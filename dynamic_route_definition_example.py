@@ -6,7 +6,7 @@ import uvicorn
 
 def _add_route(app, path, message):
     test_code_str = f"""
-def test(int_val: int, str_val: str):
+def test(int_val, str_val):
     return {{
         "message": "{message}",
         "i": int_val,
@@ -18,6 +18,7 @@ def test(int_val: int, str_val: str):
     test_code = [c for c in test_compiled.co_consts if isinstance(c, CodeType)][0]
     test_func = FunctionType(test_code, globals(), "test")
     test_func.__annotations__ = {"int_val": int, "str_val": str}
+    test_func.__defaults__ = ('abc',)  # counts backwards -- so only str_val gets a default
 
     app.get(path, response_model=dict[str, int | str])(test_func)
 
