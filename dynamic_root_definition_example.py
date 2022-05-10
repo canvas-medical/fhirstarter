@@ -19,7 +19,7 @@ def test(int_val: int, str_val: str):
     test_func = FunctionType(test_code, globals(), "test")
     test_func.__annotations__ = {"int_val": int, "str_val": str}
 
-    app.get(path)(test_func)
+    app.get(path, response_model=dict[str, int | str])(test_func)
 
 
 app = FastAPI()
