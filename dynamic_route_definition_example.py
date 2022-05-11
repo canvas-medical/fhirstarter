@@ -1,3 +1,4 @@
+from typing import Any
 from fastapi import FastAPI
 from starlette.responses import RedirectResponse
 from types import CodeType, FunctionType
@@ -20,7 +21,7 @@ def test(int_val, str_val):
     test_func = FunctionType(test_code, globals(), "test", arg_defaults)
     test_func.__annotations__ = {"int_val": int, "str_val": str}
 
-    app.get(path, response_model=dict[str, int | str])(test_func)
+    app.get(path, response_model=dict[str, Any])(test_func)
 
 
 app = FastAPI()
