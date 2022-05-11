@@ -27,13 +27,13 @@ def test(int_val, str_val):
     # Define the globals, including imports
     globals_ = {"uuid4": uuid4}
 
-    # Define the function defaults
+    # Define the function argument defaults
     arg_defaults = ("abc",)  # counts backwards, so only str_val gets a default
 
     # Create the callable
     test_func = FunctionType(test_code, globals_, "test", arg_defaults)
 
-    # Annotate the function arguments
+    # Annotate the function arguments on the callable
     test_func.__annotations__ = {"int_val": int, "str_val": str, "return": dict[str, Any]}
 
     # Create the API route
