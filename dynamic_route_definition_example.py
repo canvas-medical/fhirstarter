@@ -16,9 +16,9 @@ def test(int_val, str_val):
 
     test_compiled = compile(test_code_str, '<string>', 'exec')
     test_code = [c for c in test_compiled.co_consts if isinstance(c, CodeType)][0]
-    test_func = FunctionType(test_code, globals(), "test")
+    arg_defaults = ('abc',)  # counts backwards, so only str_val gets a default
+    test_func = FunctionType(test_code, globals(), "test", arg_defaults)
     test_func.__annotations__ = {"int_val": int, "str_val": str}
-    test_func.__defaults__ = ('abc',)  # counts backwards -- so only str_val gets a default
 
     app.get(path, response_model=dict[str, int | str])(test_func)
 
