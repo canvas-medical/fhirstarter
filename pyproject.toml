@@ -6,6 +6,7 @@ authors = ["Christopher Sande <christopher.sande@canvasmedical.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+fastapi = "^0.77.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
