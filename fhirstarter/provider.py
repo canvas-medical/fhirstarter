@@ -8,9 +8,9 @@ FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
 
 
 class FHIRProvider:
-    @staticmethod
+    @property
     @abstractmethod
-    def resource_obj_type() -> type[FHIRResourceType]:
+    def resource_obj_type(self) -> type[FHIRResourceType]:
         raise NotImplementedError
 
     @property
@@ -18,9 +18,9 @@ class FHIRProvider:
         return self.resource_obj_type().get_resource_type()
 
     @property
-    def supported_search_parameters(self) -> tuple[str, ...]:
+    def supported_search_parameters(self) -> tuple[str, ...] | None:
         if not isinstance(self, SupportsFHIRSearch):
-            return tuple()
+            return None
 
         return tuple(sorted(inspect.signature(self.search).parameters.keys()))
 
@@ -32,14 +32,14 @@ class FHIRProvider:
 @runtime_checkable
 class SupportsFHIRCreate(Protocol[FHIRResourceType]):
     @staticmethod
-    def create() -> FHIRResourceType:
+    async def create(resource: FHIRResourceType) -> FHIRResourceType:
         ...
 
 
 @runtime_checkable
 class SupportsFHIRRead(Protocol[FHIRResourceType]):
     @staticmethod
-    def read() -> FHIRResourceType:
+    async def read(id_: str) -> FHIRResourceType:
         ...
 
 
@@ -47,12 +47,12 @@ class SupportsFHIRRead(Protocol[FHIRResourceType]):
 class SupportsFHIRSearch(Protocol[FHIRResourceType]):
     # TODO: Might need to return a bundle or generic bundle wrapper
     @staticmethod
-    def search(**kwargs) -> tuple[FHIRResourceType, ...]:
+    async def search(**kwargs: str) -> tuple[FHIRResourceType, ...]:
         ...
 
 
 @runtime_checkable
-class SupportsUpdate(Protocol[FHIRResourceType]):
+class SupportsFHIRUpdate(Protocol[FHIRResourceType]):
     @staticmethod
-    def update() -> FHIRResourceType:
+    async def update(resource: FHIRResourceType) -> FHIRResourceType:
         ...
