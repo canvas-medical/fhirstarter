@@ -8,16 +8,13 @@ FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
 
 
 class FHIRProvider:
-    @property
     @abstractmethod
     def resource_obj_type(self) -> type[FHIRResourceType]:
         raise NotImplementedError
 
-    @property
     def resource_type(self) -> str:
         return self.resource_obj_type().get_resource_type()
 
-    @property
     def supported_search_parameters(self) -> tuple[str, ...] | None:
         if not isinstance(self, SupportsFHIRSearch):
             return None
@@ -45,6 +42,9 @@ class SupportsFHIRRead(Protocol[FHIRResourceType]):
 
 @runtime_checkable
 class SupportsFHIRSearch(Protocol[FHIRResourceType]):
+    def supported_search_parameters(self) -> tuple[str, ...] | None:
+        ...
+
     # TODO: Might need to return a bundle or generic bundle wrapper
     @staticmethod
     async def search(**kwargs: str) -> tuple[FHIRResourceType, ...]:

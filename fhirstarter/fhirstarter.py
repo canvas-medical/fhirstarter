@@ -16,7 +16,7 @@ class FHIRStarter(FastAPI):
 
     def add_providers(self, *providers: FHIRProvider):
         for provider in providers:
-            resource_type = provider.resource_type
+            resource_type = provider.resource_type()
             assert (
                 resource_type not in self._providers
             ), f"FHIR provider for resource type '{resource_type}' can only be supplied once"
@@ -51,9 +51,8 @@ class FHIRStarter(FastAPI):
     def _add_routes(self, provider: FHIRProvider) -> None:
         # TODO: Try to find a better way to model the ABC and protocols so that these three values
         #  don't need to be fetched prior to the calls to isinstance to avoid typing errors
-        resource_type = provider.resource_type
-        resource_obj_type = provider.resource_obj_type
-        supported_search_parameters = provider.supported_search_parameters
+        resource_type = provider.resource_type()
+        resource_obj_type = provider.resource_obj_type()
 
         if isinstance(provider, SupportsFHIRCreate):
             self._add_create_route(resource_obj_type, resource_type)
@@ -61,7 +60,7 @@ class FHIRStarter(FastAPI):
             self._add_read_route(resource_obj_type, resource_type)
         if isinstance(provider, SupportsFHIRSearch):
             self._add_search_route(
-                resource_obj_type, resource_type, supported_search_parameters
+                resource_obj_type, resource_type, provider.supported_search_parameters()
             )
         if isinstance(provider, SupportsFHIRUpdate):
             self._add_update_route(resource_obj_type, resource_type)
