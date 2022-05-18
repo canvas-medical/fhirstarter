@@ -1,9 +1,10 @@
-from collections.abc import Callable, Iterable
-from types import CodeType, FunctionType
+from collections.abc import Iterable
+from types import FunctionType
 from typing import Any, cast
 
-from fastapi import FastAPI, status
+from fastapi import FastAPI, Path, status
 
+from fhirstarter import routes
 from fhirstarter.provider import (FHIRProvider, FHIRResourceType,
                                   SupportsFHIRCreate, SupportsFHIRRead,
                                   SupportsFHIRSearch, SupportsFHIRUpdate)
@@ -73,23 +74,17 @@ class FHIRStarter(FastAPI):
     def _add_read_route(
         self, resource_obj_type: type[FHIRResourceType], resource_type: str
     ) -> None:
-        func_name = f"{resource_type.lower()}_read"
-
-        code = f"""
-async def {func_name}(id_: str) -> {resource_type}:
-    result = await app.dispatch("{resource_type}", "read", id_=id_)
-    return result"""
-
+        name = f"{resource_type.lower()}_read"
         annotations = {"id_": str}
-        globals_ = {
-            "app": self,
-            resource_type: resource_obj_type,
-        }
+        argdefs = (Path(None, alias="id", min_length=1),)
+        code = getattr(routes, "read").__code__
+        globals_ = {"dispatch": self.dispatch, "resource_type": resource_type}
 
-        func = _create_function(func_name, code, annotations, globals_)
+        func = FunctionType(code, globals_, name, argdefs)
+        func.__annotations__ = annotations
 
         self.get(
-            f"/{resource_type}/{{id_}}",
+            f"/{resource_type}/{{id}}",
             response_model=resource_obj_type,
             status_code=status.HTTP_200_OK,
         )(func)
@@ -108,21 +103,7 @@ async def {func_name}(id_: str) -> {resource_type}:
         raise NotImplementedError
 
 
-# TODO: It should be possible to dynamically add routes and avoid using the compile builtin by
-#  generating the routes beforehand and then tweaking the globals and defaults before the routes
-#  are added. The include_in_schema flag on search parameters can be set this way.
-def _create_function(
-    name: str, code: str, annotations: dict[str, Any], globals_: dict[str, Any]
-) -> Callable:
-    # TODO: Get a security review of use of the compile built-in
-    code_compiled = compile(code, "<string", "exec")
-    func_code = next(c for c in code_compiled.co_consts if isinstance(c, CodeType))
-    func = FunctionType(func_code, globals_, name)
-    func.__annotations__ = annotations
-
-    return func
-
-
+# TODO: Look into auto-filling path and query parameter options from the FHIR specification
 # TODO: Look into auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters
 # - tags
