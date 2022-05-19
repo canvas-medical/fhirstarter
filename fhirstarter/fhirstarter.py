@@ -87,6 +87,7 @@ class FHIRStarter(FastAPI):
             f"/{resource_type}/{{id}}",
             response_model=resource_obj_type,
             status_code=status.HTTP_200_OK,
+            response_model_exclude_none=True
         )(func)
 
     def _add_search_route(
