@@ -27,7 +27,7 @@ class FHIRStarter(FastAPI):
 
     async def dispatch(
         self, resource_type: str, operation: str, /, **kwargs: Any
-    ) -> FHIRResourceType | tuple[FHIRResourceType, ...]:
+    ) -> FHIRResourceType:
         # TODO: Return a proper HTTP response if a provider is not found (should be detectable by
         #  declared capabilities)
         provider = self._providers.get(resource_type)
@@ -37,17 +37,13 @@ class FHIRStarter(FastAPI):
 
         match operation:
             case "create":
-                provider = cast(SupportsFHIRCreate, provider)
-                return await provider.create(kwargs["resource"])
+                return await cast(SupportsFHIRCreate, provider).create(kwargs["resource"])
             case "read":
-                provider = cast(SupportsFHIRRead, provider)
-                return await provider.read(kwargs["id_"])
+                return await cast(SupportsFHIRRead, provider).read(kwargs["id_"])
             case "search":
-                provider = cast(SupportsFHIRSearch, provider)
-                return await provider.search(**kwargs)
+                return await cast(SupportsFHIRSearch, provider).search(**kwargs)
             case "update":
-                provider = cast(SupportsFHIRUpdate, provider)
-                return await provider.update(kwargs["resource"])
+                return await cast(SupportsFHIRUpdate, provider).update(kwargs["resource"])
 
     def _add_routes(self, provider: FHIRProvider) -> None:
         # TODO: Try to find a better way to model the ABC and protocols so that these three values
@@ -75,6 +71,7 @@ class FHIRStarter(FastAPI):
         self, resource_obj_type: type[FHIRResourceType], resource_type: str
     ) -> None:
         name = f"{resource_type.lower()}_read"
+        # TODO: Should id_ be annotated with the Id type?
         annotations = {"id_": str}
         argdefs = (Path(None, alias="id", min_length=1),)
         code = getattr(routes, "read").__code__

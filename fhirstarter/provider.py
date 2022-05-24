@@ -2,6 +2,7 @@ import inspect
 from abc import abstractmethod
 from typing import Protocol, TypeVar, runtime_checkable
 
+from fhir.resources.bundle import Bundle
 from fhir.resources.resource import Resource
 
 FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
@@ -29,7 +30,7 @@ class FHIRProvider:
 @runtime_checkable
 class SupportsFHIRCreate(Protocol[FHIRResourceType]):
     @staticmethod
-    async def create(resource: FHIRResourceType) -> FHIRResourceType:
+    async def create(resource: FHIRResourceType) -> FHIRResourceType | None:
         ...
 
 
@@ -47,12 +48,12 @@ class SupportsFHIRSearch(Protocol[FHIRResourceType]):
 
     # TODO: Might need to return a bundle or generic bundle wrapper
     @staticmethod
-    async def search(**kwargs: str) -> tuple[FHIRResourceType, ...]:
+    async def search(**kwargs: str) -> Bundle:
         ...
 
 
 @runtime_checkable
 class SupportsFHIRUpdate(Protocol[FHIRResourceType]):
     @staticmethod
-    async def update(resource: FHIRResourceType) -> FHIRResourceType:
+    async def update(resource: FHIRResourceType) -> FHIRResourceType | None:
         ...
