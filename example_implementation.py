@@ -1,5 +1,6 @@
 import uvicorn
 from fhir.resources.patient import Patient
+from starlette.responses import RedirectResponse
 
 from fhirstarter import FHIRProvider, FHIRStarter
 
@@ -28,6 +29,13 @@ app = FHIRStarter()
 # providers need (e.g. create, read, search, and update).
 app.add_providers(PatientProvider())
 
+
+@app.get("/", include_in_schema=False)
+async def index() -> RedirectResponse:
+    """Redirect main page to API docs."""
+    return RedirectResponse("/docs")
+
+
 if __name__ == "__main__":
     # Start the server
-    uvicorn.run(app)
+    uvicorn.run("example_implementation:app", reload=True)

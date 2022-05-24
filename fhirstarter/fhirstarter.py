@@ -3,6 +3,8 @@ from types import FunctionType
 from typing import Any, cast
 
 from fastapi import FastAPI, Path, status
+from fhir.resources.fhirtypes import Id
+from fhir.resources.resource import Resource
 
 from fhirstarter import routes
 from fhirstarter.provider import (FHIRProvider, FHIRResourceType,
@@ -37,13 +39,17 @@ class FHIRStarter(FastAPI):
 
         match operation:
             case "create":
-                return await cast(SupportsFHIRCreate, provider).create(kwargs["resource"])
+                return await cast(SupportsFHIRCreate, provider).create(
+                    kwargs["resource"]
+                )
             case "read":
                 return await cast(SupportsFHIRRead, provider).read(kwargs["id_"])
             case "search":
                 return await cast(SupportsFHIRSearch, provider).search(**kwargs)
             case "update":
-                return await cast(SupportsFHIRUpdate, provider).update(kwargs["resource"])
+                return await cast(SupportsFHIRUpdate, provider).update(
+                    kwargs["resource"]
+                )
 
     def _add_routes(self, provider: FHIRProvider) -> None:
         # TODO: Try to find a better way to model the ABC and protocols so that these three values
@@ -71,9 +77,14 @@ class FHIRStarter(FastAPI):
         self, resource_obj_type: type[FHIRResourceType], resource_type: str
     ) -> None:
         name = f"{resource_type.lower()}_read"
-        # TODO: Should id_ be annotated with the Id type?
-        annotations = {"id_": str}
-        argdefs = (Path(None, alias="id", min_length=1),)
+        annotations = {"id_": Id}
+        argdefs = (
+            Path(
+                None,
+                alias="id",
+                description=Resource.schema()["properties"]["id"]["title"],
+            ),
+        )
         code = getattr(routes, "read").__code__
         globals_ = {"dispatch": self.dispatch, "resource_type": resource_type}
 
@@ -84,7 +95,9 @@ class FHIRStarter(FastAPI):
             f"/{resource_type}/{{id}}",
             response_model=resource_obj_type,
             status_code=status.HTTP_200_OK,
-            response_model_exclude_none=True
+            summary=f"{resource_type} read",
+            description=f"The {resource_type} read interaction accesses the current contents of a {resource_type}.",
+            response_model_exclude_none=True,
         )(func)
 
     def _add_search_route(
