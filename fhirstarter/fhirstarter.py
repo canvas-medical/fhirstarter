@@ -2,8 +2,10 @@ from collections.abc import Iterable
 from types import FunctionType
 from typing import Any, cast
 
-from fastapi import FastAPI, Path, status
+from fastapi import FastAPI, Path, Request, status
+from fastapi.responses import JSONResponse
 from fhir.resources.fhirtypes import Id
+from fhir.resources.operationoutcome import OperationOutcome
 from fhir.resources.resource import Resource
 
 from fhirstarter import routes
@@ -15,7 +17,23 @@ from fhirstarter.provider import (FHIRProvider, FHIRResourceType,
 class FHIRStarter(FastAPI):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
+        self._add_exception_handler()
         self._providers = dict()
+
+    def _add_exception_handler(self):
+        async def _exception_handler(
+            request: Request, exception: Exception
+        ) -> JSONResponse:
+            # TODO: Add some exception classes for common errors
+            operation_outcome = OperationOutcome(
+                **{"issue": [{"severity": "fatal", "code": "processing"}]}
+            )
+            return JSONResponse(
+                operation_outcome.dict(),
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        self.add_exception_handler(Exception, _exception_handler)
 
     def add_providers(self, *providers: FHIRProvider):
         for provider in providers:
