@@ -1,6 +1,6 @@
 from collections.abc import Iterable
 from types import FunctionType
-from typing import Any, cast
+from typing import Any
 
 from fastapi import FastAPI, Path, Request, status
 from fastapi.responses import JSONResponse
@@ -9,33 +9,24 @@ from fhir.resources.operationoutcome import OperationOutcome
 from fhir.resources.resource import Resource
 
 from fhirstarter import routes
-from fhirstarter.provider import (FHIRProvider, FHIRResourceType,
-                                  SupportsFHIRCreate, SupportsFHIRRead,
-                                  SupportsFHIRSearch, SupportsFHIRUpdate)
+from fhirstarter.exceptions import FHIRError, FHIRException, make_operation_outcome
+from fhirstarter.provider import (
+    FHIRProvider,
+    FHIRResourceType,
+    SupportsFHIRCreate,
+    SupportsFHIRRead,
+    SupportsFHIRSearch,
+    SupportsFHIRUpdate,
+)
 
 
 class FHIRStarter(FastAPI):
-    def __init__(self, **kwargs: Any):
+    def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._add_exception_handler()
+        self.add_exception_handler(Exception, _exception_handler)
         self._providers = dict()
 
-    def _add_exception_handler(self):
-        async def _exception_handler(
-            request: Request, exception: Exception
-        ) -> JSONResponse:
-            # TODO: Add some exception classes for common errors
-            operation_outcome = OperationOutcome(
-                **{"issue": [{"severity": "fatal", "code": "processing"}]}
-            )
-            return JSONResponse(
-                operation_outcome.dict(),
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
-
-        self.add_exception_handler(Exception, _exception_handler)
-
-    def add_providers(self, *providers: FHIRProvider):
+    def add_providers(self, *providers: FHIRProvider) -> None:
         for provider in providers:
             resource_type = provider.resource_type()
             assert (
@@ -48,26 +39,17 @@ class FHIRStarter(FastAPI):
     async def dispatch(
         self, resource_type: str, operation: str, /, **kwargs: Any
     ) -> FHIRResourceType:
-        # TODO: Return a proper HTTP response if a provider is not found (should be detectable by
-        #  declared capabilities)
-        provider = self._providers.get(resource_type)
-        assert (
-            provider
-        ), f"FHIR provider for resource type '{resource_type}' does not exist"
+        try:
+            provider = self._providers[resource_type]
+        except KeyError as error:
+            raise FHIRError(
+                "fatal",
+                "not-supported",
+                "Server is improperly configured; request dispatched to nonexistent provider",
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
+            ) from error
 
-        match operation:
-            case "create":
-                return await cast(SupportsFHIRCreate, provider).create(
-                    kwargs["resource"]
-                )
-            case "read":
-                return await cast(SupportsFHIRRead, provider).read(kwargs["id_"])
-            case "search":
-                return await cast(SupportsFHIRSearch, provider).search(**kwargs)
-            case "update":
-                return await cast(SupportsFHIRUpdate, provider).update(
-                    kwargs["resource"]
-                )
+        return await provider.dispatch(operation, **kwargs)
 
     def _add_routes(self, provider: FHIRProvider) -> None:
         # TODO: Try to find a better way to model the ABC and protocols so that these three values
@@ -112,9 +94,24 @@ class FHIRStarter(FastAPI):
         self.get(
             f"/{resource_type}/{{id}}",
             response_model=resource_obj_type,
-            status_code=status.HTTP_200_OK,
             summary=f"{resource_type} read",
             description=f"The {resource_type} read interaction accesses the current contents of a {resource_type}.",
+            responses={
+                status.HTTP_200_OK: {
+                    "description": f"Successful {resource_type} read",
+                    "content": {
+                        "application/json": {"schema": resource_obj_type.schema()},
+                        "application/fhir+json": {"schema": resource_obj_type.schema()},
+                    },
+                },
+                status.HTTP_404_NOT_FOUND: {
+                    "description": f"Unknown {resource_type} resource",
+                    "content": {
+                        "application/json": {"schema": OperationOutcome.schema()},
+                        "application/fhir+json": {"schema": OperationOutcome.schema()},
+                    },
+                },
+            },
             response_model_exclude_none=True,
         )(func)
 
@@ -130,6 +127,19 @@ class FHIRStarter(FastAPI):
         self, resource_obj_type: type[FHIRResourceType], resource_type: str
     ) -> None:
         raise NotImplementedError
+
+
+async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
+    if isinstance(exception, FHIRException):
+        return exception.response()
+
+    operation_outcome = make_operation_outcome(
+        "fatal", "exception", f"{str(exception)}"
+    )
+
+    return JSONResponse(
+        operation_outcome.dict(), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+    )
 
 
 # TODO: Look into auto-filling path and query parameter options from the FHIR specification

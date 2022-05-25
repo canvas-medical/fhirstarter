@@ -1,9 +1,11 @@
 import inspect
 from abc import abstractmethod
-from typing import Protocol, TypeVar, runtime_checkable
+from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
 from fhir.resources.bundle import Bundle
 from fhir.resources.resource import Resource
+
+from fhirstarter.exceptions import FHIRResourceError
 
 FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
 
@@ -21,6 +23,25 @@ class FHIRProvider:
             return None
 
         return tuple(sorted(inspect.signature(self.search).parameters.keys()))
+
+    async def dispatch(self, operation: str, /, **kwargs: Any) -> FHIRResourceType:
+        try:
+            match operation:
+                case "create":
+                    return await cast(SupportsFHIRCreate, self).create(
+                        kwargs["resource"]
+                    )
+                case "read":
+                    return await cast(SupportsFHIRRead, self).read(kwargs["id_"])
+                case "search":
+                    return await cast(SupportsFHIRSearch, self).search(**kwargs)
+                case "update":
+                    return await cast(SupportsFHIRUpdate, self).update(
+                        kwargs["resource"]
+                    )
+        except FHIRResourceError as error:
+            error.set_resource_type(self.resource_type())
+            raise error
 
 
 # TODO: To handle errors, the methods on these protocols probably need to return more than just a
