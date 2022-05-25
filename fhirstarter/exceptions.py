@@ -7,7 +7,7 @@ from fhir.resources.operationoutcome import OperationOutcome
 from multimethod import multimethod
 
 
-class FHIRException(ABC, Exception):
+class FHIRException(Exception, ABC):
     def response(self) -> JSONResponse:
         return JSONResponse(
             self._operation_outcome().dict(), status_code=self._status_code()
@@ -46,7 +46,7 @@ class FHIRError(FHIRException):
         return self._status_code
 
 
-class FHIRResourceError(ABC, FHIRException):
+class FHIRResourceError(FHIRException, ABC):
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)
         self._resource_type = None
@@ -70,8 +70,7 @@ class FHIRResourceNotFoundError(FHIRResourceError):
             f"Unknown {self._resource_type} resource '{self._resource_id}'",
         )
 
-    @staticmethod
-    def _status_code() -> int:
+    def _status_code(self) -> int:
         return status.HTTP_404_NOT_FOUND
 
 

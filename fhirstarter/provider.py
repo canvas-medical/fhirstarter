@@ -44,10 +44,6 @@ class FHIRProvider:
             raise error
 
 
-# TODO: To handle errors, the methods on these protocols probably need to return more than just a
-#  FHIRResourceType
-
-
 @runtime_checkable
 class SupportsFHIRCreate(Protocol[FHIRResourceType]):
     @staticmethod
