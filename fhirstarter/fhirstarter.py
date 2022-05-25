@@ -43,10 +43,10 @@ class FHIRStarter(FastAPI):
             provider = self._providers[resource_type]
         except KeyError as error:
             raise FHIRError(
+                status.HTTP_500_INTERNAL_SERVER_ERROR,
                 "fatal",
                 "not-supported",
                 "Server is improperly configured; request dispatched to nonexistent provider",
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
             ) from error
 
         return await provider.dispatch(operation, **kwargs)

@@ -14,36 +14,36 @@ class FHIRException(Exception, ABC):
         )
 
     @abstractmethod
-    def _operation_outcome(self) -> OperationOutcome:
+    def _status_code(self) -> int:
         raise NotImplementedError
 
     @abstractmethod
-    def _status_code(self) -> int:
+    def _operation_outcome(self) -> OperationOutcome:
         raise NotImplementedError
 
 
 class FHIRError(FHIRException):
     @multimethod
     def __init__(
-        self, severity: str, code: str, details_text: str, status_code: int, *args: Any
+        self, status_code: int, severity: str, code: str, details_text: str, *args: Any
     ) -> None:
         self.__init__(
-            make_operation_outcome(severity, code, details_text), status_code, *args
+            status_code, make_operation_outcome(severity, code, details_text), *args
         )
 
     @multimethod
     def __init__(
-        self, operation_outcome: OperationOutcome, status_code: int, *args: Any
+        self, status_code: int, operation_outcome: OperationOutcome, *args: Any
     ) -> None:
         super().__init__(*args)
-        self._operation_outcome = operation_outcome
         self._status_code = status_code
-
-    def _operation_outcome(self) -> OperationOutcome:
-        return self._operation_outcome
+        self._operation_outcome = operation_outcome
 
     def _status_code(self) -> int:
         return self._status_code
+
+    def _operation_outcome(self) -> OperationOutcome:
+        return self._operation_outcome
 
 
 class FHIRResourceError(FHIRException, ABC):
@@ -60,6 +60,9 @@ class FHIRResourceNotFoundError(FHIRResourceError):
         super().__init__(*args)
         self._resource_id = resource_id
 
+    def _status_code(self) -> int:
+        return status.HTTP_404_NOT_FOUND
+
     def _operation_outcome(self) -> OperationOutcome:
         assert (
             self._resource_type is not None
@@ -69,9 +72,6 @@ class FHIRResourceNotFoundError(FHIRResourceError):
             "not-found",
             f"Unknown {self._resource_type} resource '{self._resource_id}'",
         )
-
-    def _status_code(self) -> int:
-        return status.HTTP_404_NOT_FOUND
 
 
 def make_operation_outcome(
