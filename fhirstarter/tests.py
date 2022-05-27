@@ -1,4 +1,3 @@
-import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 from fhir.resources.patient import Patient
@@ -27,11 +26,9 @@ app.add_providers(PatientProvider())
 client = TestClient(app)
 
 
-@pytest.mark.anyio
 def test_patient_read():
     assert client.get("/Patient/found").status_code == status.HTTP_200_OK
 
 
-@pytest.mark.anyio
 def test_patient_read_not_found():
     assert client.get("/Patient/notfound").status_code == status.HTTP_404_NOT_FOUND
