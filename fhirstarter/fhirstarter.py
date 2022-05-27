@@ -43,7 +43,7 @@ class FHIRStarter(FastAPI):
 
     async def dispatch(
         self, resource_type: str, operation: str, /, **kwargs: Any
-    ) -> FHIRResourceType:
+    ) -> FHIRResourceType | JSONResponse:
         try:
             provider = self._providers[resource_type]
         except KeyError as error:
@@ -57,8 +57,7 @@ class FHIRStarter(FastAPI):
         try:
             return await provider.dispatch(operation, **kwargs)
         except FHIRException as exception:
-            exception.context = FHIRExceptionContext(provider, operation, kwargs)
-            raise exception
+            return exception.response(FHIRExceptionContext(provider, operation, kwargs))
 
     def _add_routes(self, provider: FHIRProvider) -> None:
         # TODO: Try to find a better way to model the ABC and protocols so that these three values
@@ -140,9 +139,6 @@ class FHIRStarter(FastAPI):
 
 
 async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
-    if isinstance(exception, FHIRException):
-        return exception.response()
-
     operation_outcome = make_operation_outcome(
         "fatal", "exception", f"{str(exception)}"
     )

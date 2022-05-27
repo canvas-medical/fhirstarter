@@ -3,6 +3,7 @@ from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
 
 from fhirstarter import FHIRProvider, FHIRStarter
+from fhirstarter.exceptions import FHIRResourceNotFoundError
 
 
 # Define a provider for a resource (the functions will define what FHIR operations are supported for
@@ -16,6 +17,9 @@ class PatientProvider(FHIRProvider):
         # All Canvas-to-FHIR mapping code for a Patient read operation goes here. For a read
         # operation, a GraphQL request is issued, and then the result is mapped on to the FHIR
         # Patient resource to be returned.
+
+        if id_ != "bilbo":
+            raise FHIRResourceNotFoundError
 
         patient = Patient(**{"name": [{"family": "Baggins", "given": ["Bilbo"]}]})
 

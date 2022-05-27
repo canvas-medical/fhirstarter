@@ -22,7 +22,8 @@ class FHIRException(Exception, ABC):
         super().__init__(*args)
         self._context = None
 
-    def response(self) -> JSONResponse:
+    def response(self, context: FHIRExceptionContext) -> JSONResponse:
+        self._context = context
         return JSONResponse(
             self._operation_outcome().dict(), status_code=self._status_code()
         )
@@ -30,10 +31,6 @@ class FHIRException(Exception, ABC):
     @property
     def context(self) -> FHIRExceptionContext:
         return self._context
-
-    @context.setter
-    def context(self, value: FHIRExceptionContext) -> None:
-        self._context = value
 
     @abstractmethod
     def _status_code(self) -> int:
