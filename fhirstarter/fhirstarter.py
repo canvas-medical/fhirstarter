@@ -1,4 +1,5 @@
-from collections.abc import Iterable
+import inspect
+from collections.abc import Callable, Mapping
 from types import FunctionType
 from typing import Any
 
@@ -23,7 +24,6 @@ from fhirstarter.provider import (
     SupportsFHIRSearch,
     SupportsFHIRUpdate,
 )
-
 
 # TODO: Headers
 # TODO: Research auto-filling path and query parameter options from the FHIR specification
@@ -82,24 +82,47 @@ class FHIRStarter(FastAPI):
         resource_type = provider.resource_type()
         resource_obj_type = provider.resource_obj_type()
 
+        def route_options(route_func: Callable) -> dict[str, Any]:
+            return (
+                route_func.route_options if hasattr(route_func, "route_options") else {}
+            )
+
         if isinstance(provider, SupportsFHIRCreate):
-            self._add_create_route(resource_obj_type, resource_type)
+            self._add_create_route(
+                resource_obj_type, resource_type, route_options(provider.create)
+            )
         if isinstance(provider, SupportsFHIRRead):
-            self._add_read_route(resource_obj_type, resource_type)
+            self._add_read_route(
+                resource_obj_type, resource_type, route_options(provider.read)
+            )
         if isinstance(provider, SupportsFHIRSearch):
+            supported_search_parameters = tuple(
+                sorted(inspect.signature(provider.search).parameters.keys())
+            )
             self._add_search_route(
-                resource_obj_type, resource_type, provider.supported_search_parameters()
+                resource_obj_type,
+                resource_type,
+                route_options(provider.search),
+                supported_search_parameters,
             )
         if isinstance(provider, SupportsFHIRUpdate):
-            self._add_update_route(resource_obj_type, resource_type)
+            self._add_update_route(
+                resource_obj_type, resource_type, route_options(provider.update)
+            )
 
     def _add_create_route(
-        self, resource_obj_type: type[FHIRResourceType], resource_type: str
+        self,
+        resource_obj_type: type[FHIRResourceType],
+        resource_type: str,
+        route_options: Mapping[str, Any],
     ) -> None:
         raise NotImplementedError
 
     def _add_read_route(
-        self, resource_obj_type: type[FHIRResourceType], resource_type: str
+        self,
+        resource_obj_type: type[FHIRResourceType],
+        resource_type: str,
+        route_options: Mapping[str, Any],
     ) -> None:
         name = f"{resource_type.lower()}_read"
         annotations = {"id_": Id}
@@ -139,18 +162,23 @@ class FHIRStarter(FastAPI):
                 },
             },
             response_model_exclude_none=True,
+            **route_options,
         )(func)
 
     def _add_search_route(
         self,
         resource_obj_type: type[FHIRResourceType],
         resource_type: str,
-        supported_search_parameters: Iterable[str],
+        route_options: Mapping[str, Any],
+        supported_search_parameters: tuple[str, ...],
     ) -> None:
         raise NotImplementedError
 
     def _add_update_route(
-        self, resource_obj_type: type[FHIRResourceType], resource_type: str
+        self,
+        resource_obj_type: type[FHIRResourceType],
+        resource_type: str,
+        route_options: Mapping[str, Any],
     ) -> None:
         raise NotImplementedError
 

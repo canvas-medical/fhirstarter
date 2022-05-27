@@ -1,9 +1,7 @@
-from fastapi import status
-from fastapi.testclient import TestClient
-from fhir.resources.patient import Patient
-
-from fhirstarter import FHIRProvider, FHIRStarter
+from fhirstarter import FHIRProvider, FHIRStarter, status
 from fhirstarter.exceptions import FHIRResourceNotFoundError
+from fhirstarter.resources import Patient
+from fhirstarter.testclient import TestClient
 
 
 class PatientProvider(FHIRProvider):

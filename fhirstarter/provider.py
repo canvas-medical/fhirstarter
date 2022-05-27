@@ -1,5 +1,6 @@
-import inspect
+import functools
 from abc import abstractmethod
+from collections.abc import Callable
 from typing import Any, Protocol, TypeVar, cast, runtime_checkable
 
 from fhir.resources.bundle import Bundle
@@ -16,12 +17,6 @@ class FHIRProvider:
     def resource_type(self) -> str:
         return self.resource_obj_type().get_resource_type()
 
-    def supported_search_parameters(self) -> tuple[str, ...] | None:
-        if not isinstance(self, SupportsFHIRSearch):
-            return None
-
-        return tuple(sorted(inspect.signature(self.search).parameters.keys()))
-
     async def dispatch(self, operation: str, /, **kwargs: Any) -> FHIRResourceType:
         match operation:
             case "create":
@@ -32,6 +27,18 @@ class FHIRProvider:
                 return await cast(SupportsFHIRSearch, self).search(**kwargs)
             case "update":
                 return await cast(SupportsFHIRUpdate, self).update(kwargs["resource"])
+
+
+def route_options(include_in_schema: bool = True) -> Callable[..., Any]:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(func)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            return func(*args, **kwargs)
+
+        wrapper.route_options = {"include_in_schema": include_in_schema}
+        return wrapper
+
+    return decorator
 
 
 @runtime_checkable
@@ -50,10 +57,6 @@ class SupportsFHIRRead(Protocol[FHIRResourceType]):
 
 @runtime_checkable
 class SupportsFHIRSearch(Protocol[FHIRResourceType]):
-    def supported_search_parameters(self) -> tuple[str, ...] | None:
-        ...
-
-    # TODO: Might need to return a bundle or generic bundle wrapper
     @staticmethod
     async def search(**kwargs: str) -> Bundle:
         ...
