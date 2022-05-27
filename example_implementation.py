@@ -1,9 +1,9 @@
 import uvicorn
+from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
 
 from fhirstarter import FHIRProvider, FHIRStarter
 from fhirstarter.exceptions import FHIRResourceNotFoundError
-from fhirstarter.resources import Patient
 
 
 # Define a provider for a resource (the functions will define what FHIR operations are supported for

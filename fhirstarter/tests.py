@@ -1,6 +1,7 @@
+from fhir.resources.patient import Patient
+
 from fhirstarter import FHIRProvider, FHIRStarter, status
 from fhirstarter.exceptions import FHIRResourceNotFoundError
-from fhirstarter.resources import Patient
 from fhirstarter.testclient import TestClient
 
 
