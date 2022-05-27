@@ -57,7 +57,8 @@ class FHIRStarter(FastAPI):
         try:
             return await provider.dispatch(operation, **kwargs)
         except FHIRException as exception:
-            return exception.response(FHIRExceptionContext(provider, operation, kwargs))
+            context = FHIRExceptionContext(provider, operation, kwargs)
+            return exception.response(context)
 
     def _add_routes(self, provider: FHIRProvider) -> None:
         # TODO: Try to find a better way to model the ABC and protocols so that these three values
