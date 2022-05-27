@@ -23,7 +23,7 @@ class PatientProvider(FHIRProvider):
 
 
 # Create the app
-app = FHIRStarter()
+app = FHIRStarter(title="FHIRStarter Example Implementation")
 
 # Add the patient provider to the app. This will automatically generate the API routes that the
 # providers need (e.g. create, read, search, and update).

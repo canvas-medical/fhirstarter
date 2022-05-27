@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi import status
@@ -6,12 +7,33 @@ from fastapi.responses import JSONResponse
 from fhir.resources.operationoutcome import OperationOutcome
 from multimethod import multimethod
 
+from fhirstarter.provider import FHIRProvider
+
+
+@dataclass
+class FHIRExceptionContext:
+    provider: FHIRProvider
+    operation: str
+    kwargs: dict[str, Any]
+
 
 class FHIRException(Exception, ABC):
+    def __init__(self, *args: Any) -> None:
+        super().__init__(*args)
+        self._context = None
+
     def response(self) -> JSONResponse:
         return JSONResponse(
             self._operation_outcome().dict(), status_code=self._status_code()
         )
+
+    @property
+    def context(self) -> FHIRExceptionContext:
+        return self._context
+
+    @context.setter
+    def context(self, value: FHIRExceptionContext) -> None:
+        self._context = value
 
     @abstractmethod
     def _status_code(self) -> int:
@@ -46,32 +68,28 @@ class FHIRError(FHIRException):
         return self._operation_outcome
 
 
-class FHIRResourceError(FHIRException, ABC):
+class FHIRResourceNotFoundError(FHIRException):
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)
-        self._resource_type = None
-
-    def set_resource_type(self, resource_type: str) -> None:
-        self._resource_type = resource_type
-
-
-class FHIRResourceNotFoundError(FHIRResourceError):
-    def __init__(self, resource_id: str, *args: Any) -> None:
-        super().__init__(*args)
-        self._resource_id = resource_id
 
     def _status_code(self) -> int:
         return status.HTTP_404_NOT_FOUND
 
     def _operation_outcome(self) -> OperationOutcome:
-        assert (
-            self._resource_type is not None
-        ), "Resource type must be set before the response is constructed"
-        return make_operation_outcome(
-            "error",
-            "not-found",
-            f"Unknown {self._resource_type} resource '{self._resource_id}'",
-        )
+        try:
+            resource_type = self.context.provider.resource_type()
+            resource_id = self.context.kwargs["id_"]
+        except Exception as exception:
+            raise AssertionError(
+                "Unable to get response type and response ID from exception context; "
+                "exception context must be set before the response is constructed"
+            ) from exception
+        else:
+            return make_operation_outcome(
+                "error",
+                "not-found",
+                f"Unknown {resource_type} resource '{resource_id}'",
+            )
 
 
 def make_operation_outcome(

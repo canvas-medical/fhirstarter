@@ -9,7 +9,12 @@ from fhir.resources.operationoutcome import OperationOutcome
 from fhir.resources.resource import Resource
 
 from fhirstarter import routes
-from fhirstarter.exceptions import FHIRError, FHIRException, make_operation_outcome
+from fhirstarter.exceptions import (
+    FHIRError,
+    FHIRException,
+    FHIRExceptionContext,
+    make_operation_outcome,
+)
 from fhirstarter.provider import (
     FHIRProvider,
     FHIRResourceType,
@@ -49,7 +54,11 @@ class FHIRStarter(FastAPI):
                 "Server is improperly configured; request dispatched to nonexistent provider",
             ) from error
 
-        return await provider.dispatch(operation, **kwargs)
+        try:
+            return await provider.dispatch(operation, **kwargs)
+        except FHIRException as exception:
+            exception.context = FHIRExceptionContext(provider, operation, kwargs)
+            raise exception
 
     def _add_routes(self, provider: FHIRProvider) -> None:
         # TODO: Try to find a better way to model the ABC and protocols so that these three values
@@ -95,7 +104,8 @@ class FHIRStarter(FastAPI):
             f"/{resource_type}/{{id}}",
             response_model=resource_obj_type,
             summary=f"{resource_type} read",
-            description=f"The {resource_type} read interaction accesses the current contents of a {resource_type}.",
+            description=f"The {resource_type} read interaction accesses "
+            f"the current contents of a {resource_type}.",
             responses={
                 status.HTTP_200_OK: {
                     "description": f"Successful {resource_type} read",
