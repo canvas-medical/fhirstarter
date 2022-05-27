@@ -25,6 +25,22 @@ from fhirstarter.provider import (
 )
 
 
+# TODO: Headers
+# TODO: Research auto-filling path and query parameter options from the FHIR specification
+# TODO: Research auto-filling path definition parameters with data from the FHIR specification
+# TODO: Review all of the path definition parameters and path/query/body parameters
+# - tags
+# - summary
+# - description
+# - response_description
+# - responses
+# - operation_id
+# - response class
+# - name
+# - callbacks
+# - openapi_extra
+
+
 class FHIRStarter(FastAPI):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -147,18 +163,3 @@ async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
     return JSONResponse(
         operation_outcome.dict(), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
     )
-
-
-# TODO: Look into auto-filling path and query parameter options from the FHIR specification
-# TODO: Look into auto-filling path definition parameters with data from the FHIR specification
-# TODO: Review all of the path definition parameters
-# - tags
-# - summary
-# - description
-# - response_description
-# - responses
-# - operation_id
-# - response class
-# - name
-# - callbacks
-# - openapi_extra
