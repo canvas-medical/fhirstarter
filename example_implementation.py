@@ -9,15 +9,14 @@ from fhirstarter.exceptions import FHIRResourceNotFoundError
 provider = FHIRProvider()
 
 
-# Register the patient read FHIR interaction with the provider
+# Register the patient read FHIR interaction with the provider.
+#
 # The pieces of information the developer has to provide in order to create a route are:
 # - FHIR interaction type (this affects what the endpoint will look like)
 # - FHIR resource type (this affects validation of inputs and outputs, and what search parameters
 #   are valid)
-# - the actual callable (expected signature and annotations are affected by both operation and
-#   resource type)
-
-
+# - the actual callable (expected signature and annotations need to match the defined protocols,
+#   because thes values affect route creation in FastAPI)
 @provider.register_read_interaction(Patient)
 async def patient_read(id_: str) -> Patient:
     # All Canvas-to-FHIR mapping code for a Patient read operation goes here. For a read
