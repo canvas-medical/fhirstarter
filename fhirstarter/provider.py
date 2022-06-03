@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Generic, Protocol, TypeVar
@@ -54,8 +55,8 @@ class FHIRProvider:
         self._interactions: list[FHIRInteraction] = list()
 
     @property
-    def interactions(self) -> list[FHIRInteraction]:
-        return self._interactions
+    def interactions(self) -> Iterable[FHIRInteraction]:
+        yield from self._interactions
 
     def register_create_interaction(
         self, resource_type: type[FHIRResourceType]
