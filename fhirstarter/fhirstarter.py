@@ -1,5 +1,5 @@
 import inspect
-from collections.abc import Callable, Mapping
+from collections import defaultdict
 from types import FunctionType
 from typing import Any
 
@@ -9,7 +9,7 @@ from fhir.resources.fhirtypes import Id
 from fhir.resources.operationoutcome import OperationOutcome
 from fhir.resources.resource import Resource
 
-from fhirstarter import routes
+from fhirstarter import code_templates
 from fhirstarter.exceptions import (
     FHIRError,
     FHIRException,
@@ -17,12 +17,10 @@ from fhirstarter.exceptions import (
     make_operation_outcome,
 )
 from fhirstarter.provider import (
+    FHIRInteraction,
+    FHIRInteractionType,
     FHIRProvider,
     FHIRResourceType,
-    SupportsFHIRCreate,
-    SupportsFHIRRead,
-    SupportsFHIRSearch,
-    SupportsFHIRUpdate,
 )
 
 # TODO: Headers
@@ -45,86 +43,78 @@ class FHIRStarter(FastAPI):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.add_exception_handler(Exception, _exception_handler)
-        self._providers = dict()
+        self._interactions: defaultdict = defaultdict(dict)
 
     def add_providers(self, *providers: FHIRProvider) -> None:
         for provider in providers:
-            resource_type = provider.resource_type()
-            assert (
-                resource_type not in self._providers
-            ), f"FHIR provider for resource type '{resource_type}' can only be supplied once"
+            for interaction in provider.interactions:
+                assert (
+                    interaction.resource_type not in self._interactions
+                    or interaction.interaction_type
+                    not in self._interactions[interaction.resource_type]
+                ), (
+                    f"FHIR interaction for resource type "
+                    "'{interaction.resource_type.get_resource_type()}' and interaction type "
+                    "'{interaction.interaction_type}' can only be supplied once"
+                )
 
-            self._providers[resource_type] = provider
-            self._add_routes(provider)
+                self._interactions[interaction.resource_type][
+                    interaction.interaction_type
+                ] = interaction
+                self._add_route(interaction)
 
     async def dispatch(
-        self, resource_type: str, operation: str, /, **kwargs: Any
+        self,
+        resource_type: FHIRResourceType,
+        interaction_type: FHIRInteractionType,
+        /,
+        **kwargs: Any,
     ) -> FHIRResourceType | JSONResponse:
-        try:
-            provider = self._providers[resource_type]
-        except KeyError as error:
-            raise FHIRError(
-                status.HTTP_500_INTERNAL_SERVER_ERROR,
-                "fatal",
-                "not-supported",
-                "Server is improperly configured; request dispatched to nonexistent provider",
-            ) from error
+        error = FHIRError(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "fatal",
+            "not-supported",
+            f"Server is improperly configured; FHIR interaction '{interaction_type.value}' is not "
+            f"supported for resource type '{resource_type.get_resource_type()}'",
+        )
 
         try:
-            return await provider.dispatch(operation, **kwargs)
+            interaction = self._interactions[resource_type][interaction_type]
+        except KeyError as key_error:
+            raise error from key_error
+
+        try:
+            match interaction_type:
+                case FHIRInteractionType.CREATE | FHIRInteractionType.UPDATE:
+                    return await interaction.callable_(kwargs["resource"])
+                case FHIRInteractionType.READ:
+                    return await interaction.callable_(kwargs["id_"])
+                case FHIRInteractionType.SEARCH_TYPE:
+                    return await interaction.callable_(**kwargs)
         except FHIRException as exception:
-            context = FHIRExceptionContext(provider, operation, kwargs)
+            context = FHIRExceptionContext(interaction, kwargs)
             return exception.response(context)
 
-    def _add_routes(self, provider: FHIRProvider) -> None:
-        # TODO: Try to find a better way to model the ABC and protocols so that these three values
-        #  don't need to be fetched prior to the calls to isinstance to avoid typing errors
-        resource_type = provider.resource_type()
-        resource_obj_type = provider.resource_obj_type()
+        raise error
 
-        def route_options(route_func: Callable) -> dict[str, Any]:
-            return (
-                route_func.route_options if hasattr(route_func, "route_options") else {}
-            )
+    def _add_route(self, interaction: FHIRInteraction) -> None:
+        match interaction.interaction_type:
+            case FHIRInteractionType.CREATE:
+                self._add_create_route(interaction)
+            case FHIRInteractionType.READ:
+                self._add_read_route(interaction)
+            case FHIRInteractionType.SEARCH_TYPE:
+                self._add_search_route(interaction)
+            case FHIRInteractionType.UPDATE:
+                self._add_update_route(interaction)
 
-        if isinstance(provider, SupportsFHIRCreate):
-            self._add_create_route(
-                resource_obj_type, resource_type, route_options(provider.create)
-            )
-        if isinstance(provider, SupportsFHIRRead):
-            self._add_read_route(
-                resource_obj_type, resource_type, route_options(provider.read)
-            )
-        if isinstance(provider, SupportsFHIRSearch):
-            supported_search_parameters = tuple(
-                sorted(inspect.signature(provider.search).parameters.keys())
-            )
-            self._add_search_route(
-                resource_obj_type,
-                resource_type,
-                route_options(provider.search),
-                supported_search_parameters,
-            )
-        if isinstance(provider, SupportsFHIRUpdate):
-            self._add_update_route(
-                resource_obj_type, resource_type, route_options(provider.update)
-            )
-
-    def _add_create_route(
-        self,
-        resource_obj_type: type[FHIRResourceType],
-        resource_type: str,
-        route_options: Mapping[str, Any],
-    ) -> None:
+    def _add_create_route(self, interaction: FHIRInteraction) -> None:
         raise NotImplementedError
 
-    def _add_read_route(
-        self,
-        resource_obj_type: type[FHIRResourceType],
-        resource_type: str,
-        route_options: Mapping[str, Any],
-    ) -> None:
-        name = f"{resource_type.lower()}_read"
+    def _add_read_route(self, interaction: FHIRInteraction) -> None:
+        resource_type_str = interaction.resource_type.get_resource_type()
+
+        name = f"{resource_type_str.lower()}_read"
         annotations = {"id_": Id}
         argdefs = (
             Path(
@@ -133,28 +123,36 @@ class FHIRStarter(FastAPI):
                 description=Resource.schema()["properties"]["id"]["title"],
             ),
         )
-        code = getattr(routes, "read").__code__
-        globals_ = {"dispatch": self.dispatch, "resource_type": resource_type}
+        code = getattr(code_templates, "read").__code__
+        globals_ = {
+            "dispatch": self.dispatch,
+            "resource_type": interaction.resource_type,
+            "interaction_type": interaction.interaction_type,
+        }
 
         func = FunctionType(code, globals_, name, argdefs)
         func.__annotations__ = annotations
 
         self.get(
-            f"/{resource_type}/{{id}}",
-            response_model=resource_obj_type,
-            summary=f"{resource_type} read",
-            description=f"The {resource_type} read interaction accesses "
-            f"the current contents of a {resource_type}.",
+            f"/{resource_type_str}/{{id}}",
+            response_model=interaction.resource_type,
+            summary=f"{resource_type_str} read",
+            description=f"The {resource_type_str} read interaction accesses "
+            f"the current contents of a {resource_type_str}.",
             responses={
                 status.HTTP_200_OK: {
-                    "description": f"Successful {resource_type} read",
+                    "description": f"Successful {resource_type_str} read",
                     "content": {
-                        "application/json": {"schema": resource_obj_type.schema()},
-                        "application/fhir+json": {"schema": resource_obj_type.schema()},
+                        "application/json": {
+                            "schema": interaction.resource_type.schema()
+                        },
+                        "application/fhir+json": {
+                            "schema": interaction.resource_type.schema()
+                        },
                     },
                 },
                 status.HTTP_404_NOT_FOUND: {
-                    "description": f"Unknown {resource_type} resource",
+                    "description": f"Unknown {resource_type_str} resource",
                     "content": {
                         "application/json": {"schema": OperationOutcome.schema()},
                         "application/fhir+json": {"schema": OperationOutcome.schema()},
@@ -162,24 +160,16 @@ class FHIRStarter(FastAPI):
                 },
             },
             response_model_exclude_none=True,
-            **route_options,
+            **interaction.route_options,
         )(func)
 
-    def _add_search_route(
-        self,
-        resource_obj_type: type[FHIRResourceType],
-        resource_type: str,
-        route_options: Mapping[str, Any],
-        supported_search_parameters: tuple[str, ...],
-    ) -> None:
+    def _add_search_route(self, interaction: FHIRInteraction) -> None:
+        supported_search_parameters = tuple(
+            sorted(inspect.signature(interaction.callable_).parameters.keys())
+        )
         raise NotImplementedError
 
-    def _add_update_route(
-        self,
-        resource_obj_type: type[FHIRResourceType],
-        resource_type: str,
-        route_options: Mapping[str, Any],
-    ) -> None:
+    def _add_update_route(self, interaction: FHIRInteraction) -> None:
         raise NotImplementedError
 
 

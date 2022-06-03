@@ -5,22 +5,20 @@ from typing import Any
 from fastapi import status
 from fastapi.responses import JSONResponse
 from fhir.resources.operationoutcome import OperationOutcome
-from multimethod import multimethod
 
-from fhirstarter.provider import FHIRProvider
+from fhirstarter.provider import FHIRInteraction
 
 
 @dataclass
 class FHIRExceptionContext:
-    provider: FHIRProvider
-    operation: str
+    interaction: FHIRInteraction
     kwargs: dict[str, Any]
 
 
 class FHIRException(Exception, ABC):
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)
-        self._context = None
+        self._context: FHIRExceptionContext | None = None
 
     def response(self, context: FHIRExceptionContext) -> JSONResponse:
         self._context = context
@@ -29,7 +27,7 @@ class FHIRException(Exception, ABC):
         )
 
     @property
-    def context(self) -> FHIRExceptionContext:
+    def context(self) -> FHIRExceptionContext | None:
         return self._context
 
     @abstractmethod
@@ -42,27 +40,26 @@ class FHIRException(Exception, ABC):
 
 
 class FHIRError(FHIRException):
-    @multimethod
     def __init__(
         self, status_code: int, severity: str, code: str, details_text: str, *args: Any
     ) -> None:
-        self.__init__(
-            status_code, make_operation_outcome(severity, code, details_text), *args
-        )
-
-    @multimethod
-    def __init__(
-        self, status_code: int, operation_outcome: OperationOutcome, *args: Any
-    ) -> None:
         super().__init__(*args)
-        self._status_code = status_code
-        self._operation_outcome = operation_outcome
+        self._status_code_ = status_code
+        self._operation_outcome_ = make_operation_outcome(severity, code, details_text)
+
+    @classmethod
+    def from_operation_outcome(
+        cls, status_code: int, operation_outcome: OperationOutcome
+    ) -> "FHIRError":
+        error = FHIRError(status_code, "severity", "code", "details")
+        error._operation_outcome_ = operation_outcome
+        return error
 
     def _status_code(self) -> int:
-        return self._status_code
+        return self._status_code_
 
     def _operation_outcome(self) -> OperationOutcome:
-        return self._operation_outcome
+        return self._operation_outcome_
 
 
 class FHIRResourceNotFoundError(FHIRException):
@@ -74,11 +71,11 @@ class FHIRResourceNotFoundError(FHIRException):
 
     def _operation_outcome(self) -> OperationOutcome:
         try:
-            resource_type = self.context.provider.resource_type()
-            resource_id = self.context.kwargs["id_"]
+            resource_type = self.context.interaction.resource_type.get_resource_type()  # type: ignore
+            resource_id = self.context.kwargs["id_"]  # type: ignore
         except Exception as exception:
             raise AssertionError(
-                "Unable to get response type and response ID from exception context; "
+                "Unable to get resource type and resource ID from exception context; "
                 "exception context must be set before the response is constructed"
             ) from exception
         else:

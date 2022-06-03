@@ -4,23 +4,21 @@ from fhirstarter import FHIRProvider, FHIRStarter, status
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 from fhirstarter.testclient import TestClient
 
+provider = FHIRProvider()
 
-class PatientProvider(FHIRProvider):
-    def resource_obj_type(self) -> type:
-        return Patient
 
-    @staticmethod
-    async def read(id_: str) -> Patient:
-        if id_ != "found":
-            raise FHIRResourceNotFoundError
+@provider.register_read_interaction(Patient)
+async def read(id_: str) -> Patient:
+    if id_ != "found":
+        raise FHIRResourceNotFoundError
 
-        patient = Patient(**{"name": [{"family": "Baggins", "given": ["Bilbo"]}]})
+    patient = Patient(**{"name": [{"family": "Baggins", "given": ["Bilbo"]}]})
 
-        return patient
+    return patient
 
 
 app = FHIRStarter()
-app.add_providers(PatientProvider())
+app.add_providers(provider)
 
 client = TestClient(app)
 
