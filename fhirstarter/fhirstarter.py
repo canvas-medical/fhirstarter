@@ -9,15 +9,15 @@ from fhir.resources.fhirtypes import Id
 from fhir.resources.operationoutcome import OperationOutcome
 from fhir.resources.resource import Resource
 
-from fhirstarter import code_templates
-from fhirstarter.exceptions import (
+from . import code_templates
+from .exceptions import (
     FHIRException,
     FHIRGeneralError,
     FHIRInteractionContext,
     FHIRInteractionError,
     make_operation_outcome,
 )
-from fhirstarter.provider import (
+from .provider import (
     FHIRInteraction,
     FHIRInteractionType,
     FHIRProvider,

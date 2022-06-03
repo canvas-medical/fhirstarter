@@ -1,8 +1,8 @@
 from fhir.resources.patient import Patient
 
-from fhirstarter import FHIRProvider, FHIRStarter, status
-from fhirstarter.exceptions import FHIRResourceNotFoundError
-from fhirstarter.testclient import TestClient
+from . import FHIRProvider, FHIRStarter, status
+from .exceptions import FHIRResourceNotFoundError
+from .testclient import TestClient
 
 provider = FHIRProvider()
 

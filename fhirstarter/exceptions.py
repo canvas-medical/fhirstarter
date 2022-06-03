@@ -6,7 +6,7 @@ from fastapi import status
 from fastapi.responses import JSONResponse
 from fhir.resources.operationoutcome import OperationOutcome
 
-from fhirstarter.provider import FHIRInteraction
+from .provider import FHIRInteraction
 
 
 class FHIRException(Exception, ABC):
