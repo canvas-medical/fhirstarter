@@ -11,7 +11,7 @@ FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
 class FHIRInteractionType(Enum):
     CREATE = "create"
     READ = "read"
-    SEARCH_TYPE = "search-type"
+    SEARCH = "search"
     UPDATE = "update"
 
 
@@ -20,11 +20,7 @@ class FHIRInteraction(Generic[FHIRResourceType]):
     resource_type: type[FHIRResourceType]
     interaction_type: FHIRInteractionType
     callable_: Callable
-    _route_options: tuple[tuple[str, Any], ...]
-
-    @property
-    def route_options(self) -> dict[str, Any]:
-        return dict(self._route_options)
+    route_options: dict[str, Any]
 
 
 class FHIRCreateInteractionCallable(Protocol[FHIRResourceType]):
@@ -47,30 +43,55 @@ class FHIRUpdateInteractionCallable(Protocol[FHIRResourceType]):
         ...
 
 
+C = TypeVar("C", bound=Callable)
+
+
 class FHIRProvider:
     def __init__(self) -> None:
         self._interactions: list[FHIRInteraction] = list()
 
+    @property
+    def interactions(self) -> list[FHIRInteraction]:
+        return self._interactions
+
+    def register_create_interaction(
+        self, resource_type: type[FHIRResourceType]
+    ) -> Callable[[FHIRCreateInteractionCallable], FHIRCreateInteractionCallable]:
+        return self._register_interaction(resource_type, FHIRInteractionType.CREATE)
+
     def register_read_interaction(
-        self, resource_type: type[FHIRResourceType], *, include_in_schema=True
+        self, resource_type: type[FHIRResourceType]
     ) -> Callable[[FHIRReadInteractionCallable], FHIRReadInteractionCallable]:
+        return self._register_interaction(resource_type, FHIRInteractionType.READ)
+
+    def register_search_interaction(
+        self, resource_type: type[FHIRResourceType]
+    ) -> Callable[[FHIRSearchInteractionCallable], FHIRSearchInteractionCallable]:
+        return self._register_interaction(resource_type, FHIRInteractionType.SEARCH)
+
+    def register_update_interaction(
+        self, resource_type: type[FHIRResourceType]
+    ) -> Callable[[FHIRUpdateInteractionCallable], FHIRUpdateInteractionCallable]:
+        return self._register_interaction(resource_type, FHIRInteractionType.UPDATE)
+
+    def _register_interaction(
+        self,
+        resource_type: type[FHIRResourceType],
+        interaction_type: FHIRInteractionType,
+        *,
+        include_in_schema: bool = True
+    ) -> Callable[[C], C]:
         # TODO: Validate function signature?
         # TODO: Prevent duplicate registration (but not here)
-        def decorator(
-            callable_: FHIRReadInteractionCallable,
-        ) -> FHIRReadInteractionCallable:
+        def decorator(callable_: C) -> C:
             self._interactions.append(
                 FHIRInteraction[FHIRResourceType](
                     resource_type=resource_type,
-                    interaction_type=FHIRInteractionType.READ,
+                    interaction_type=interaction_type,
                     callable_=callable_,
-                    _route_options=(("include_in_schema", include_in_schema),),
+                    route_options={"include_in_schema": include_in_schema},
                 )
             )
             return callable_
 
         return decorator
-
-    @property
-    def interactions(self) -> list[FHIRInteraction]:
-        return self._interactions

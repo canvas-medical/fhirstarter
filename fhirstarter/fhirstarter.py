@@ -90,7 +90,7 @@ class FHIRStarter(FastAPI):
                     return await interaction.callable_(kwargs["resource"])
                 case FHIRInteractionType.READ:
                     return await interaction.callable_(kwargs["id_"])
-                case FHIRInteractionType.SEARCH_TYPE:
+                case FHIRInteractionType.SEARCH:
                     return await interaction.callable_(**kwargs)
         except FHIRInteractionError as error:
             error.set_context(FHIRInteractionContext(interaction, kwargs))
@@ -106,7 +106,7 @@ class FHIRStarter(FastAPI):
                 self._add_create_route(interaction)
             case FHIRInteractionType.READ:
                 self._add_read_route(interaction)
-            case FHIRInteractionType.SEARCH_TYPE:
+            case FHIRInteractionType.SEARCH:
                 self._add_search_route(interaction)
             case FHIRInteractionType.UPDATE:
                 self._add_update_route(interaction)
