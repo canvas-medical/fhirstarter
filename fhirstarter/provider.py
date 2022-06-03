@@ -85,8 +85,6 @@ class FHIRProvider:
         *,
         include_in_schema: bool = True
     ) -> Callable[[C], C]:
-        # TODO: Validate function signature?
-        # TODO: Prevent duplicate registration (but not here)
         def decorator(callable_: C) -> C:
             self._interactions.append(
                 FHIRInteraction[FHIRResourceType](

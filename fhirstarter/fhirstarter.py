@@ -25,6 +25,7 @@ from .provider import (
 )
 
 # TODO: Headers
+# TODO: Find out if user-provided type annotations need to be validated
 # TODO: Research auto-filling path and query parameter options from the FHIR specification
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters and path/query/body parameters
