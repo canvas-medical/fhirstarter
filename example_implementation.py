@@ -1,4 +1,5 @@
 import uvicorn
+from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
 
@@ -18,7 +19,7 @@ provider = FHIRProvider()
 # - the actual callable (expected signature and annotations need to match the defined protocols,
 #   because thes values affect route creation in FastAPI)
 @provider.register_read_interaction(Patient)
-async def patient_read(id_: str) -> Patient:
+async def patient_read(id_: Id) -> Patient:
     # All Canvas-to-FHIR mapping code for a Patient read operation goes here. For a read
     # operation, a GraphQL request is issued, and then the result is mapped on to the FHIR
     # Patient resource to be returned.

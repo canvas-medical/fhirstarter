@@ -86,12 +86,14 @@ class FHIRStarter(FastAPI):
 
         try:
             match interaction_type:
-                case FHIRInteractionType.CREATE | FHIRInteractionType.UPDATE:
+                case FHIRInteractionType.CREATE:
                     return await interaction.callable_(kwargs["resource"])
                 case FHIRInteractionType.READ:
                     return await interaction.callable_(kwargs["id_"])
                 case FHIRInteractionType.SEARCH:
                     return await interaction.callable_(**kwargs)
+                case FHIRInteractionType.UPDATE:
+                    return await interaction.callable_(kwargs["id"], kwargs["resource"])
         except FHIRInteractionError as error:
             error.set_context(FHIRInteractionContext(interaction, kwargs))
             return error.response()

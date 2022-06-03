@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Any, Callable, Generic, Protocol, TypeVar
 
 from fhir.resources.bundle import Bundle
+from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
 FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
@@ -29,7 +30,7 @@ class FHIRCreateInteractionCallable(Protocol[FHIRResourceType]):
 
 
 class FHIRReadInteractionCallable(Protocol):
-    async def __call__(self, id_: str) -> Resource:
+    async def __call__(self, id_: Id) -> Resource:
         ...
 
 
@@ -39,7 +40,9 @@ class FHIRSearchInteractionCallable(Protocol):
 
 
 class FHIRUpdateInteractionCallable(Protocol[FHIRResourceType]):
-    async def __call__(self, resource: FHIRResourceType) -> FHIRResourceType | None:
+    async def __call__(
+        self, id_: Id, resource: FHIRResourceType
+    ) -> FHIRResourceType | None:
         ...
 
 
