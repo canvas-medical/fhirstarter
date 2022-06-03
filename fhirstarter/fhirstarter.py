@@ -11,9 +11,10 @@ from fhir.resources.resource import Resource
 
 from fhirstarter import code_templates
 from fhirstarter.exceptions import (
-    FHIRError,
     FHIRException,
-    FHIRExceptionContext,
+    FHIRGeneralError,
+    FHIRInteractionContext,
+    FHIRInteractionError,
     make_operation_outcome,
 )
 from fhirstarter.provider import (
@@ -70,7 +71,7 @@ class FHIRStarter(FastAPI):
         /,
         **kwargs: Any,
     ) -> FHIRResourceType | JSONResponse:
-        error = FHIRError(
+        error = FHIRGeneralError(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             "fatal",
             "not-supported",
@@ -91,9 +92,11 @@ class FHIRStarter(FastAPI):
                     return await interaction.callable_(kwargs["id_"])
                 case FHIRInteractionType.SEARCH_TYPE:
                     return await interaction.callable_(**kwargs)
+        except FHIRInteractionError as error:
+            error.set_context(FHIRInteractionContext(interaction, kwargs))
+            return error.response()
         except FHIRException as exception:
-            context = FHIRExceptionContext(interaction, kwargs)
-            return exception.response(context)
+            return exception.response()
 
         raise error
 

@@ -9,26 +9,11 @@ from fhir.resources.operationoutcome import OperationOutcome
 from fhirstarter.provider import FHIRInteraction
 
 
-@dataclass
-class FHIRExceptionContext:
-    interaction: FHIRInteraction
-    kwargs: dict[str, Any]
-
-
 class FHIRException(Exception, ABC):
-    def __init__(self, *args: Any) -> None:
-        super().__init__(*args)
-        self._context: FHIRExceptionContext | None = None
-
-    def response(self, context: FHIRExceptionContext) -> JSONResponse:
-        self._context = context
+    def response(self) -> JSONResponse:
         return JSONResponse(
             self._operation_outcome().dict(), status_code=self._status_code()
         )
-
-    @property
-    def context(self) -> FHIRExceptionContext | None:
-        return self._context
 
     @abstractmethod
     def _status_code(self) -> int:
@@ -39,7 +24,7 @@ class FHIRException(Exception, ABC):
         raise NotImplementedError
 
 
-class FHIRError(FHIRException):
+class FHIRGeneralError(FHIRException):
     def __init__(
         self, status_code: int, severity: str, code: str, details_text: str, *args: Any
     ) -> None:
@@ -50,8 +35,8 @@ class FHIRError(FHIRException):
     @classmethod
     def from_operation_outcome(
         cls, status_code: int, operation_outcome: OperationOutcome
-    ) -> "FHIRError":
-        error = FHIRError(status_code, "severity", "code", "details")
+    ) -> "FHIRGeneralError":
+        error = FHIRGeneralError(status_code, "severity", "code", "details")
         error._operation_outcome_ = operation_outcome
         return error
 
@@ -62,17 +47,29 @@ class FHIRError(FHIRException):
         return self._operation_outcome_
 
 
-class FHIRResourceNotFoundError(FHIRException):
+@dataclass
+class FHIRInteractionContext:
+    interaction: FHIRInteraction
+    kwargs: dict[str, Any]
+
+
+class FHIRInteractionError(FHIRException, ABC):
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)
+        self._context: FHIRInteractionContext | None = None
 
+    def set_context(self, context: FHIRInteractionContext) -> None:
+        self._context = context
+
+
+class FHIRResourceNotFoundError(FHIRInteractionError):
     def _status_code(self) -> int:
         return status.HTTP_404_NOT_FOUND
 
     def _operation_outcome(self) -> OperationOutcome:
         try:
-            resource_type = self.context.interaction.resource_type.get_resource_type()  # type: ignore
-            resource_id = self.context.kwargs["id_"]  # type: ignore
+            resource_type = self._context.interaction.resource_type.get_resource_type()  # type: ignore
+            resource_id = self._context.kwargs["id_"]  # type: ignore
         except Exception as exception:
             raise AssertionError(
                 "Unable to get resource type and resource ID from exception context; "

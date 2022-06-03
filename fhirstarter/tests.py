@@ -23,7 +23,7 @@ app.add_providers(provider)
 client = TestClient(app)
 
 
-def test_patient_read():
+def test_patient_read() -> None:
     response = client.get("/Patient/found")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
@@ -32,7 +32,7 @@ def test_patient_read():
     }
 
 
-def test_patient_read_not_found():
+def test_patient_read_not_found() -> None:
     response = client.get("/Patient/notfound")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {
