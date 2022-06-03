@@ -24,8 +24,24 @@ client = TestClient(app)
 
 
 def test_patient_read():
-    assert client.get("/Patient/found").status_code == status.HTTP_200_OK
+    response = client.get("/Patient/found")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "resourceType": "Patient",
+        "name": [{"family": "Baggins", "given": ["Bilbo"]}],
+    }
 
 
 def test_patient_read_not_found():
-    assert client.get("/Patient/notfound").status_code == status.HTTP_404_NOT_FOUND
+    response = client.get("/Patient/notfound")
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {
+        "resourceType": "OperationOutcome",
+        "issue": [
+            {
+                "severity": "error",
+                "code": "not-found",
+                "details": {"text": "Unknown Patient resource 'notfound'"},
+            }
+        ],
+    }
