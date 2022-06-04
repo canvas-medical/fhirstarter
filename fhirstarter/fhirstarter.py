@@ -1,9 +1,9 @@
 import inspect
 from collections import defaultdict
 from types import FunctionType
-from typing import Any
+from typing import Any, Mapping
 
-from fastapi import FastAPI, Path, Request, status
+from fastapi import Body, FastAPI, Path, Request, status
 from fastapi.responses import JSONResponse
 from fhir.resources.fhirtypes import Id
 from fhir.resources.operationoutcome import OperationOutcome
@@ -24,7 +24,10 @@ from .provider import (
     FHIRResourceType,
 )
 
-# TODO: Headers
+# TODO: Sort interactions
+# TODO: Override FastAPI exception handlers so they return an OperationOutcome
+# TODO: Headers for all interation types
+# TODO: Tests for all interaction types
 # TODO: Find out if user-provided type annotations need to be validated
 # TODO: Research auto-filling path and query parameter options from the FHIR specification
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
@@ -72,18 +75,12 @@ class FHIRStarter(FastAPI):
         /,
         **kwargs: Any,
     ) -> FHIRResourceType | JSONResponse:
-        error = FHIRGeneralError(
-            status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "fatal",
-            "not-supported",
-            f"Server is improperly configured; FHIR interaction '{interaction_type.value}' is not "
-            f"supported for resource type '{resource_type.get_resource_type()}'",
-        )
-
         try:
             interaction = self._interactions[resource_type][interaction_type]
         except KeyError as key_error:
-            raise error from key_error
+            raise _unsupported_interaction_error(
+                resource_type, interaction_type
+            ) from key_error
 
         try:
             match interaction_type:
@@ -100,8 +97,8 @@ class FHIRStarter(FastAPI):
             return error.response()
         except FHIRException as exception:
             return exception.response()
-
-        raise error
+        else:
+            raise _unsupported_interaction_error(resource_type, interaction_type)
 
     def _add_route(self, interaction: FHIRInteraction) -> None:
         match interaction.interaction_type:
@@ -115,33 +112,77 @@ class FHIRStarter(FastAPI):
                 self._add_update_route(interaction)
 
     def _add_create_route(self, interaction: FHIRInteraction) -> None:
-        raise NotImplementedError
+        resource_type_str = interaction.resource_type.get_resource_type()
+
+        func = self._create_function(
+            interaction,
+            annotations={"resource": interaction.resource_type},
+            argdefs=(
+                Body(None, media_type="application/fhir+json", alias=resource_type_str),
+            ),
+        )
+
+        # TODO: Can route be configured so that it is optional whether the response body contains
+        #  the created resource?
+        self.post(
+            f"/{resource_type_str}",
+            response_model=interaction.resource_type,
+            status_code=status.HTTP_201_CREATED,
+            summary=f"{resource_type_str} create",
+            description=f"The {resource_type_str} create interaction creates a new "
+            f"{resource_type_str} resource in a server-assigned location.",
+            responses={
+                status.HTTP_201_CREATED: {
+                    "description": f"Successful {resource_type_str} create",
+                    "content": {
+                        "application/json": {
+                            "schema": interaction.resource_type.schema()
+                        },
+                        "application/fhir+json": {
+                            "schema": interaction.resource_type.schema()
+                        },
+                    },
+                },
+                status.HTTP_400_BAD_REQUEST: {
+                    "description": f"{resource_type_str} resource could not be parsed or failed "
+                    "basic FHIR validation rules",
+                    "content": {
+                        "application/json": {"schema": OperationOutcome.schema()},
+                        "application/fhir+json": {"schema": OperationOutcome.schema()},
+                    },
+                },
+                status.HTTP_422_UNPROCESSABLE_ENTITY: {
+                    "description": f"The proposed {resource_type_str} resource violated applicable "
+                    "FHIR profiles or server business rules",
+                    "content": {
+                        "application/json": {"schema": OperationOutcome.schema()},
+                        "application/fhir+json": {"schema": OperationOutcome.schema()},
+                    },
+                },
+            },
+            response_model_exclude_none=True,
+            **interaction.route_options,
+        )(func)
 
     def _add_read_route(self, interaction: FHIRInteraction) -> None:
         resource_type_str = interaction.resource_type.get_resource_type()
 
-        name = f"{resource_type_str.lower()}_read"
-        annotations = {"id_": Id}
-        argdefs = (
-            Path(
-                None,
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
+        func = self._create_function(
+            interaction,
+            annotations={"id_": Id},
+            argdefs=(
+                Path(
+                    None,
+                    alias="id",
+                    description=Resource.schema()["properties"]["id"]["title"],
+                ),
             ),
         )
-        code = getattr(code_templates, "read").__code__
-        globals_ = {
-            "dispatch": self.dispatch,
-            "resource_type": interaction.resource_type,
-            "interaction_type": interaction.interaction_type,
-        }
-
-        func = FunctionType(code, globals_, name, argdefs)
-        func.__annotations__ = annotations
 
         self.get(
             f"/{resource_type_str}/{{id}}",
             response_model=interaction.resource_type,
+            status_code=status.HTTP_200_OK,
             summary=f"{resource_type_str} read",
             description=f"The {resource_type_str} read interaction accesses "
             f"the current contents of a {resource_type_str}.",
@@ -178,6 +219,28 @@ class FHIRStarter(FastAPI):
     def _add_update_route(self, interaction: FHIRInteraction) -> None:
         raise NotImplementedError
 
+    def _create_function(
+        self,
+        interaction: FHIRInteraction,
+        annotations: Mapping[str, Any],
+        argdefs: tuple[Any, ...],
+    ) -> FunctionType:
+        name = (
+            f"{interaction.resource_type.get_resource_type().lower()}_"
+            f"{interaction.interaction_type.value}"
+        )
+        code = getattr(code_templates, interaction.interaction_type.value).__code__
+        globals_ = {
+            "dispatch": self.dispatch,
+            "resource_type": interaction.resource_type,
+            "interaction_type": interaction.interaction_type,
+        }
+
+        func = FunctionType(code, globals_, name, argdefs)
+        func.__annotations__ = dict(annotations)
+
+        return func
+
 
 async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
     operation_outcome = make_operation_outcome(
@@ -186,4 +249,16 @@ async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
 
     return JSONResponse(
         operation_outcome.dict(), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+    )
+
+
+def _unsupported_interaction_error(
+    resource_type: FHIRResourceType, interaction_type: FHIRInteractionType
+) -> FHIRGeneralError:
+    return FHIRGeneralError(
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        "fatal",
+        "not-supported",
+        f"Server is improperly configured; FHIR interaction '{interaction_type.value}' is not "
+        f"supported for resource type '{resource_type.get_resource_type()}'",
     )

@@ -59,31 +59,38 @@ class FHIRProvider:
         yield from self._interactions
 
     def register_create_interaction(
-        self, resource_type: type[FHIRResourceType]
+        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
     ) -> Callable[[FHIRCreateInteractionCallable], FHIRCreateInteractionCallable]:
-        return self._register_interaction(resource_type, FHIRInteractionType.CREATE)
+        return self._register_interaction(
+            resource_type, FHIRInteractionType.CREATE, include_in_schema
+        )
 
     def register_read_interaction(
-        self, resource_type: type[FHIRResourceType]
+        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
     ) -> Callable[[FHIRReadInteractionCallable], FHIRReadInteractionCallable]:
-        return self._register_interaction(resource_type, FHIRInteractionType.READ)
+        return self._register_interaction(
+            resource_type, FHIRInteractionType.READ, include_in_schema
+        )
 
     def register_search_interaction(
-        self, resource_type: type[FHIRResourceType]
+        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
     ) -> Callable[[FHIRSearchInteractionCallable], FHIRSearchInteractionCallable]:
-        return self._register_interaction(resource_type, FHIRInteractionType.SEARCH)
+        return self._register_interaction(
+            resource_type, FHIRInteractionType.SEARCH, include_in_schema
+        )
 
     def register_update_interaction(
-        self, resource_type: type[FHIRResourceType]
+        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
     ) -> Callable[[FHIRUpdateInteractionCallable], FHIRUpdateInteractionCallable]:
-        return self._register_interaction(resource_type, FHIRInteractionType.UPDATE)
+        return self._register_interaction(
+            resource_type, FHIRInteractionType.UPDATE, include_in_schema
+        )
 
     def _register_interaction(
         self,
         resource_type: type[FHIRResourceType],
         interaction_type: FHIRInteractionType,
-        *,
-        include_in_schema: bool = True
+        include_in_schema: bool,
     ) -> Callable[[C], C]:
         def decorator(callable_: C) -> C:
             self._interactions.append(
