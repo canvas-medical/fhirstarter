@@ -1,3 +1,4 @@
+from copy import deepcopy
 from uuid import uuid4
 
 import uvicorn
@@ -28,10 +29,11 @@ provider = FHIRProvider()
 async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
     # All Canvas-to-FHIR mapping code for a Patient create operation goes here. For a create
     # operation, an integration message is sent to the integration message router
-    resource.id = uuid4().hex
-    DATABASE[resource.id] = resource
+    patient = deepcopy(resource)
+    patient.id = uuid4().hex
+    DATABASE[patient.id] = patient
 
-    return FHIRInteractionResult[Patient](resource.id)
+    return FHIRInteractionResult[Patient](patient.id)
 
 
 # Register the patient read FHIR interaction with the provider
