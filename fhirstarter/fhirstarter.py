@@ -27,10 +27,9 @@ from .provider import (
     FHIRResourceType,
 )
 
-# TODO: Headers for all interation types
-# TODO: Tests for all interaction types
+
+# TODO: Review documentation for read and create interactions
 # TODO: Find out if user-provided type annotations need to be validated
-# TODO: OperationOutcome
 # TODO: Research auto-filling path and query parameter options from the FHIR specification
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters and path/query/body parameters
@@ -150,8 +149,6 @@ class FHIRStarter(FastAPI):
             ),
         )
 
-        # TODO: Can route be configured so that it is optional whether the response body contains
-        #  the created resource?
         self.post(
             path=f"/{resource_type_str}",
             response_model=interaction.resource_type,
