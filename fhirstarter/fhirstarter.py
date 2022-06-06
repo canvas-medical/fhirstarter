@@ -27,7 +27,6 @@ from .provider import (
     FHIRResourceType,
 )
 
-
 # TODO: Review documentation for read and create interactions
 # TODO: Find out if user-provided type annotations need to be validated
 # TODO: Research auto-filling path and query parameter options from the FHIR specification
@@ -254,7 +253,7 @@ class FHIRStarter(FastAPI):
             f"{interaction.resource_type.get_resource_type().lower()}_"
             f"{interaction.interaction_type.value}"
         )
-        annotations = annotations | {"request": Request, "response": Response}
+        annotations |= {"request": Request, "response": Response}
         code = getattr(code_templates, interaction.interaction_type.value).__code__
         globals_ = {
             "dispatch": self._dispatch,
@@ -263,7 +262,7 @@ class FHIRStarter(FastAPI):
         }
 
         func = FunctionType(code=code, globals=globals_, name=name, argdefs=argdefs)
-        func.__annotations__ = dict(annotations)
+        func.__annotations__ = annotations
 
         return func
 

@@ -29,7 +29,7 @@ class FHIRInteractionType(Enum):
         )
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(kw_only=True)
 class FHIRInteraction(Generic[FHIRResourceType]):
     resource_type: type[FHIRResourceType]
     interaction_type: FHIRInteractionType
@@ -65,7 +65,7 @@ class FHIRUpdateInteractionCallable(Protocol[FHIRResourceType]):
         ...
 
 
-class FHIRReadInteractionCallable(Protocol):
+class FHIRReadInteractionCallable(Protocol[FHIRResourceType]):
     async def __call__(self, id_: Id) -> FHIRInteractionResult[FHIRResourceType]:
         ...
 
