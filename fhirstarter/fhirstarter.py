@@ -4,6 +4,7 @@ from types import FunctionType
 from typing import Any, Mapping
 
 from fastapi import Body, FastAPI, Path, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fhir.resources.fhirtypes import Id
 from fhir.resources.operationoutcome import OperationOutcome
@@ -25,10 +26,10 @@ from .provider import (
 )
 
 # TODO: Sort interactions
-# TODO: Override FastAPI exception handlers so they return an OperationOutcome
 # TODO: Headers for all interation types
 # TODO: Tests for all interaction types
 # TODO: Find out if user-provided type annotations need to be validated
+# TODO: OperationOutcome
 # TODO: Research auto-filling path and query parameter options from the FHIR specification
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters and path/query/body parameters
@@ -47,6 +48,9 @@ from .provider import (
 class FHIRStarter(FastAPI):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self.add_exception_handler(
+            RequestValidationError, _validation_exception_handler
+        )
         self.add_exception_handler(Exception, _exception_handler)
         self._interactions: defaultdict = defaultdict(dict)
 
@@ -115,7 +119,7 @@ class FHIRStarter(FastAPI):
         resource_type_str = interaction.resource_type.get_resource_type()
 
         func = self._create_function(
-            interaction,
+            interaction=interaction,
             annotations={"resource": interaction.resource_type},
             argdefs=(
                 Body(None, media_type="application/fhir+json", alias=resource_type_str),
@@ -125,7 +129,7 @@ class FHIRStarter(FastAPI):
         # TODO: Can route be configured so that it is optional whether the response body contains
         #  the created resource?
         self.post(
-            f"/{resource_type_str}",
+            path=f"/{resource_type_str}",
             response_model=interaction.resource_type,
             status_code=status.HTTP_201_CREATED,
             summary=f"{resource_type_str} create",
@@ -168,7 +172,7 @@ class FHIRStarter(FastAPI):
         resource_type_str = interaction.resource_type.get_resource_type()
 
         func = self._create_function(
-            interaction,
+            interaction=interaction,
             annotations={"id_": Id},
             argdefs=(
                 Path(
@@ -180,7 +184,7 @@ class FHIRStarter(FastAPI):
         )
 
         self.get(
-            f"/{resource_type_str}/{{id}}",
+            path=f"/{resource_type_str}/{{id}}",
             response_model=interaction.resource_type,
             status_code=status.HTTP_200_OK,
             summary=f"{resource_type_str} read",
@@ -236,29 +240,49 @@ class FHIRStarter(FastAPI):
             "interaction_type": interaction.interaction_type,
         }
 
-        func = FunctionType(code, globals_, name, argdefs)
+        func = FunctionType(code=code, globals=globals_, name=name, argdefs=argdefs)
         func.__annotations__ = dict(annotations)
 
         return func
 
 
-async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
-    operation_outcome = make_operation_outcome(
-        "fatal", "exception", f"{str(exception)}"
+async def _validation_exception_handler(
+    _: Request, exception: RequestValidationError
+) -> JSONResponse:
+    return _exception_json_response(
+        severity="fatal",
+        code="structure",
+        exception=exception,
+        status_code=status.HTTP_400_BAD_REQUEST,
     )
 
-    return JSONResponse(
-        operation_outcome.dict(), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+
+async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
+    return _exception_json_response(
+        severity="fatal",
+        code="exception",
+        exception=exception,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
+
+
+def _exception_json_response(
+    severity: str, code: str, exception: Exception, status_code: int
+) -> JSONResponse:
+    operation_outcome = make_operation_outcome(
+        severity=severity, code=code, details_text=f"{str(exception)}"
+    )
+    return JSONResponse(content=operation_outcome.dict(), status_code=status_code)
 
 
 def _unsupported_interaction_error(
     resource_type: FHIRResourceType, interaction_type: FHIRInteractionType
 ) -> FHIRGeneralError:
     return FHIRGeneralError(
-        status.HTTP_500_INTERNAL_SERVER_ERROR,
-        "fatal",
-        "not-supported",
-        f"Server is improperly configured; FHIR interaction '{interaction_type.value}' is not "
-        f"supported for resource type '{resource_type.get_resource_type()}'",
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        severity="fatal",
+        code="not-supported",
+        details_text="Server is improperly configured; FHIR interaction "
+        f"'{interaction_type.value}' is not supported for resource type "
+        f"'{resource_type.get_resource_type()}'",
     )

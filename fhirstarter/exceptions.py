@@ -12,7 +12,7 @@ from .provider import FHIRInteraction
 class FHIRException(Exception, ABC):
     def response(self) -> JSONResponse:
         return JSONResponse(
-            self._operation_outcome().dict(), status_code=self._status_code()
+            content=self._operation_outcome().dict(), status_code=self._status_code()
         )
 
     @abstractmethod
@@ -68,7 +68,9 @@ class FHIRResourceNotFoundError(FHIRInteractionError):
 
     def _operation_outcome(self) -> OperationOutcome:
         try:
-            resource_type = self._context.interaction.resource_type.get_resource_type()  # type: ignore
+            resource_type = (
+                self._context.interaction.resource_type.get_resource_type()
+            )  # type: ignore
             resource_id = self._context.kwargs["id_"]  # type: ignore
         except Exception as exception:
             raise AssertionError(
