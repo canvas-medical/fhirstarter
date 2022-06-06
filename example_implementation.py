@@ -23,6 +23,17 @@ provider = FHIRProvider()
 #   because these values affect route creation in FastAPI)
 
 
+# Register the patient create FHIR interaction with the provider
+@provider.register_create_interaction(Patient)
+async def patient_create(resource: Patient) -> None:
+    # All Canvas-to-FHIR mapping code for a Patient create operation goes here. For a create
+    # operation, an integration message is sent to the integration message router
+    resource.id = uuid4().hex
+    DATABASE[resource.id] = resource
+
+    return None
+
+
 # Register the patient read FHIR interaction with the provider
 @provider.register_read_interaction(Patient)
 async def patient_read(id_: Id) -> Patient:
@@ -34,17 +45,6 @@ async def patient_read(id_: Id) -> Patient:
         raise FHIRResourceNotFoundError
 
     return patient
-
-
-# Register the patient create FHIR interaction with the provider
-@provider.register_create_interaction(Patient)
-async def patient_create(resource: Patient) -> None:
-    # All Canvas-to-FHIR mapping code for a Patient create operation goes here. For a create
-    # operation, an integration message is sent to the integration message router
-    resource.id = uuid4().hex
-    DATABASE[resource.id] = resource
-
-    return None
 
 
 # Create the app

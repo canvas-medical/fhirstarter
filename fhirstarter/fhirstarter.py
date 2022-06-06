@@ -1,4 +1,5 @@
 import inspect
+import itertools
 from collections import defaultdict
 from types import FunctionType
 from typing import Any, Mapping
@@ -25,7 +26,6 @@ from .provider import (
     FHIRResourceType,
 )
 
-# TODO: Sort interactions
 # TODO: Headers for all interation types
 # TODO: Tests for all interaction types
 # TODO: Find out if user-provided type annotations need to be validated
@@ -55,22 +55,24 @@ class FHIRStarter(FastAPI):
         self._interactions: defaultdict = defaultdict(dict)
 
     def add_providers(self, *providers: FHIRProvider) -> None:
-        for provider in providers:
-            for interaction in provider.interactions:
-                assert (
-                    interaction.resource_type not in self._interactions
-                    or interaction.interaction_type
-                    not in self._interactions[interaction.resource_type]
-                ), (
-                    f"FHIR interaction for resource type "
-                    "'{interaction.resource_type.get_resource_type()}' and interaction type "
-                    "'{interaction.interaction_type}' can only be supplied once"
-                )
+        interactions = itertools.chain.from_iterable(
+            provider.interactions for provider in providers
+        )
+        for interaction in sorted(interactions):
+            assert (
+                interaction.resource_type not in self._interactions
+                or interaction.interaction_type
+                not in self._interactions[interaction.resource_type]
+            ), (
+                f"FHIR interaction for resource type "
+                "'{interaction.resource_type.get_resource_type()}' and interaction type "
+                "'{interaction.interaction_type}' can only be supplied once"
+            )
 
-                self._interactions[interaction.resource_type][
-                    interaction.interaction_type
-                ] = interaction
-                self._add_route(interaction)
+            self._interactions[interaction.resource_type][
+                interaction.interaction_type
+            ] = interaction
+            self._add_route(interaction)
 
     async def dispatch(
         self,
@@ -90,12 +92,12 @@ class FHIRStarter(FastAPI):
             match interaction_type:
                 case FHIRInteractionType.CREATE:
                     return await interaction.callable_(kwargs["resource"])
+                case FHIRInteractionType.UPDATE:
+                    return await interaction.callable_(kwargs["id"], kwargs["resource"])
                 case FHIRInteractionType.READ:
                     return await interaction.callable_(kwargs["id_"])
                 case FHIRInteractionType.SEARCH:
                     return await interaction.callable_(**kwargs)
-                case FHIRInteractionType.UPDATE:
-                    return await interaction.callable_(kwargs["id"], kwargs["resource"])
         except FHIRInteractionError as error:
             error.set_context(FHIRInteractionContext(interaction, kwargs))
             return error.response()
@@ -108,17 +110,17 @@ class FHIRStarter(FastAPI):
         match interaction.interaction_type:
             case FHIRInteractionType.CREATE:
                 self._add_create_route(interaction)
+            case FHIRInteractionType.UPDATE:
+                self._add_update_route(interaction)
             case FHIRInteractionType.READ:
                 self._add_read_route(interaction)
             case FHIRInteractionType.SEARCH:
                 self._add_search_route(interaction)
-            case FHIRInteractionType.UPDATE:
-                self._add_update_route(interaction)
 
     def _add_create_route(self, interaction: FHIRInteraction) -> None:
         resource_type_str = interaction.resource_type.get_resource_type()
 
-        func = self._create_function(
+        func = self._make_function(
             interaction=interaction,
             annotations={"resource": interaction.resource_type},
             argdefs=(
@@ -171,7 +173,7 @@ class FHIRStarter(FastAPI):
     def _add_read_route(self, interaction: FHIRInteraction) -> None:
         resource_type_str = interaction.resource_type.get_resource_type()
 
-        func = self._create_function(
+        func = self._make_function(
             interaction=interaction,
             annotations={"id_": Id},
             argdefs=(
@@ -223,7 +225,7 @@ class FHIRStarter(FastAPI):
     def _add_update_route(self, interaction: FHIRInteraction) -> None:
         raise NotImplementedError
 
-    def _create_function(
+    def _make_function(
         self,
         interaction: FHIRInteraction,
         annotations: Mapping[str, Any],

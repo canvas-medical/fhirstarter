@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
+from functools import cache
 from typing import Any, Callable, Generic, Protocol, TypeVar
 
 from fhir.resources.bundle import Bundle
@@ -12,9 +13,20 @@ FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
 
 class FHIRInteractionType(Enum):
     CREATE = "create"
+    UPDATE = "update"
     READ = "read"
     SEARCH = "search"
-    UPDATE = "update"
+
+    @staticmethod
+    @cache
+    def _order() -> dict[str, int]:
+        return {"create": 1, "update": 2, "read": 3, "search": 4}
+
+    def __lt__(self, other: "FHIRInteractionType") -> bool:
+        return (
+            FHIRInteractionType._order()[self.value]
+            < FHIRInteractionType._order()[other.value]
+        )
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -24,9 +36,24 @@ class FHIRInteraction(Generic[FHIRResourceType]):
     callable_: Callable
     route_options: dict[str, Any]
 
+    def __lt__(self, other: "FHIRInteraction") -> bool:
+        if self.resource_type != other.resource_type:
+            return (
+                self.resource_type.get_resource_type()
+                < other.resource_type.get_resource_type()
+            )
+        return self.interaction_type < other.interaction_type
+
 
 class FHIRCreateInteractionCallable(Protocol[FHIRResourceType]):
     async def __call__(self, resource: FHIRResourceType) -> FHIRResourceType | None:
+        ...
+
+
+class FHIRUpdateInteractionCallable(Protocol[FHIRResourceType]):
+    async def __call__(
+        self, id_: Id, resource: FHIRResourceType
+    ) -> FHIRResourceType | None:
         ...
 
 
@@ -37,13 +64,6 @@ class FHIRReadInteractionCallable(Protocol):
 
 class FHIRSearchInteractionCallable(Protocol):
     async def __call__(self, **kwargs: str) -> Bundle:
-        ...
-
-
-class FHIRUpdateInteractionCallable(Protocol[FHIRResourceType]):
-    async def __call__(
-        self, id_: Id, resource: FHIRResourceType
-    ) -> FHIRResourceType | None:
         ...
 
 
@@ -65,6 +85,13 @@ class FHIRProvider:
             resource_type, FHIRInteractionType.CREATE, include_in_schema
         )
 
+    def register_update_interaction(
+        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
+    ) -> Callable[[FHIRUpdateInteractionCallable], FHIRUpdateInteractionCallable]:
+        return self._register_interaction(
+            resource_type, FHIRInteractionType.UPDATE, include_in_schema
+        )
+
     def register_read_interaction(
         self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
     ) -> Callable[[FHIRReadInteractionCallable], FHIRReadInteractionCallable]:
@@ -77,13 +104,6 @@ class FHIRProvider:
     ) -> Callable[[FHIRSearchInteractionCallable], FHIRSearchInteractionCallable]:
         return self._register_interaction(
             resource_type, FHIRInteractionType.SEARCH, include_in_schema
-        )
-
-    def register_update_interaction(
-        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
-    ) -> Callable[[FHIRUpdateInteractionCallable], FHIRUpdateInteractionCallable]:
-        return self._register_interaction(
-            resource_type, FHIRInteractionType.UPDATE, include_in_schema
         )
 
     def _register_interaction(
