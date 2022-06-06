@@ -5,7 +5,7 @@ from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
 
-from fhirstarter import FHIRProvider, FHIRStarter
+from fhirstarter import FHIRInteractionResult, FHIRProvider, FHIRStarter
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 
 # Create a "database"
@@ -25,18 +25,18 @@ provider = FHIRProvider()
 
 # Register the patient create FHIR interaction with the provider
 @provider.register_create_interaction(Patient)
-async def patient_create(resource: Patient) -> None:
+async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
     # All Canvas-to-FHIR mapping code for a Patient create operation goes here. For a create
     # operation, an integration message is sent to the integration message router
     resource.id = uuid4().hex
     DATABASE[resource.id] = resource
 
-    return None
+    return FHIRInteractionResult[Patient](resource.id)
 
 
 # Register the patient read FHIR interaction with the provider
 @provider.register_read_interaction(Patient)
-async def patient_read(id_: Id) -> Patient:
+async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
     # All Canvas-to-FHIR mapping code for a Patient read operation goes here. For a read
     # operation, a GraphQL request is issued, and then the result is mapped on to the FHIR
     # Patient resource to be returned.
@@ -44,7 +44,7 @@ async def patient_read(id_: Id) -> Patient:
     if not patient:
         raise FHIRResourceNotFoundError
 
-    return patient
+    return FHIRInteractionResult[Patient](patient.id, patient)
 
 
 # Create the app

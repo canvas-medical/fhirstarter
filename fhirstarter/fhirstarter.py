@@ -2,9 +2,9 @@ import inspect
 import itertools
 from collections import defaultdict
 from types import FunctionType
-from typing import Any, Mapping
+from typing import Any, Mapping, cast
 
-from fastapi import Body, FastAPI, Path, Request, status
+from fastapi import Body, FastAPI, Path, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fhir.resources.fhirtypes import Id
@@ -21,6 +21,7 @@ from .exceptions import (
 )
 from .provider import (
     FHIRInteraction,
+    FHIRInteractionResult,
     FHIRInteractionType,
     FHIRProvider,
     FHIRResourceType,
@@ -74,13 +75,15 @@ class FHIRStarter(FastAPI):
             ] = interaction
             self._add_route(interaction)
 
-    async def dispatch(
+    async def _dispatch(
         self,
+        request: Request,
+        response: Response,
         resource_type: FHIRResourceType,
         interaction_type: FHIRInteractionType,
         /,
         **kwargs: Any,
-    ) -> FHIRResourceType | JSONResponse:
+    ) -> FHIRResourceType | JSONResponse | None:
         try:
             interaction = self._interactions[resource_type][interaction_type]
         except KeyError as key_error:
@@ -91,13 +94,32 @@ class FHIRStarter(FastAPI):
         try:
             match interaction_type:
                 case FHIRInteractionType.CREATE:
-                    return await interaction.callable_(kwargs["resource"])
+                    result = cast(
+                        FHIRInteractionResult,
+                        await interaction.callable_(kwargs["resource"]),
+                    )
+                    response.headers["Location"] = (
+                        f"{request.base_url}{resource_type.get_resource_type()}"
+                        f"/{result.id_}/_history/1"
+                    )
+                    return result.resource
                 case FHIRInteractionType.UPDATE:
-                    return await interaction.callable_(kwargs["id"], kwargs["resource"])
+                    result = cast(
+                        FHIRInteractionResult,
+                        await interaction.callable_(kwargs["id"], kwargs["resource"]),
+                    )
+                    return result.resource
                 case FHIRInteractionType.READ:
-                    return await interaction.callable_(kwargs["id_"])
+                    result = cast(
+                        FHIRInteractionResult,
+                        await interaction.callable_(kwargs["id_"]),
+                    )
+                    return result.resource
                 case FHIRInteractionType.SEARCH:
-                    return await interaction.callable_(**kwargs)
+                    result = cast(
+                        FHIRInteractionResult, await interaction.callable_(**kwargs)
+                    )
+                    return result.resource
         except FHIRInteractionError as error:
             error.set_context(FHIRInteractionContext(interaction, kwargs))
             return error.response()
@@ -235,9 +257,10 @@ class FHIRStarter(FastAPI):
             f"{interaction.resource_type.get_resource_type().lower()}_"
             f"{interaction.interaction_type.value}"
         )
+        annotations = annotations | {"request": Request, "response": Response}
         code = getattr(code_templates, interaction.interaction_type.value).__code__
         globals_ = {
-            "dispatch": self.dispatch,
+            "dispatch": self._dispatch,
             "resource_type": interaction.resource_type,
             "interaction_type": interaction.interaction_type,
         }

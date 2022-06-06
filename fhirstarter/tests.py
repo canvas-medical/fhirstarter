@@ -1,20 +1,26 @@
+from uuid import uuid4
+
 from fhir.resources.patient import Patient
 
-from . import FHIRProvider, FHIRStarter, status
+from . import FHIRInteractionResult, FHIRProvider, FHIRStarter, status
 from .exceptions import FHIRResourceNotFoundError
 from .testclient import TestClient
+
+_ID = uuid4().hex
 
 provider = FHIRProvider()
 
 
 @provider.register_read_interaction(Patient)
-async def read(id_: str) -> Patient:
+async def read(id_: str) -> FHIRInteractionResult[Patient]:
     if id_ != "found":
         raise FHIRResourceNotFoundError
 
-    patient = Patient(**{"name": [{"family": "Baggins", "given": ["Bilbo"]}]})
+    patient = Patient(
+        **{"id": _ID, "name": [{"family": "Baggins", "given": ["Bilbo"]}]}
+    )
 
-    return patient
+    return FHIRInteractionResult[Patient](patient.id, patient)
 
 
 app = FHIRStarter()
@@ -28,6 +34,7 @@ def test_patient_read() -> None:
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "resourceType": "Patient",
+        "id": _ID,
         "name": [{"family": "Baggins", "given": ["Bilbo"]}],
     }
 
