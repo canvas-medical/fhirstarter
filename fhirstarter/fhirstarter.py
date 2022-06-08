@@ -17,6 +17,7 @@ from .provider import (
     FHIRInteractionResult,
     FHIRInteractionType,
     FHIRProvider,
+    FHIRResourceType,
 )
 
 # TODO: Review documentation for read and create interactions
@@ -70,7 +71,7 @@ class FHIRStarter(FastAPI):
             )
             self._add_route(interaction)
 
-    def _add_route(self, interaction: FHIRInteraction) -> None:
+    def _add_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         match interaction.interaction_type:
             case FHIRInteractionType.CREATE:
                 self._add_create_route(interaction)
@@ -81,7 +82,7 @@ class FHIRStarter(FastAPI):
             case FHIRInteractionType.SEARCH:
                 self._add_search_route(interaction)
 
-    def _add_create_route(self, interaction: FHIRInteraction) -> None:
+    def _add_create_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         resource_type_str = interaction.resource_type.get_resource_type()
 
         func = self._make_function(
@@ -132,7 +133,7 @@ class FHIRStarter(FastAPI):
             **interaction.route_options,
         )(func)
 
-    def _add_read_route(self, interaction: FHIRInteraction) -> None:
+    def _add_read_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         resource_type_str = interaction.resource_type.get_resource_type()
 
         func = self._make_function(
@@ -178,18 +179,18 @@ class FHIRStarter(FastAPI):
             **interaction.route_options,
         )(func)
 
-    def _add_search_route(self, interaction: FHIRInteraction) -> None:
+    def _add_search_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         supported_search_parameters = tuple(
             sorted(inspect.signature(interaction.callable_).parameters.keys())
         )
         raise NotImplementedError
 
-    def _add_update_route(self, interaction: FHIRInteraction) -> None:
+    def _add_update_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         raise NotImplementedError
 
     def _make_function(
         self,
-        interaction: FHIRInteraction,
+        interaction: FHIRInteraction[FHIRResourceType],
         annotations: Mapping[str, Any],
         argdefs: tuple[Any, ...],
     ) -> FunctionType:
@@ -201,6 +202,7 @@ class FHIRStarter(FastAPI):
         code = getattr(code_templates, interaction.interaction_type.value).__code__
         globals_ = {
             "FHIRInteractionResult": FHIRInteractionResult,
+            "FHIRResourceType": interaction.resource_type,
             "callable_": interaction.callable_,
             "cast": cast,
             "resource_type_str": interaction.resource_type.get_resource_type(),

@@ -49,7 +49,7 @@ class FHIRInteractionError(FHIRException, ABC):
         super().__init__(*args)
         self._request: Request | None = None
 
-    def set_request(self, request: Request):
+    def set_request(self, request: Request) -> None:
         self._request = request
 
 

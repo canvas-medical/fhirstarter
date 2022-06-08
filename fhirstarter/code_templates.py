@@ -15,7 +15,7 @@ async def callable_(*_: Any, **__: Any) -> Any:
 async def create(
     request: Request, response: Response, resource: FHIRResourceType
 ) -> FHIRResourceType | None:
-    result = cast(FHIRInteractionResult, await callable_(resource))
+    result = cast(FHIRInteractionResult[FHIRResourceType], await callable_(resource))
 
     response.headers["Location"] = (
         f"{request.base_url}{resource_type_str}" f"/{result.id_}/_history/1"
@@ -25,7 +25,7 @@ async def create(
 
 
 async def read(request: Request, response: Response, id_: Id) -> FHIRResourceType:
-    result = cast(FHIRInteractionResult, await callable_(id_))
+    result = cast(FHIRInteractionResult[FHIRResourceType], await callable_(id_))
 
     assert result.resource is not None, "FHIR read interaction cannot return None"
 

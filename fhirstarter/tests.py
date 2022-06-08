@@ -3,8 +3,10 @@ from uuid import uuid4
 
 from fhir.resources.patient import Patient
 
-from . import FHIRInteractionResult, FHIRProvider, FHIRStarter, status
+from . import status
 from .exceptions import FHIRResourceNotFoundError
+from .fhirstarter import FHIRStarter
+from .provider import FHIRInteractionResult, FHIRProvider
 from .testclient import TestClient
 
 _DATABASE: dict[str, Patient] = {}
@@ -87,7 +89,8 @@ def test_validation_error() -> None:
                 "severity": "fatal",
                 "code": "structure",
                 "details": {
-                    "text": "1 validation error for Request\nbody -> extraField\n  extra fields not permitted (type=value_error.extra)"
+                    "text": "1 validation error for Request\nbody -> extraField\n  extra fields "
+                    "not permitted (type=value_error.extra)"
                 },
             }
         ],
