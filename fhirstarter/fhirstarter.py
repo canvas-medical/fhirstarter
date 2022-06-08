@@ -1,24 +1,21 @@
 import inspect
 import itertools
-from types import FunctionType
-from typing import Any, Mapping, cast
+from typing import Any
 
-from fastapi import Body, FastAPI, Path, Request, Response, status
+from fastapi import Body, FastAPI, Path, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fhir.resources.fhirtypes import Id
-from fhir.resources.operationoutcome import OperationOutcome
 from fhir.resources.resource import Resource
 
-from . import code_templates
 from .exceptions import FHIRException, FHIRInteractionError, make_operation_outcome
 from .provider import (
     FHIRInteraction,
-    FHIRInteractionResult,
     FHIRInteractionType,
     FHIRProvider,
     FHIRResourceType,
 )
+from .utils import create_route_args, make_function, read_route_args
 
 # TODO: Review documentation for read and create interactions
 # TODO: Find out if user-provided type annotations need to be validated
@@ -83,60 +80,25 @@ class FHIRStarter(FastAPI):
                 self._add_search_route(interaction)
 
     def _add_create_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
-        resource_type_str = interaction.resource_type.get_resource_type()
-
-        func = self._make_function(
+        func = make_function(
             interaction=interaction,
             annotations={"resource": interaction.resource_type},
             argdefs=(
-                Body(None, media_type="application/fhir+json", alias=resource_type_str),
+                Body(
+                    None,
+                    media_type="application/fhir+json",
+                    alias=interaction.resource_type.get_resource_type(),
+                ),
             ),
         )
 
-        self.post(
-            path=f"/{resource_type_str}",
-            response_model=interaction.resource_type,
-            status_code=status.HTTP_201_CREATED,
-            summary=f"{resource_type_str} create",
-            description=f"The {resource_type_str} create interaction creates a new "
-            f"{resource_type_str} resource in a server-assigned location.",
-            responses={
-                status.HTTP_201_CREATED: {
-                    "description": f"Successful {resource_type_str} create",
-                    "content": {
-                        "application/json": {
-                            "schema": interaction.resource_type.schema()
-                        },
-                        "application/fhir+json": {
-                            "schema": interaction.resource_type.schema()
-                        },
-                    },
-                },
-                status.HTTP_400_BAD_REQUEST: {
-                    "description": f"{resource_type_str} resource could not be parsed or failed "
-                    "basic FHIR validation rules",
-                    "content": {
-                        "application/json": {"schema": OperationOutcome.schema()},
-                        "application/fhir+json": {"schema": OperationOutcome.schema()},
-                    },
-                },
-                status.HTTP_422_UNPROCESSABLE_ENTITY: {
-                    "description": f"The proposed {resource_type_str} resource violated applicable "
-                    "FHIR profiles or server business rules",
-                    "content": {
-                        "application/json": {"schema": OperationOutcome.schema()},
-                        "application/fhir+json": {"schema": OperationOutcome.schema()},
-                    },
-                },
-            },
-            response_model_exclude_none=True,
-            **interaction.route_options,
-        )(func)
+        self.post(**create_route_args(interaction))(func)
+
+    def _add_update_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+        raise NotImplementedError
 
     def _add_read_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
-        resource_type_str = interaction.resource_type.get_resource_type()
-
-        func = self._make_function(
+        func = make_function(
             interaction=interaction,
             annotations={"id_": Id},
             argdefs=(
@@ -148,70 +110,13 @@ class FHIRStarter(FastAPI):
             ),
         )
 
-        self.get(
-            path=f"/{resource_type_str}/{{id}}",
-            response_model=interaction.resource_type,
-            status_code=status.HTTP_200_OK,
-            summary=f"{resource_type_str} read",
-            description=f"The {resource_type_str} read interaction accesses "
-            f"the current contents of a {resource_type_str}.",
-            responses={
-                status.HTTP_200_OK: {
-                    "description": f"Successful {resource_type_str} read",
-                    "content": {
-                        "application/json": {
-                            "schema": interaction.resource_type.schema()
-                        },
-                        "application/fhir+json": {
-                            "schema": interaction.resource_type.schema()
-                        },
-                    },
-                },
-                status.HTTP_404_NOT_FOUND: {
-                    "description": f"Unknown {resource_type_str} resource",
-                    "content": {
-                        "application/json": {"schema": OperationOutcome.schema()},
-                        "application/fhir+json": {"schema": OperationOutcome.schema()},
-                    },
-                },
-            },
-            response_model_exclude_none=True,
-            **interaction.route_options,
-        )(func)
+        self.get(**read_route_args(interaction))(func)
 
     def _add_search_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         supported_search_parameters = tuple(
             sorted(inspect.signature(interaction.callable_).parameters.keys())
         )
         raise NotImplementedError
-
-    def _add_update_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
-        raise NotImplementedError
-
-    def _make_function(
-        self,
-        interaction: FHIRInteraction[FHIRResourceType],
-        annotations: Mapping[str, Any],
-        argdefs: tuple[Any, ...],
-    ) -> FunctionType:
-        name = (
-            f"{interaction.resource_type.get_resource_type().lower()}_"
-            f"{interaction.interaction_type.value}"
-        )
-        annotations |= {"request": Request, "response": Response}
-        code = getattr(code_templates, interaction.interaction_type.value).__code__
-        globals_ = {
-            "FHIRInteractionResult": FHIRInteractionResult,
-            "FHIRResourceType": interaction.resource_type,
-            "callable_": interaction.callable_,
-            "cast": cast,
-            "resource_type_str": interaction.resource_type.get_resource_type(),
-        }
-
-        func = FunctionType(code=code, globals=globals_, name=name, argdefs=argdefs)
-        func.__annotations__ = annotations
-
-        return func
 
 
 async def _validation_exception_handler(
