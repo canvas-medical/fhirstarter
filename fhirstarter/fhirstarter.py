@@ -22,6 +22,7 @@ from .utils import create_route_args, make_function, read_route_args
 # TODO: Research auto-filling path and query parameter options from the FHIR specification
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters and path/query/body parameters
+# TODO: Expose responses FastAPI argument so that developer can specify additional responses
 # - tags
 # - summary
 # - description
