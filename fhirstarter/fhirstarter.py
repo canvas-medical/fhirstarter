@@ -55,22 +55,22 @@ class FHIRStarter(FastAPI):
         self.add_exception_handler(Exception, _exception_handler)
 
     def add_providers(self, *providers: FHIRProvider) -> None:
-        unique_interactions = set()
+        interactions = set()
 
-        interactions = itertools.chain.from_iterable(
+        provider_interactions = itertools.chain.from_iterable(
             provider.interactions for provider in providers
         )
-        for interaction in sorted(interactions):
+        for interaction in sorted(provider_interactions):
             assert (
                 interaction.resource_type,
                 interaction.interaction_type,
-            ) not in unique_interactions, (
+            ) not in interactions, (
                 f"FHIR interaction for resource type "
                 f"'{interaction.resource_type.get_resource_type()}' and interaction type "
                 f"'{interaction.interaction_type.value}' can only be supplied once"
             )
 
-            unique_interactions.add(
+            interactions.add(
                 (interaction.resource_type, interaction.interaction_type)
             )
             self._add_route(interaction)
