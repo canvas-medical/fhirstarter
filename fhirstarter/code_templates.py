@@ -1,16 +1,32 @@
-resource_type = None
-interaction_type = None
+from typing import Any, cast
+
+from fastapi import Request, Response
+from fhir.resources.fhirtypes import Id
+
+from .provider import FHIRInteractionResult, FHIRResourceType
+
+resource_type_str: str | None = None
 
 
-async def dispatch(*_, **__):
-    pass
+async def callable_(*_: Any, **__: Any) -> Any:
+    return None
 
 
-async def create(request, response, resource):
-    return await dispatch(
-        request, response, resource_type, interaction_type, resource=resource
+async def create(
+    request: Request, response: Response, resource: FHIRResourceType
+) -> FHIRResourceType | None:
+    result = cast(FHIRInteractionResult, await callable_(resource))
+
+    response.headers["Location"] = (
+        f"{request.base_url}{resource_type_str}" f"/{result.id_}/_history/1"
     )
 
+    return result.resource
 
-async def read(request, response, id_):
-    return await dispatch(request, response, resource_type, interaction_type, id_=id_)
+
+async def read(request: Request, response: Response, id_: Id) -> FHIRResourceType:
+    result = cast(FHIRInteractionResult, await callable_(id_))
+
+    assert result.resource is not None, "FHIR read interaction cannot return None"
+
+    return result.resource

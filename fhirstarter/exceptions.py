@@ -1,12 +1,9 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import Any
 
-from fastapi import status
+from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fhir.resources.operationoutcome import OperationOutcome
-
-from .provider import FHIRInteraction
 
 
 class FHIRException(Exception, ABC):
@@ -47,19 +44,13 @@ class FHIRGeneralError(FHIRException):
         return self._operation_outcome_
 
 
-@dataclass
-class FHIRInteractionContext:
-    interaction: FHIRInteraction
-    kwargs: dict[str, Any]
-
-
 class FHIRInteractionError(FHIRException, ABC):
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)
-        self._context: FHIRInteractionContext | None = None
+        self._request: Request | None = None
 
-    def set_context(self, context: FHIRInteractionContext) -> None:
-        self._context = context
+    def set_request(self, request: Request):
+        self._request = request
 
 
 class FHIRResourceNotFoundError(FHIRInteractionError):
@@ -68,20 +59,17 @@ class FHIRResourceNotFoundError(FHIRInteractionError):
 
     def _operation_outcome(self) -> OperationOutcome:
         try:
-            resource_type = (
-                self._context.interaction.resource_type.get_resource_type()  # type: ignore
-            )
-            resource_id = self._context.kwargs["id_"]  # type: ignore
+            _, resource_type_str, id_ = self._request.url.components.path.split("/")  # type: ignore
         except Exception as exception:
             raise AssertionError(
-                "Unable to get resource type and resource ID from exception context; "
-                "exception context must be set before the response is constructed"
+                "Unable to get resource type and resource ID from request; request must be set"
+                "before the operation outcome is constructed"
             ) from exception
         else:
             return make_operation_outcome(
                 "error",
                 "not-found",
-                f"Unknown {resource_type} resource '{resource_id}'",
+                f"Unknown {resource_type_str} resource '{id_}'",
             )
 
 
