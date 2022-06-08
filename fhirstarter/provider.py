@@ -88,7 +88,7 @@ C = TypeVar("C", bound=Callable[..., Any])
 
 class FHIRProvider:
     def __init__(self) -> None:
-        self._interactions: list[FHIRInteraction[Resource]] = list()
+        self._interactions: list[FHIRInteraction[Resource]] = []
 
     @property
     def interactions(self) -> Iterable[FHIRInteraction[Resource]]:

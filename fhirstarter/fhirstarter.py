@@ -137,8 +137,8 @@ class FHIRStarter(FastAPI):
         self.get(**read_route_args(interaction))(func)
 
     def _add_search_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
-        supported_search_parameters = tuple(
-            sorted(inspect.signature(interaction.callable_).parameters.keys())
+        supported_search_parameters = sorted(
+            inspect.signature(interaction.callable_).parameters.keys()
         )
         raise NotImplementedError
 
