@@ -5,6 +5,8 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fhir.resources.operationoutcome import OperationOutcome
 
+from .utils import make_operation_outcome
+
 
 class FHIRException(Exception, ABC):
     def response(self) -> JSONResponse:
@@ -71,19 +73,3 @@ class FHIRResourceNotFoundError(FHIRInteractionError):
                 "not-found",
                 f"Unknown {resource_type_str} resource '{id_}'",
             )
-
-
-def make_operation_outcome(
-    severity: str, code: str, details_text: str
-) -> OperationOutcome:
-    return OperationOutcome(
-        **{
-            "issue": [
-                {
-                    "severity": severity,
-                    "code": code,
-                    "details": {"text": details_text},
-                }
-            ]
-        }
-    )

@@ -24,6 +24,16 @@ async def create(
     return result.resource
 
 
+async def update(
+    request: Request, response: Response, id_: Id, resource: FHIRResourceType
+) -> FHIRResourceType | None:
+    result = cast(
+        FHIRInteractionResult[FHIRResourceType], await callable_(id_, resource)
+    )
+
+    return result.resource
+
+
 async def read(request: Request, response: Response, id_: Id) -> FHIRResourceType:
     result = cast(FHIRInteractionResult[FHIRResourceType], await callable_(id_))
 

@@ -28,10 +28,24 @@ provider = FHIRProvider()
 @provider.register_create_interaction(Patient)
 async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
     # All Canvas-to-FHIR mapping code for a Patient create operation goes here. For a create
-    # operation, an integration message is sent to the integration message router
+    # operation, an integration message is sent to the integration message router.
     patient = deepcopy(resource)
     patient.id = uuid4().hex
     DATABASE[patient.id] = patient
+
+    return FHIRInteractionResult[Patient](patient.id)
+
+
+# Register the patient update FHIR interaction with the provider
+@provider.register_update_interaction(Patient)
+async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Patient]:
+    # All Canvas-to-FHIR mapping code for a Patient update operation goes here. For an update
+    # operation, an integration message is sent to the integration message router.
+    if id_ not in DATABASE:
+        raise FHIRResourceNotFoundError
+
+    patient = deepcopy(resource)
+    DATABASE[id_] = patient
 
     return FHIRInteractionResult[Patient](patient.id)
 

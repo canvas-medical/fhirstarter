@@ -8,6 +8,22 @@ from . import code_templates, status
 from .provider import FHIRInteraction, FHIRInteractionResult, FHIRResourceType
 
 
+def make_operation_outcome(
+    severity: str, code: str, details_text: str
+) -> OperationOutcome:
+    return OperationOutcome(
+        **{
+            "issue": [
+                {
+                    "severity": severity,
+                    "code": code,
+                    "details": {"text": details_text},
+                }
+            ]
+        }
+    )
+
+
 def make_function(
     interaction: FHIRInteraction[FHIRResourceType],
     annotations: Mapping[str, Any],
@@ -40,12 +56,28 @@ def create_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[st
         "path": f"/{resource_type_str}",
         "response_model": interaction.resource_type,
         "status_code": status.HTTP_201_CREATED,
-        "summary": f"{resource_type_str} create",
+        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
         "description": f"The {resource_type_str} create interaction creates a new "
         f"{resource_type_str} resource in a server-assigned location.",
         "responses": _responses(
             interaction, _created, _bad_request, _unprocessable_entity
         ),
+        "response_model_exclude_none": True,
+        **interaction.route_options,
+    }
+
+
+def update_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+    resource_type_str = interaction.resource_type.get_resource_type()
+
+    return {
+        "path": f"/{resource_type_str}/{{id}}",
+        "response_model": interaction.resource_type,
+        "status_code": status.HTTP_200_OK,
+        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
+        "description": f"The {resource_type_str} update interaction creates a new current version "
+        f"for an existing {resource_type_str} resource.",
+        "responses": _responses(interaction, _ok, _bad_request, _unprocessable_entity),
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -58,7 +90,7 @@ def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str,
         "path": f"/{resource_type_str}/{{id}}",
         "response_model": interaction.resource_type,
         "status_code": status.HTTP_200_OK,
-        "summary": f"{resource_type_str} read",
+        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
         "description": f"The {resource_type_str} read interaction accesses "
         f"the current contents of a {resource_type_str}.",
         "responses": _responses(interaction, _ok, _not_found),

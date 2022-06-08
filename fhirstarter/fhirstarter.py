@@ -8,14 +8,20 @@ from fastapi.responses import JSONResponse
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
-from .exceptions import FHIRException, FHIRInteractionError, make_operation_outcome
+from .exceptions import FHIRException, FHIRInteractionError
 from .provider import (
     FHIRInteraction,
     FHIRInteractionType,
     FHIRProvider,
     FHIRResourceType,
 )
-from .utils import create_route_args, make_function, read_route_args
+from .utils import (
+    create_route_args,
+    make_function,
+    make_operation_outcome,
+    read_route_args,
+    update_route_args,
+)
 
 # TODO: Review documentation for read and create interactions
 # TODO: Find out if user-provided type annotations need to be validated
@@ -96,7 +102,24 @@ class FHIRStarter(FastAPI):
         self.post(**create_route_args(interaction))(func)
 
     def _add_update_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
-        raise NotImplementedError
+        func = make_function(
+            interaction=interaction,
+            annotations={"id_": Id, "resource": interaction.resource_type},
+            argdefs=(
+                Path(
+                    None,
+                    alias="id",
+                    description=Resource.schema()["properties"]["id"]["title"],
+                ),
+                Body(
+                    None,
+                    media_type="application/fhir+json",
+                    alias=interaction.resource_type.get_resource_type(),
+                ),
+            ),
+        )
+
+        self.put(**update_route_args(interaction))(func)
 
     def _add_read_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         func = make_function(
