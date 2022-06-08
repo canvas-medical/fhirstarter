@@ -70,9 +70,7 @@ class FHIRStarter(FastAPI):
                 f"'{interaction.interaction_type.value}' can only be supplied once"
             )
 
-            interactions.add(
-                (interaction.resource_type, interaction.interaction_type)
-            )
+            interactions.add((interaction.resource_type, interaction.interaction_type))
             self._add_route(interaction)
 
     def _add_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
