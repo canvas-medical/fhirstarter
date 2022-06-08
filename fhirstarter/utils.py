@@ -67,20 +67,20 @@ def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str,
     }
 
 
-Responses = dict[int, dict[str, Any]]
+_Responses = dict[int, dict[str, Any]]
 
 
 def _responses(
     interaction: FHIRInteraction[FHIRResourceType],
-    *responses: Callable[[FHIRInteraction[FHIRResourceType]], Responses],
-) -> Responses:
-    merged_responses: Responses = {}
+    *responses: Callable[[FHIRInteraction[FHIRResourceType]], _Responses],
+) -> _Responses:
+    merged_responses: _Responses = {}
     for response in responses:
         merged_responses |= response(interaction)
     return merged_responses
 
 
-def _ok(interaction: FHIRInteraction[FHIRResourceType]) -> Responses:
+def _ok(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_200_OK: {
             "description": f"Successful {interaction.resource_type.get_resource_type()} "
@@ -93,7 +93,7 @@ def _ok(interaction: FHIRInteraction[FHIRResourceType]) -> Responses:
     }
 
 
-def _created(interaction: FHIRInteraction[FHIRResourceType]) -> Responses:
+def _created(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_201_CREATED: {
             "description": f"Successful {interaction.resource_type.get_resource_type()} create",
@@ -105,7 +105,7 @@ def _created(interaction: FHIRInteraction[FHIRResourceType]) -> Responses:
     }
 
 
-def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> Responses:
+def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_400_BAD_REQUEST: {
             "description": f"{interaction.resource_type.get_resource_type()} resource could not be"
@@ -118,7 +118,7 @@ def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> Responses:
     }
 
 
-def _not_found(interaction: FHIRInteraction[FHIRResourceType]) -> Responses:
+def _not_found(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_404_NOT_FOUND: {
             "description": f"Unknown {interaction.resource_type.get_resource_type()} resource",
@@ -130,7 +130,7 @@ def _not_found(interaction: FHIRInteraction[FHIRResourceType]) -> Responses:
     }
 
 
-def _unprocessable_entity(interaction: FHIRInteraction[FHIRResourceType]) -> Responses:
+def _unprocessable_entity(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "description": f"The proposed {interaction.resource_type.get_resource_type()} resource"
