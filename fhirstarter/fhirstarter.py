@@ -73,6 +73,24 @@ class FHIRStarter(FastAPI):
             interactions.add((interaction.resource_type, interaction.interaction_type))
             self._add_route(interaction)
 
+    def openapi(self) -> dict[str, Any]:
+        openapi_schema = super().openapi()
+
+        del openapi_schema["components"]["schemas"]["HTTPValidationError"]
+        del openapi_schema["components"]["schemas"]["ValidationError"]
+
+        for path in openapi_schema["paths"].values():
+            for operation_name, operation in path.items():
+                responses = operation["responses"]
+
+                if operation_name == "get":
+                    responses.pop("422", None)
+
+                for response in responses.values():
+                    response["content"].pop("application/json", None)
+
+        return openapi_schema
+
     def _add_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         match interaction.interaction_type:
             case FHIRInteractionType.CREATE:

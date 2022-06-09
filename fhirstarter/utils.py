@@ -142,7 +142,7 @@ def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_400_BAD_REQUEST: {
             "description": f"{interaction.resource_type.get_resource_type()} resource could not be"
-            " parsed or failed basic FHIR validation rules",
+            " parsed or failed basic FHIR validation rules.",
             "content": {
                 "application/json": {"schema": OperationOutcome.schema()},
                 "application/fhir+json": {"schema": OperationOutcome.schema()},
@@ -168,7 +168,7 @@ def _unprocessable_entity(interaction: FHIRInteraction[FHIRResourceType]) -> _Re
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "description": f"The proposed {interaction.resource_type.get_resource_type()} resource"
             " violated applicable "
-            "FHIR profiles or server business rules",
+            "FHIR profiles or server business rules.",
             "content": {
                 "application/json": {"schema": OperationOutcome.schema()},
                 "application/fhir+json": {"schema": OperationOutcome.schema()},
