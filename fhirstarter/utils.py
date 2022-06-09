@@ -93,7 +93,7 @@ def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str,
         "status_code": status.HTTP_200_OK,
         "summary": f"{resource_type_str} {interaction.interaction_type.value}",
         "description": f"The {resource_type_str} read interaction accesses "
-        f"the current contents of a {resource_type_str}.",
+        f"the current contents of a {resource_type_str} resource.",
         "responses": _responses(interaction, _ok, _not_found),
         "response_model_exclude_none": True,
         **interaction.route_options,
