@@ -36,10 +36,11 @@ def make_function(
     annotations |= {"request": Request, "response": Response}
     code = getattr(code_templates, interaction.interaction_type.value).__code__
     globals_ = {
+        "cast": cast,
         "FHIRInteractionResult": FHIRInteractionResult,
         "FHIRResourceType": interaction.resource_type,
         "callable_": interaction.callable_,
-        "cast": cast,
+        "resource_id": code_templates.resource_id,
         "resource_type_str": interaction.resource_type.get_resource_type(),
     }
 

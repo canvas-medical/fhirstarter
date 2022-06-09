@@ -26,7 +26,7 @@ async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
     patient.id = _generate_patient_id()
     _DATABASE[patient.id] = patient
 
-    return FHIRInteractionResult[Patient](patient.id)
+    return FHIRInteractionResult[Patient](id_=patient.id)
 
 
 @provider.register_update_interaction(Patient)
@@ -37,7 +37,7 @@ async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Pa
     patient = deepcopy(resource)
     _DATABASE[id_] = patient
 
-    return FHIRInteractionResult[Patient](patient.id)
+    return FHIRInteractionResult[Patient](id_=patient.id)
 
 
 @provider.register_read_interaction(Patient)
@@ -46,7 +46,7 @@ async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
     if not patient:
         raise FHIRResourceNotFoundError
 
-    return FHIRInteractionResult[Patient](patient.id, patient)
+    return FHIRInteractionResult[Patient](resource=patient)
 
 
 app = FHIRStarter()

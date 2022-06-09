@@ -7,6 +7,7 @@ from typing import Any, Callable, Generic, Protocol, TypeVar
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
+from more_itertools import quantify
 
 FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
 
@@ -29,10 +30,15 @@ class FHIRInteractionType(Enum):
         )
 
 
-@dataclass
+@dataclass(frozen=True, kw_only=True)
 class FHIRInteractionResult(Generic[FHIRResourceType]):
-    id_: Id
+    id_: Id | None = None
     resource: FHIRResourceType | None = None
+
+    def validate(self) -> None:
+        assert (
+            quantify((self.id_ is None, self.resource is None)) == 1
+        ), "One and only one of 'id_' and 'resource' must be specified on a FHIRInteractionResult"
 
 
 class FHIRCreateInteractionCallable(Protocol[FHIRResourceType]):
@@ -60,9 +66,9 @@ class FHIRSearchInteractionCallable(Protocol):
 
 
 FHIRInteractionCallable = (
-    FHIRCreateInteractionCallable
-    | FHIRUpdateInteractionCallable
-    | FHIRReadInteractionCallable
+    FHIRCreateInteractionCallable[FHIRResourceType]
+    | FHIRUpdateInteractionCallable[FHIRResourceType]
+    | FHIRReadInteractionCallable[FHIRResourceType]
     | FHIRSearchInteractionCallable
 )
 
@@ -71,7 +77,7 @@ FHIRInteractionCallable = (
 class FHIRInteraction(Generic[FHIRResourceType]):
     resource_type: type[FHIRResourceType]
     interaction_type: FHIRInteractionType
-    callable_: FHIRInteractionCallable
+    callable_: FHIRInteractionCallable[FHIRResourceType]
     route_options: dict[str, Any]
 
     def __lt__(self, other: "FHIRInteraction[FHIRResourceType]") -> bool:
