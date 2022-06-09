@@ -116,12 +116,9 @@ def _responses(
 def _ok(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_200_OK: {
+            "model": interaction.resource_type,
             "description": f"Successful {interaction.resource_type.get_resource_type()} "
             f"{interaction.interaction_type.value}",
-            "content": {
-                "application/json": {"schema": interaction.resource_type.schema()},
-                "application/fhir+json": {"schema": interaction.resource_type.schema()},
-            },
         }
     }
 
@@ -129,11 +126,8 @@ def _ok(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
 def _created(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_201_CREATED: {
+            "model": interaction.resource_type,
             "description": f"Successful {interaction.resource_type.get_resource_type()} create",
-            "content": {
-                "application/json": {"schema": interaction.resource_type.schema()},
-                "application/fhir+json": {"schema": interaction.resource_type.schema()},
-            },
         }
     }
 
@@ -141,12 +135,9 @@ def _created(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
 def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_400_BAD_REQUEST: {
+            "model": OperationOutcome,
             "description": f"{interaction.resource_type.get_resource_type()} resource could not be"
             " parsed or failed basic FHIR validation rules.",
-            "content": {
-                "application/json": {"schema": OperationOutcome.schema()},
-                "application/fhir+json": {"schema": OperationOutcome.schema()},
-            },
         }
     }
 
@@ -154,11 +145,8 @@ def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
 def _not_found(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_404_NOT_FOUND: {
+            "model": OperationOutcome,
             "description": f"Unknown {interaction.resource_type.get_resource_type()} resource",
-            "content": {
-                "application/json": {"schema": OperationOutcome.schema()},
-                "application/fhir+json": {"schema": OperationOutcome.schema()},
-            },
         }
     }
 
@@ -166,12 +154,9 @@ def _not_found(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
 def _unprocessable_entity(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "model": OperationOutcome,
             "description": f"The proposed {interaction.resource_type.get_resource_type()} resource"
             " violated applicable "
             "FHIR profiles or server business rules.",
-            "content": {
-                "application/json": {"schema": OperationOutcome.schema()},
-                "application/fhir+json": {"schema": OperationOutcome.schema()},
-            },
         }
     }

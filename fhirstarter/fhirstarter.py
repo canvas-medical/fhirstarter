@@ -76,8 +76,8 @@ class FHIRStarter(FastAPI):
     def openapi(self) -> dict[str, Any]:
         openapi_schema = super().openapi()
 
-        del openapi_schema["components"]["schemas"]["HTTPValidationError"]
-        del openapi_schema["components"]["schemas"]["ValidationError"]
+        openapi_schema["components"]["schemas"].pop("HTTPValidationError", None)
+        openapi_schema["components"]["schemas"].pop("ValidationError", None)
 
         for path in openapi_schema["paths"].values():
             for operation_name, operation in path.items():
@@ -87,7 +87,8 @@ class FHIRStarter(FastAPI):
                     responses.pop("422", None)
 
                 for response in responses.values():
-                    response["content"].pop("application/json", None)
+                    if schema := response["content"].pop("application/json", None):
+                        response["content"]["application/fhir+json"] = schema
 
         return openapi_schema
 
