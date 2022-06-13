@@ -1,10 +1,14 @@
 import inspect
 import itertools
+from datetime import datetime
+from functools import cache
 from typing import Any
+from uuid import uuid4
 
 from fastapi import Body, FastAPI, Path, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fhir.resources.capabilitystatement import CapabilityStatement
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
@@ -45,6 +49,10 @@ class FHIRStarter(FastAPI):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
+        self._capabilities: set[tuple[type[Resource], FHIRInteractionType]] = set()
+
+        self._add_capabilities_route()
+
         self.add_exception_handler(
             RequestValidationError, _validation_exception_handler
         )
@@ -55,8 +63,6 @@ class FHIRStarter(FastAPI):
         self.add_exception_handler(Exception, _exception_handler)
 
     def add_providers(self, *providers: FHIRProvider) -> None:
-        interactions = set()
-
         provider_interactions = itertools.chain.from_iterable(
             provider.interactions for provider in providers
         )
@@ -64,13 +70,15 @@ class FHIRStarter(FastAPI):
             assert (
                 interaction.resource_type,
                 interaction.interaction_type,
-            ) not in interactions, (
+            ) not in self._capabilities, (
                 f"FHIR interaction for resource type "
                 f"'{interaction.resource_type.get_resource_type()}' and interaction type "
                 f"'{interaction.interaction_type.value}' can only be supplied once"
             )
 
-            interactions.add((interaction.resource_type, interaction.interaction_type))
+            self._capabilities.add(
+                (interaction.resource_type, interaction.interaction_type)
+            )
             self._add_route(interaction)
 
     def openapi(self) -> dict[str, Any]:
@@ -91,6 +99,21 @@ class FHIRStarter(FastAPI):
                         response["content"]["application/fhir+json"] = schema
 
         return openapi_schema
+
+    def _add_capabilities_route(self) -> None:
+        def metadata() -> CapabilityStatement:
+            return self._capability_statement()
+
+        self.get(
+            "/metadata",
+            response_model=CapabilityStatement,
+            status_code=status.HTTP_200_OK,
+            tags=["system"],
+            summary="Get a capability statement for the system",
+            description="The capabilities interaction retrieves the information about a server's "
+            "capabilities - which portions of the FHIR specification it supports.",
+            response_model_exclude_none=True,
+        )(metadata)
 
     def _add_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         match interaction.interaction_type:
@@ -158,6 +181,36 @@ class FHIRStarter(FastAPI):
             inspect.signature(interaction.callable_).parameters.keys()
         )
         raise NotImplementedError
+
+    @cache
+    def _capability_statement(self) -> CapabilityStatement:
+        # TODO: Status can be filled in based on environment
+        # TODO: Date could be the start time of the server, or release date
+        # TODO: Add XML format
+        return CapabilityStatement(
+            **{
+                "id": str(uuid4()),
+                "status": "active",
+                "date": datetime.utcnow().isoformat(),
+                "kind": "instance",
+                "fhirVersion": "4.3.0",
+                "format": ["json"],
+                "rest": [
+                    {
+                        "mode": "server",
+                        "resource": [
+                            {
+                                "type": resource_type.get_resource_type(),
+                                "interaction": [{"code": interaction_type.value}],
+                            }
+                            for resource_type, interaction_type in sorted(
+                                self._capabilities
+                            )
+                        ],
+                    }
+                ],
+            }
+        )
 
 
 async def _validation_exception_handler(
