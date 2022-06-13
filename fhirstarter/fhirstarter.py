@@ -50,6 +50,7 @@ class FHIRStarter(FastAPI):
         super().__init__(**kwargs)
 
         self._capabilities: set[tuple[type[Resource], FHIRInteractionType]] = set()
+        self._created = datetime.utcnow()
 
         self._add_capabilities_route()
 
@@ -185,13 +186,13 @@ class FHIRStarter(FastAPI):
     @cache
     def _capability_statement(self) -> CapabilityStatement:
         # TODO: Status can be filled in based on environment
-        # TODO: Date could be the start time of the server, or release date
+        # TODO: Date could be the release date (from an environment variable)
         # TODO: Add XML format
         return CapabilityStatement(
             **{
                 "id": str(uuid4()),
                 "status": "active",
-                "date": datetime.utcnow().isoformat(),
+                "date": self._created,
                 "kind": "instance",
                 "fhirVersion": "4.3.0",
                 "format": ["json"],

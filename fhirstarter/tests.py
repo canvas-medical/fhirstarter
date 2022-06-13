@@ -6,6 +6,7 @@ import pytest
 from fastapi import Response
 from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
+from funcy import omit
 
 from . import status
 from .exceptions import FHIRResourceNotFoundError
@@ -17,10 +18,6 @@ from .utils import make_operation_outcome
 _DATABASE: dict[str, Patient] = {}
 
 
-provider = FHIRProvider()
-
-
-@provider.register_create_interaction(Patient)
 async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
     patient = deepcopy(resource)
     patient.id = _generate_patient_id()
@@ -29,7 +26,6 @@ async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
     return FHIRInteractionResult[Patient](id_=patient.id)
 
 
-@provider.register_update_interaction(Patient)
 async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Patient]:
     if id_ not in _DATABASE:
         raise FHIRResourceNotFoundError
@@ -40,7 +36,6 @@ async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Pa
     return FHIRInteractionResult[Patient](id_=patient.id)
 
 
-@provider.register_read_interaction(Patient)
 async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
     patient = _DATABASE.get(id_)
     if not patient:
@@ -49,10 +44,86 @@ async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
     return FHIRInteractionResult[Patient](resource=patient)
 
 
-app = FHIRStarter()
-app.add_providers(provider)
+def _app(provider: FHIRProvider) -> TestClient:
+    app = FHIRStarter()
+    app.add_providers(provider)
 
-client = TestClient(app)
+    _DATABASE.clear()
+
+    return TestClient(app)
+
+
+@pytest.fixture
+def client() -> TestClient:
+    provider = FHIRProvider()
+    provider.register_create_interaction(Patient)(patient_create)
+    provider.register_update_interaction(Patient)(patient_update)
+    provider.register_read_interaction(Patient)(patient_read)
+
+    return _app(provider)
+
+
+@pytest.fixture
+def client_create_and_read() -> TestClient:
+    provider = FHIRProvider()
+    provider.register_create_interaction(Patient)(patient_create)
+    provider.register_read_interaction(Patient)(patient_read)
+
+    return _app(provider)
+
+
+def test_capability_statement(client: TestClient) -> None:
+    app = cast(FHIRStarter, client.app)
+
+    response = client.get("/metadata")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert omit(response.json(), ["id"]) == {
+        "resourceType": "CapabilityStatement",
+        "status": "active",
+        "date": app._created.isoformat(),
+        "kind": "instance",
+        "fhirVersion": "4.3.0",
+        "format": ["json"],
+        "rest": [
+            {
+                "mode": "server",
+                "resource": [
+                    {"type": "Patient", "interaction": [{"code": "create"}]},
+                    {"type": "Patient", "interaction": [{"code": "update"}]},
+                    {"type": "Patient", "interaction": [{"code": "read"}]},
+                ],
+            }
+        ],
+    }
+
+
+def test_capability_statement_create_and_read(
+    client_create_and_read: TestClient,
+) -> None:
+    client = client_create_and_read
+    app = cast(FHIRStarter, client.app)
+
+    response = client.get("/metadata")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert omit(response.json(), ["id"]) == {
+        "resourceType": "CapabilityStatement",
+        "status": "active",
+        "date": app._created.isoformat(),
+        "kind": "instance",
+        "fhirVersion": "4.3.0",
+        "format": ["json"],
+        "rest": [
+            {
+                "mode": "server",
+                "resource": [
+                    {"type": "Patient", "interaction": [{"code": "create"}]},
+                    {"type": "Patient", "interaction": [{"code": "read"}]},
+                ],
+            }
+        ],
+    }
 
 
 _RESOURCE = {
@@ -62,7 +133,7 @@ _RESOURCE = {
 
 
 @pytest.fixture
-def create_response() -> Response:
+def create_response(client: TestClient) -> Response:
     return cast(Response, client.post("/Patient", json=_RESOURCE))
 
 
@@ -70,7 +141,7 @@ def test_create(create_response: Response) -> None:
     assert create_response.status_code == status.HTTP_201_CREATED
 
 
-def test_update(create_response: Response) -> None:
+def test_update(client: TestClient, create_response: Response) -> None:
     id_ = _id_from_create_response(create_response)
     read_response = client.get(f"/Patient/{id_}")
     content = read_response.json()
@@ -89,7 +160,7 @@ def test_update(create_response: Response) -> None:
     }
 
 
-def test_update_not_found() -> None:
+def test_update_not_found(client: TestClient) -> None:
     id_ = _generate_patient_id()
     put_response = client.put(f"/Patient/{id_}", json=_RESOURCE)
 
@@ -103,7 +174,7 @@ def test_update_not_found() -> None:
     assert put_response.json() == operation_outcome.dict()
 
 
-def test_read(create_response: Response) -> None:
+def test_read(client: TestClient, create_response: Response) -> None:
     id_ = _id_from_create_response(create_response)
     read_response = client.get(f"/Patient/{id_}")
 
@@ -111,7 +182,7 @@ def test_read(create_response: Response) -> None:
     assert read_response.json() == _RESOURCE | {"id": id_}
 
 
-def test_read_not_found() -> None:
+def test_read_not_found(client: TestClient) -> None:
     id_ = _generate_patient_id()
     response = client.get(f"/Patient/{id_}")
 
@@ -125,7 +196,7 @@ def test_read_not_found() -> None:
     assert response.json() == operation_outcome.dict()
 
 
-def test_validation_error() -> None:
+def test_validation_error(client: TestClient) -> None:
     create_response = client.post("/Patient", json={"extraField": []})
 
     operation_outcome = make_operation_outcome(
