@@ -2,6 +2,7 @@ import inspect
 import itertools
 from datetime import datetime
 from functools import cache
+from itertools import groupby
 from typing import Any
 from uuid import uuid4
 
@@ -193,6 +194,7 @@ class FHIRStarter(FastAPI):
                 "id": str(uuid4()),
                 "status": "active",
                 "date": self._created,
+                "publisher": "Canvas Medical",
                 "kind": "instance",
                 "fhirVersion": "4.3.0",
                 "format": ["json"],
@@ -201,11 +203,15 @@ class FHIRStarter(FastAPI):
                         "mode": "server",
                         "resource": [
                             {
-                                "type": resource_type.get_resource_type(),
-                                "interaction": [{"code": interaction_type.value}],
+                                "type": resource_type,
+                                "interaction": [
+                                    {"code": interaction_type.value}
+                                    for _, interaction_type in interaction_types
+                                ],
                             }
-                            for resource_type, interaction_type in sorted(
-                                self._capabilities
+                            for resource_type, interaction_types in groupby(
+                                sorted(self._capabilities),
+                                key=lambda item: item[0].get_resource_type(),  # type: ignore
                             )
                         ],
                     }

@@ -83,15 +83,21 @@ def test_capability_statement(client: TestClient) -> None:
         "status": "active",
         "date": app._created.isoformat(),
         "kind": "instance",
+        "publisher": "Canvas Medical",
         "fhirVersion": "4.3.0",
         "format": ["json"],
         "rest": [
             {
                 "mode": "server",
                 "resource": [
-                    {"type": "Patient", "interaction": [{"code": "create"}]},
-                    {"type": "Patient", "interaction": [{"code": "update"}]},
-                    {"type": "Patient", "interaction": [{"code": "read"}]},
+                    {
+                        "type": "Patient",
+                        "interaction": [
+                            {"code": "create"},
+                            {"code": "update"},
+                            {"code": "read"},
+                        ],
+                    }
                 ],
             }
         ],
@@ -112,14 +118,17 @@ def test_capability_statement_create_and_read(
         "status": "active",
         "date": app._created.isoformat(),
         "kind": "instance",
+        "publisher": "Canvas Medical",
         "fhirVersion": "4.3.0",
         "format": ["json"],
         "rest": [
             {
                 "mode": "server",
                 "resource": [
-                    {"type": "Patient", "interaction": [{"code": "create"}]},
-                    {"type": "Patient", "interaction": [{"code": "read"}]},
+                    {
+                        "type": "Patient",
+                        "interaction": [{"code": "create"}, {"code": "read"}],
+                    },
                 ],
             }
         ],
