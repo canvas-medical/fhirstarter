@@ -9,6 +9,9 @@ from starlette.responses import RedirectResponse
 from fhirstarter import FHIRInteractionResult, FHIRProvider, FHIRStarter
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 
+# Create the app
+app = FHIRStarter(title="FHIRStarter Example Implementation")
+
 # Create a "database"
 DATABASE: dict[str, Patient] = {}
 
@@ -62,9 +65,6 @@ async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
 
     return FHIRInteractionResult[Patient](resource=patient)
 
-
-# Create the app
-app = FHIRStarter(title="FHIRStarter Example Implementation")
 
 # Add the provider to the app. This will automatically generate the API routes for the interactions
 # provided by the providers (e.g. create, read, search, and update).
