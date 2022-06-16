@@ -1,11 +1,20 @@
-from types import FunctionType
-from typing import Any, Callable, Mapping, cast
+from collections.abc import Callable, Mapping
+from functools import partial
+from types import CodeType, FunctionType
+from typing import Any, cast
 
-from fastapi import Request, Response
+from fastapi import Query, Request, Response
+from fhir.resources.bundle import Bundle
 from fhir.resources.operationoutcome import OperationOutcome
+from funcy import omit
 
-from . import code_templates, status
+from . import function_templates, status
 from .provider import FHIRInteraction, FHIRInteractionResult, FHIRResourceType
+from .search_parameters import (
+    load_search_parameters,
+    supported_search_parameters,
+    var_sp_name_to_fhir_sp_name,
+)
 
 
 def make_operation_outcome(
@@ -29,18 +38,66 @@ def make_function(
     annotations: Mapping[str, Any],
     argdefs: tuple[Any, ...],
 ) -> FunctionType:
+    code = getattr(function_templates, interaction.interaction_type.value).__code__
+
+    return _make_function(interaction, annotations, code, argdefs)
+
+
+# TODO: If possible, map FHIR primitives to correct type annotations for better validation
+def make_search_function(
+    interaction: FHIRInteraction[FHIRResourceType],
+) -> FunctionType:
+    function_template = getattr(
+        function_templates,
+        f"{interaction.resource_type.get_resource_type().lower()}_"
+        f"{interaction.interaction_type.value}",
+    )
+    variable_names = tuple(
+        omit(
+            function_template.__annotations__, ["request", "response", "return"]
+        ).keys()
+    )
+    supported_search_parameters_ = set(
+        supported_search_parameters(interaction.callable_)
+    )
+    search_parameters = load_search_parameters()[
+        interaction.resource_type.get_resource_type()
+    ]
+
+    annotations = {name: str for name in variable_names}
+    code = function_template.__code__
+    argdefs = tuple(
+        Query(
+            None,
+            alias=var_sp_name_to_fhir_sp_name(name),
+            description=search_parameters[var_sp_name_to_fhir_sp_name(name)][
+                "description"
+            ],
+            include_in_schema=name in supported_search_parameters_,
+        )
+        for name in variable_names
+    )
+
+    return _make_function(interaction, annotations, code, argdefs)
+
+
+def _make_function(
+    interaction: FHIRInteraction[FHIRResourceType],
+    annotations: Mapping[str, Any],
+    code: CodeType,
+    argdefs: tuple[Any, ...],
+) -> FunctionType:
     name = (
         f"{interaction.resource_type.get_resource_type().lower()}_"
         f"{interaction.interaction_type.value}"
     )
     annotations |= {"request": Request, "response": Response}
-    code = getattr(code_templates, interaction.interaction_type.value).__code__
     globals_ = {
         "cast": cast,
         "FHIRInteractionResult": FHIRInteractionResult,
         "FHIRResourceType": interaction.resource_type,
         "callable_": interaction.callable_,
-        "resource_id": code_templates.resource_id,
+        "resource_id": function_templates.resource_id,
         "resource_type_str": interaction.resource_type.get_resource_type(),
     }
 
@@ -103,6 +160,23 @@ def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str,
     }
 
 
+def search_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+    resource_type_str = interaction.resource_type.get_resource_type()
+
+    return {
+        "path": f"/{resource_type_str}",
+        "response_model": Bundle,
+        "status_code": status.HTTP_200_OK,
+        "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
+        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
+        "description": f"The {resource_type_str} search interaction searches a set of resources "
+        "based on some filter criteria.",
+        "responses": _responses(interaction, partial(_ok, search=True), _bad_request),
+        "response_model_exclude_none": True,
+        **interaction.route_options,
+    }
+
+
 _Responses = dict[int, dict[str, Any]]
 
 
@@ -116,10 +190,12 @@ def _responses(
     return merged_responses
 
 
-def _ok(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
+def _ok(
+    interaction: FHIRInteraction[FHIRResourceType], search: bool = False
+) -> _Responses:
     return {
         status.HTTP_200_OK: {
-            "model": interaction.resource_type,
+            "model": interaction.resource_type if not search else Bundle,
             "description": f"Successful {interaction.resource_type.get_resource_type()} "
             f"{interaction.interaction_type.value}",
         }

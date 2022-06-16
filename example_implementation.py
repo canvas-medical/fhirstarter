@@ -1,7 +1,9 @@
 from copy import deepcopy
+from typing import Any
 from uuid import uuid4
 
 import uvicorn
+from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
@@ -56,14 +58,39 @@ async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Pa
 # Register the patient read FHIR interaction with the provider
 @provider.register_read_interaction(Patient)
 async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
-    # All Canvas-to-FHIR mapping code for a Patient read operation goes here. For a read
-    # operation, a GraphQL request is issued, and then the result is mapped on to the FHIR
-    # Patient resource to be returned.
+    # All Canvas-to-FHIR mapping code for a Patient read operation goes here. For a read operation,
+    # a GraphQL request is issued, and then the result is mapped on to the FHIR Patient resource to
+    # be returned.
     patient = DATABASE.get(id_)
     if not patient:
         raise FHIRResourceNotFoundError
 
     return FHIRInteractionResult[Patient](resource=patient)
+
+
+# Register the patient search FHIR interaction with the provider
+@provider.register_search_interaction(Patient)
+async def patient_search(
+    family: str | None = None, active: str | None = None, **kwargs: Any
+) -> FHIRInteractionResult[Bundle]:
+    # All Canvas-to-FHIR mapping code for a Patient search operation goes here. For a search
+    # operation, a GraphQL request is issued, and then the result is mapped on to the FHIR Bundle
+    # Patient resource to be returned.
+    patients = []
+    for patient in DATABASE.values():
+        for name in patient.name:
+            if name.family == family:
+                patients.append(patient)
+
+    bundle = Bundle(
+        **{
+            "type": "searchset",
+            "total": len(patients),
+            "entry": [{"resource": {**patient.dict()}} for patient in patients],
+        }
+    )
+
+    return FHIRInteractionResult[Bundle](resource=bundle)
 
 
 # Add the provider to the app. This will automatically generate the API routes for the interactions

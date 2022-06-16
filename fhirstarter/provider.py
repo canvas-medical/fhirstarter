@@ -1,8 +1,8 @@
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import Enum
 from functools import cache
-from typing import Any, Callable, Generic, Protocol, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
