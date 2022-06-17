@@ -71,7 +71,7 @@ async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
 # Register the patient search FHIR interaction with the provider
 @provider.register_search_interaction(Patient)
 async def patient_search(
-    family: str | None = None, active: str | None = None, **kwargs: Any
+    family: str | None = None, **kwargs: Any
 ) -> FHIRInteractionResult[Bundle]:
     # All Canvas-to-FHIR mapping code for a Patient search operation goes here. For a search
     # operation, a GraphQL request is issued, and then the result is mapped on to the FHIR Bundle
