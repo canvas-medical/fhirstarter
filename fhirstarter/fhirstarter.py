@@ -82,7 +82,7 @@ class FHIRStarter(FastAPI):
                 resource_type not in self._capabilities
                 or interaction_type not in self._capabilities[resource_type]
             ), (
-                f"FHIR interaction for resource type "
+                "FHIR interaction for resource type "
                 f"'{resource_type}' and interaction type "
                 f"'{interaction_type}' can only be supplied once"
             )
@@ -100,8 +100,16 @@ class FHIRStarter(FastAPI):
             for operation_name, operation in path.items():
                 responses = operation["responses"]
 
-                if operation_name == "get":
-                    responses.pop("422", None)
+                status_codes = tuple(responses.keys())
+                for status_code in status_codes:
+                    if (
+                        responses[status_code]["content"]
+                        .get("application/json", {})
+                        .get("schema", {})
+                        .get("$ref")
+                        == "#/components/schemas/HTTPValidationError"
+                    ):
+                        responses.pop(status_code)
 
                 for response in responses.values():
                     if schema := response["content"].pop("application/json", None):
@@ -166,9 +174,11 @@ class FHIRStarter(FastAPI):
         self.get(**read_route_args(interaction))(func)
 
     def _add_search_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
-        func = make_search_function(interaction)
+        get_func = make_search_function(interaction, post=False)
+        post_func = make_search_function(interaction, post=True)
 
-        self.get(**search_route_args(interaction))(func)
+        self.get(**search_route_args(interaction, post=False))(get_func)
+        self.post(**search_route_args(interaction, post=True))(post_func)
 
     def _add_update_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         func = make_function(

@@ -3,7 +3,7 @@ from functools import partial
 from types import CodeType, FunctionType
 from typing import Any, cast
 
-from fastapi import Query, Request, Response
+from fastapi import Form, Query, Request, Response
 from fhir.resources.bundle import Bundle
 from fhir.resources.operationoutcome import OperationOutcome
 from funcy import omit
@@ -45,7 +45,7 @@ def make_function(
 
 # TODO: If possible, map FHIR primitives to correct type annotations for better validation
 def make_search_function(
-    interaction: FHIRInteraction[FHIRResourceType],
+    interaction: FHIRInteraction[FHIRResourceType], post: bool
 ) -> FunctionType:
     function_template = getattr(
         function_templates,
@@ -66,17 +66,31 @@ def make_search_function(
 
     annotations = {name: str for name in variable_names}
     code = function_template.__code__
-    argdefs = tuple(
-        Query(
-            None,
-            alias=var_sp_name_to_fhir_sp_name(name),
-            description=search_parameters[var_sp_name_to_fhir_sp_name(name)][
-                "description"
-            ],
-            include_in_schema=name in supported_search_parameters_,
+    if post:
+        argdefs = tuple(
+            Form(
+                None,
+                alias=var_sp_name_to_fhir_sp_name(name),
+                description=search_parameters[var_sp_name_to_fhir_sp_name(name)][
+                    "description"
+                ],
+            )
+            if name in supported_search_parameters_
+            else Query(None, include_in_schema=False)
+            for name in variable_names
         )
-        for name in variable_names
-    )
+    else:
+        argdefs = tuple(
+            Query(
+                None,
+                alias=var_sp_name_to_fhir_sp_name(name),
+                description=search_parameters[var_sp_name_to_fhir_sp_name(name)][
+                    "description"
+                ],
+                include_in_schema=name in supported_search_parameters_,
+            )
+            for name in variable_names
+        )
 
     return _make_function(interaction, annotations, code, argdefs)
 
@@ -87,10 +101,6 @@ def _make_function(
     code: CodeType,
     argdefs: tuple[Any, ...],
 ) -> FunctionType:
-    name = (
-        f"{interaction.resource_type.get_resource_type().lower()}_"
-        f"{interaction.interaction_type.value}"
-    )
     annotations |= {"request": Request, "response": Response}
     globals_ = {
         "cast": cast,
@@ -101,7 +111,7 @@ def _make_function(
         "resource_type_str": interaction.resource_type.get_resource_type(),
     }
 
-    func = FunctionType(code=code, globals=globals_, name=name, argdefs=argdefs)
+    func = FunctionType(code=code, globals=globals_, argdefs=argdefs)
     func.__annotations__ = annotations
 
     return func
@@ -143,11 +153,13 @@ def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str,
     }
 
 
-def search_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+def search_route_args(
+    interaction: FHIRInteraction[FHIRResourceType], post: bool
+) -> dict[str, Any]:
     resource_type_str = interaction.resource_type.get_resource_type()
 
     return {
-        "path": f"/{resource_type_str}",
+        "path": f"/{resource_type_str}{'/_search' if post else ''}",
         "response_model": Bundle,
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
@@ -215,8 +227,9 @@ def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     return {
         status.HTTP_400_BAD_REQUEST: {
             "model": OperationOutcome,
-            "description": f"{interaction.resource_type.get_resource_type()} resource could not be"
-            " parsed or failed basic FHIR validation rules.",
+            "description": f"{interaction.resource_type.get_resource_type()} "
+            f"{interaction.interaction_type.value} request could not be parsed or "
+            "failed basic FHIR validation rules.",
         }
     }
 

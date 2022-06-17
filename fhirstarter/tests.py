@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, cast
+from typing import Any, Callable, cast
 from uuid import uuid4
 
 import pytest
@@ -199,8 +199,23 @@ def test_read_not_found(client: TestClient) -> None:
 
 
 def test_search(client: TestClient, create_response: Response) -> None:
+    _test_search(
+        create_response, lambda: client.get("/Patient", params={"family": "Baggins"})
+    )
+
+
+def test_search_post(client: TestClient, create_response: Response) -> None:
+    _test_search(
+        create_response,
+        lambda: client.post("/Patient/_search", data={"family": "Baggins"}),
+    )
+
+
+def _test_search(
+    create_response: Response, search_func: Callable[..., Response]
+) -> None:
     id_ = _id_from_create_response(create_response)
-    search_response = client.get(f"/Patient", params={"family": "Baggins"})
+    search_response = search_func()
 
     _assert_expected_response(
         search_response,
