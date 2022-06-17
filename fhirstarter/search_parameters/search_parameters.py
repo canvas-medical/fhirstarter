@@ -1,6 +1,7 @@
 import inspect
 import json
 import os.path
+import re
 from collections import defaultdict
 from collections.abc import Callable
 from functools import cache
@@ -26,7 +27,9 @@ def load_search_parameters() -> defaultdict[str, dict[str, dict[str, str]]]:
             search_parameters[resource_type][resource["name"]] = {
                 "name": resource["name"],
                 "type": resource["type"],
-                "description": resource["description"],
+                "description": _remove_hyperlinks_from_markdown(
+                    resource["description"]
+                ),
             }
 
     return search_parameters
@@ -50,3 +53,7 @@ def supported_search_parameters(search_function: Callable[..., Any]) -> tuple[st
         for key in inspect.signature(search_function).parameters.keys()
         if key != "kwargs"
     )
+
+
+def _remove_hyperlinks_from_markdown(markdown: str) -> str:
+    return re.sub(r"\[(.*?)\]\(.*?\)", r"\1", markdown)
