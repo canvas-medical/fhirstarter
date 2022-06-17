@@ -128,12 +128,12 @@ class FHIRStarter(FastAPI):
         match interaction.interaction_type:
             case FHIRInteractionType.CREATE:
                 self._add_create_route(interaction)
-            case FHIRInteractionType.UPDATE:
-                self._add_update_route(interaction)
             case FHIRInteractionType.READ:
                 self._add_read_route(interaction)
             case FHIRInteractionType.SEARCH:
                 self._add_search_route(interaction)
+            case FHIRInteractionType.UPDATE:
+                self._add_update_route(interaction)
 
     def _add_create_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         func = make_function(
@@ -149,26 +149,6 @@ class FHIRStarter(FastAPI):
         )
 
         self.post(**create_route_args(interaction))(func)
-
-    def _add_update_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
-        func = make_function(
-            interaction=interaction,
-            annotations={"id_": Id, "resource": interaction.resource_type},
-            argdefs=(
-                Path(
-                    None,
-                    alias="id",
-                    description=Resource.schema()["properties"]["id"]["title"],
-                ),
-                Body(
-                    None,
-                    media_type="application/fhir+json",
-                    alias=interaction.resource_type.get_resource_type(),
-                ),
-            ),
-        )
-
-        self.put(**update_route_args(interaction))(func)
 
     def _add_read_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
         func = make_function(
@@ -189,6 +169,26 @@ class FHIRStarter(FastAPI):
         func = make_search_function(interaction)
 
         self.get(**search_route_args(interaction))(func)
+
+    def _add_update_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+        func = make_function(
+            interaction=interaction,
+            annotations={"id_": Id, "resource": interaction.resource_type},
+            argdefs=(
+                Path(
+                    None,
+                    alias="id",
+                    description=Resource.schema()["properties"]["id"]["title"],
+                ),
+                Body(
+                    None,
+                    media_type="application/fhir+json",
+                    alias=interaction.resource_type.get_resource_type(),
+                ),
+            ),
+        )
+
+        self.put(**update_route_args(interaction))(func)
 
     @cache
     def _capability_statement(self) -> CapabilityStatement:

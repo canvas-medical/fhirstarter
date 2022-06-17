@@ -126,23 +126,6 @@ def create_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[st
     }
 
 
-def update_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
-    resource_type_str = interaction.resource_type.get_resource_type()
-
-    return {
-        "path": f"/{resource_type_str}/{{id}}",
-        "response_model": interaction.resource_type,
-        "status_code": status.HTTP_200_OK,
-        "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
-        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
-        "description": f"The {resource_type_str} update interaction creates a new current version "
-        f"for an existing {resource_type_str} resource.",
-        "responses": _responses(interaction, _ok, _bad_request, _unprocessable_entity),
-        "response_model_exclude_none": True,
-        **interaction.route_options,
-    }
-
-
 def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -172,6 +155,23 @@ def search_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[st
         "description": f"The {resource_type_str} search interaction searches a set of resources "
         "based on some filter criteria.",
         "responses": _responses(interaction, partial(_ok, search=True), _bad_request),
+        "response_model_exclude_none": True,
+        **interaction.route_options,
+    }
+
+
+def update_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+    resource_type_str = interaction.resource_type.get_resource_type()
+
+    return {
+        "path": f"/{resource_type_str}/{{id}}",
+        "response_model": interaction.resource_type,
+        "status_code": status.HTTP_200_OK,
+        "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
+        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
+        "description": f"The {resource_type_str} update interaction creates a new current version "
+        f"for an existing {resource_type_str} resource.",
+        "responses": _responses(interaction, _ok, _bad_request, _unprocessable_entity),
         "response_model_exclude_none": True,
         **interaction.route_options,
     }

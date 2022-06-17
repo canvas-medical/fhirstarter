@@ -27,16 +27,6 @@ async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
     return FHIRInteractionResult[Patient](id_=patient.id)
 
 
-async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Patient]:
-    if id_ not in _DATABASE:
-        raise FHIRResourceNotFoundError
-
-    patient = deepcopy(resource)
-    _DATABASE[id_] = patient
-
-    return FHIRInteractionResult[Patient](id_=patient.id)
-
-
 async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
     patient = _DATABASE.get(id_)
     if not patient:
@@ -65,6 +55,16 @@ async def patient_search(
     return FHIRInteractionResult[Bundle](resource=bundle)
 
 
+async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Patient]:
+    if id_ not in _DATABASE:
+        raise FHIRResourceNotFoundError
+
+    patient = deepcopy(resource)
+    _DATABASE[id_] = patient
+
+    return FHIRInteractionResult[Patient](id_=patient.id)
+
+
 def _app(provider: FHIRProvider) -> TestClient:
     app = FHIRStarter()
     app.add_providers(provider)
@@ -78,9 +78,9 @@ def _app(provider: FHIRProvider) -> TestClient:
 def client() -> TestClient:
     provider = FHIRProvider()
     provider.register_create_interaction(Patient)(patient_create)
-    provider.register_update_interaction(Patient)(patient_update)
     provider.register_read_interaction(Patient)(patient_read)
     provider.register_search_interaction(Patient)(patient_search)
+    provider.register_update_interaction(Patient)(patient_update)
 
     return _app(provider)
 
@@ -116,9 +116,9 @@ def test_capability_statement(client: TestClient) -> None:
                         "type": "Patient",
                         "interaction": [
                             {"code": "create"},
-                            {"code": "update"},
                             {"code": "read"},
                             {"code": "search"},
+                            {"code": "update"},
                         ],
                         "searchParam": [{"name": "family", "type": "string"}],
                     }
@@ -174,43 +174,6 @@ def test_create(create_response: Response) -> None:
     _assert_expected_response(create_response, status.HTTP_201_CREATED)
 
 
-def test_update(client: TestClient, create_response: Response) -> None:
-    id_ = _id_from_create_response(create_response)
-    read_response = client.get(f"/Patient/{id_}")
-    content = read_response.json()
-    content["name"][0]["given"][0] = "Frodo"
-    put_response = client.put(f"/Patient/{id_}", json=content)
-
-    _assert_expected_response(put_response, status.HTTP_200_OK)
-
-    read_response = client.get(f"/Patient/{id_}")
-
-    _assert_expected_response(
-        read_response,
-        status.HTTP_200_OK,
-        content={
-            "resourceType": "Patient",
-            "id": id_,
-            "name": [{"family": "Baggins", "given": ["Frodo"]}],
-        },
-    )
-
-
-def test_update_not_found(client: TestClient) -> None:
-    id_ = _generate_patient_id()
-    put_response = client.put(f"/Patient/{id_}", json=_RESOURCE)
-
-    _assert_expected_response(
-        put_response,
-        status.HTTP_404_NOT_FOUND,
-        content=make_operation_outcome(
-            severity="error",
-            code="not-found",
-            details_text=f"Unknown Patient resource '{id_}'",
-        ).dict(),
-    )
-
-
 def test_read(client: TestClient, create_response: Response) -> None:
     id_ = _id_from_create_response(create_response)
     read_response = client.get(f"/Patient/{id_}")
@@ -248,6 +211,43 @@ def test_search(client: TestClient, create_response: Response) -> None:
             "total": 1,
             "entry": [{"resource": _RESOURCE | {"id": id_}}],
         },
+    )
+
+
+def test_update(client: TestClient, create_response: Response) -> None:
+    id_ = _id_from_create_response(create_response)
+    read_response = client.get(f"/Patient/{id_}")
+    content = read_response.json()
+    content["name"][0]["given"][0] = "Frodo"
+    put_response = client.put(f"/Patient/{id_}", json=content)
+
+    _assert_expected_response(put_response, status.HTTP_200_OK)
+
+    read_response = client.get(f"/Patient/{id_}")
+
+    _assert_expected_response(
+        read_response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "Patient",
+            "id": id_,
+            "name": [{"family": "Baggins", "given": ["Frodo"]}],
+        },
+    )
+
+
+def test_update_not_found(client: TestClient) -> None:
+    id_ = _generate_patient_id()
+    put_response = client.put(f"/Patient/{id_}", json=_RESOURCE)
+
+    _assert_expected_response(
+        put_response,
+        status.HTTP_404_NOT_FOUND,
+        content=make_operation_outcome(
+            severity="error",
+            code="not-found",
+            details_text=f"Unknown Patient resource '{id_}'",
+        ).dict(),
     )
 
 

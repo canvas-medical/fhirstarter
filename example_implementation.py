@@ -41,20 +41,6 @@ async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
     return FHIRInteractionResult[Patient](id_=patient.id)
 
 
-# Register the patient update FHIR interaction with the provider
-@provider.register_update_interaction(Patient)
-async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Patient]:
-    # All Canvas-to-FHIR mapping code for a Patient update operation goes here. For an update
-    # operation, an integration message is sent to the integration message router.
-    if id_ not in DATABASE:
-        raise FHIRResourceNotFoundError
-
-    patient = deepcopy(resource)
-    DATABASE[id_] = patient
-
-    return FHIRInteractionResult[Patient](id_=patient.id)
-
-
 # Register the patient read FHIR interaction with the provider
 @provider.register_read_interaction(Patient)
 async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
@@ -91,6 +77,20 @@ async def patient_search(
     )
 
     return FHIRInteractionResult[Bundle](resource=bundle)
+
+
+# Register the patient update FHIR interaction with the provider
+@provider.register_update_interaction(Patient)
+async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Patient]:
+    # All Canvas-to-FHIR mapping code for a Patient update operation goes here. For an update
+    # operation, an integration message is sent to the integration message router.
+    if id_ not in DATABASE:
+        raise FHIRResourceNotFoundError
+
+    patient = deepcopy(resource)
+    DATABASE[id_] = patient
+
+    return FHIRInteractionResult[Patient](id_=patient.id)
 
 
 # Add the provider to the app. This will automatically generate the API routes for the interactions

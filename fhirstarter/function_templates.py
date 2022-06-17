@@ -37,6 +37,15 @@ async def create(
     return result.resource
 
 
+async def read(request: Request, response: Response, id_: Id) -> FHIRResourceType:
+    result = cast(FHIRInteractionResult[FHIRResourceType], await callable_(id_))
+    result.validate()
+
+    assert result.resource is not None, "FHIR read interaction must return a resource"
+
+    return result.resource
+
+
 async def update(
     request: Request, response: Response, id_: Id, resource: FHIRResourceType
 ) -> FHIRResourceType | None:
@@ -44,15 +53,6 @@ async def update(
         FHIRInteractionResult[FHIRResourceType], await callable_(id_, resource)
     )
     result.validate()
-
-    return result.resource
-
-
-async def read(request: Request, response: Response, id_: Id) -> FHIRResourceType:
-    result = cast(FHIRInteractionResult[FHIRResourceType], await callable_(id_))
-    result.validate()
-
-    assert result.resource is not None, "FHIR read interaction must return a resource"
 
     return result.resource
 
