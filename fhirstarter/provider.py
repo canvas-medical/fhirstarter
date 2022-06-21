@@ -34,13 +34,15 @@ class FHIRInteractionResult(Generic[FHIRResourceType]):
 
 class FHIRCreateInteractionCallable(Protocol[FHIRResourceType]):
     async def __call__(
-        self, resource: FHIRResourceType
+        self, resource: FHIRResourceType, **kwargs: str
     ) -> FHIRInteractionResult[FHIRResourceType]:
         ...
 
 
 class FHIRReadInteractionCallable(Protocol[FHIRResourceType]):
-    async def __call__(self, id_: Id) -> FHIRInteractionResult[FHIRResourceType]:
+    async def __call__(
+        self, id_: Id, **kwargs: str
+    ) -> FHIRInteractionResult[FHIRResourceType]:
         ...
 
 
@@ -51,7 +53,7 @@ class FHIRSearchInteractionCallable(Protocol):
 
 class FHIRUpdateInteractionCallable(Protocol[FHIRResourceType]):
     async def __call__(
-        self, id_: Id, resource: FHIRResourceType
+        self, id_: Id, resource: FHIRResourceType, **kwargs: str
     ) -> FHIRInteractionResult[FHIRResourceType]:
         ...
 

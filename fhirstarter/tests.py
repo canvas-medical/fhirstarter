@@ -19,7 +19,9 @@ from .utils import make_operation_outcome
 _DATABASE: dict[str, Patient] = {}
 
 
-async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
+async def patient_create(
+    resource: Patient, **kwargs: str
+) -> FHIRInteractionResult[Patient]:
     patient = deepcopy(resource)
     patient.id = _generate_patient_id()
     _DATABASE[patient.id] = patient
@@ -27,7 +29,7 @@ async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
     return FHIRInteractionResult[Patient](id_=patient.id)
 
 
-async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
+async def patient_read(id_: Id, **kwargs: str) -> FHIRInteractionResult[Patient]:
     patient = _DATABASE.get(id_)
     if not patient:
         raise FHIRResourceNotFoundError
@@ -36,7 +38,7 @@ async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
 
 
 async def patient_search(
-    family: str | None = None, **kwargs: Any
+    family: str | None = None, **kwargs: str
 ) -> FHIRInteractionResult[Bundle]:
     patients = []
     for patient in _DATABASE.values():
@@ -55,7 +57,9 @@ async def patient_search(
     return FHIRInteractionResult[Bundle](resource=bundle)
 
 
-async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Patient]:
+async def patient_update(
+    id_: Id, resource: Patient, **kwargs: str
+) -> FHIRInteractionResult[Patient]:
     if id_ not in _DATABASE:
         raise FHIRResourceNotFoundError
 

@@ -25,7 +25,10 @@ async def callable_(*_: Any, **__: Any) -> Any:
 async def create(
     request: Request, response: Response, resource: FHIRResourceType
 ) -> FHIRResourceType | None:
-    result = cast(FHIRInteractionResult[FHIRResourceType], await callable_(resource))
+    result = cast(
+        FHIRInteractionResult[FHIRResourceType],
+        await callable_(resource, request=request),
+    )
     result.validate()
 
     id_ = resource_id(result)
@@ -38,7 +41,9 @@ async def create(
 
 
 async def read(request: Request, response: Response, id_: Id) -> FHIRResourceType:
-    result = cast(FHIRInteractionResult[FHIRResourceType], await callable_(id_))
+    result = cast(
+        FHIRInteractionResult[FHIRResourceType], await callable_(id_, request=request)
+    )
     result.validate()
 
     assert result.resource is not None, "FHIR read interaction must return a resource"
@@ -50,7 +55,8 @@ async def update(
     request: Request, response: Response, id_: Id, resource: FHIRResourceType
 ) -> FHIRResourceType | None:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType], await callable_(id_, resource)
+        FHIRInteractionResult[FHIRResourceType],
+        await callable_(id_, resource, request=request),
     )
     result.validate()
 
@@ -80,6 +86,7 @@ async def account_search(
             status=status,
             subject=subject,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -140,6 +147,7 @@ async def activitydefinition_search(
             topic=topic,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -180,6 +188,7 @@ async def adverseevent_search(
             study=study,
             subject=subject,
             substance=substance,
+            request=request,
         ),
     )
     result.validate()
@@ -228,6 +237,7 @@ async def allergyintolerance_search(
             severity=severity,
             type_=type_,
             verification_status=verification_status,
+            request=request,
         ),
     )
     result.validate()
@@ -278,6 +288,7 @@ async def appointment_search(
             specialty=specialty,
             status=status,
             supporting_info=supporting_info,
+            request=request,
         ),
     )
     result.validate()
@@ -308,6 +319,7 @@ async def appointmentresponse_search(
             part_status=part_status,
             patient=patient,
             practitioner=practitioner,
+            request=request,
         ),
     )
     result.validate()
@@ -360,6 +372,7 @@ async def auditevent_search(
             source=source,
             subtype=subtype,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -388,6 +401,7 @@ async def basic_search(
             identifier=identifier,
             patient=patient,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -412,6 +426,7 @@ async def bodystructure_search(
             location=location,
             morphology=morphology,
             patient=patient,
+            request=request,
         ),
     )
     result.validate()
@@ -474,6 +489,7 @@ async def capabilitystatement_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -530,6 +546,7 @@ async def careplan_search(
             replaces=replaces,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -562,6 +579,7 @@ async def careteam_search(
             patient=patient,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -612,6 +630,7 @@ async def chargeitem_search(
             requesting_organization=requesting_organization,
             service=service,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -658,6 +677,7 @@ async def chargeitemdefinition_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -708,6 +728,7 @@ async def claim_search(
             status=status,
             subdetail_udi=subdetail_udi,
             use=use,
+            request=request,
         ),
     )
     result.validate()
@@ -746,6 +767,7 @@ async def claimresponse_search(
             requestor=requestor,
             status=status,
             use=use,
+            request=request,
         ),
     )
     result.validate()
@@ -788,6 +810,7 @@ async def clinicalimpression_search(
             status=status,
             subject=subject,
             supporting_info=supporting_info,
+            request=request,
         ),
     )
     result.validate()
@@ -844,6 +867,7 @@ async def codesystem_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -890,6 +914,7 @@ async def communication_search(
             sent=sent,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -938,6 +963,7 @@ async def communicationrequest_search(
             sender=sender,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -982,6 +1008,7 @@ async def compartmentdefinition_search(
             status=status,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -1034,6 +1061,7 @@ async def composition_search(
             subject=subject,
             title=title,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -1102,6 +1130,7 @@ async def conceptmap_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -1160,6 +1189,7 @@ async def condition_search(
             stage=stage,
             subject=subject,
             verification_status=verification_status,
+            request=request,
         ),
     )
     result.validate()
@@ -1206,6 +1236,7 @@ async def consent_search(
             security_label=security_label,
             source_reference=source_reference,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -1242,6 +1273,7 @@ async def contract_search(
             status=status,
             subject=subject,
             url=url,
+            request=request,
         ),
     )
     result.validate()
@@ -1280,6 +1312,7 @@ async def coverage_search(
             status=status,
             subscriber=subscriber,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -1310,6 +1343,7 @@ async def coverageeligibilityrequest_search(
             patient=patient,
             provider=provider,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -1344,6 +1378,7 @@ async def coverageeligibilityresponse_search(
             request_=request_,
             requestor=requestor,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -1372,6 +1407,7 @@ async def detectedissue_search(
             identifier=identifier,
             implicated=implicated,
             patient=patient,
+            request=request,
         ),
     )
     result.validate()
@@ -1412,6 +1448,7 @@ async def device_search(
             udi_carrier=udi_carrier,
             udi_di=udi_di,
             url=url,
+            request=request,
         ),
     )
     result.validate()
@@ -1426,7 +1463,9 @@ async def devicedefinition_search(
 ) -> FHIRResourceType:
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
-        await callable_(identifier=identifier, parent=parent, type_=type_),
+        await callable_(
+            identifier=identifier, parent=parent, type_=type_, request=request
+        ),
     )
     result.validate()
 
@@ -1452,6 +1491,7 @@ async def devicemetric_search(
             parent=parent,
             source=source,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -1504,6 +1544,7 @@ async def devicerequest_search(
             requester=requester,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -1524,7 +1565,11 @@ async def deviceusestatement_search(
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
         await callable_(
-            device=device, identifier=identifier, patient=patient, subject=subject
+            device=device,
+            identifier=identifier,
+            patient=patient,
+            subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -1573,6 +1618,7 @@ async def diagnosticreport_search(
             specimen=specimen,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -1615,6 +1661,7 @@ async def documentmanifest_search(
             status=status,
             subject=subject,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -1681,6 +1728,7 @@ async def documentreference_search(
             status=status,
             subject=subject,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -1729,6 +1777,7 @@ async def effectevidencesynthesis_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -1791,6 +1840,7 @@ async def encounter_search(
             status=status,
             subject=subject,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -1819,6 +1869,7 @@ async def endpoint_search(
             organization=organization,
             payload_type=payload_type,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -1839,7 +1890,11 @@ async def enrollmentrequest_search(
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
         await callable_(
-            identifier=identifier, patient=patient, status=status, subject=subject
+            identifier=identifier,
+            patient=patient,
+            status=status,
+            subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -1854,7 +1909,9 @@ async def enrollmentresponse_search(
 ) -> FHIRResourceType:
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
-        await callable_(identifier=identifier, request_=request_, status=status),
+        await callable_(
+            identifier=identifier, request_=request_, status=status, request=request
+        ),
     )
     result.validate()
 
@@ -1888,6 +1945,7 @@ async def episodeofcare_search(
             patient=patient,
             status=status,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -1948,6 +2006,7 @@ async def eventdefinition_search(
             topic=topic,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -2008,6 +2067,7 @@ async def evidence_search(
             topic=topic,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -2068,6 +2128,7 @@ async def evidencevariable_search(
             topic=topic,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -2110,6 +2171,7 @@ async def examplescenario_search(
             status=status,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -2160,6 +2222,7 @@ async def explanationofbenefit_search(
             provider=provider,
             status=status,
             subdetail_udi=subdetail_udi,
+            request=request,
         ),
     )
     result.validate()
@@ -2194,6 +2257,7 @@ async def familymemberhistory_search(
             relationship=relationship,
             sex=sex,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -2222,6 +2286,7 @@ async def flag_search(
             identifier=identifier,
             patient=patient,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -2254,6 +2319,7 @@ async def goal_search(
             start_date=start_date,
             subject=subject,
             target_date=target_date,
+            request=request,
         ),
     )
     result.validate()
@@ -2298,6 +2364,7 @@ async def graphdefinition_search(
             status=status,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -2334,6 +2401,7 @@ async def group_search(
             member=member,
             type_=type_,
             value=value,
+            request=request,
         ),
     )
     result.validate()
@@ -2354,7 +2422,11 @@ async def guidanceresponse_search(
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
         await callable_(
-            identifier=identifier, patient=patient, request_=request_, subject=subject
+            identifier=identifier,
+            patient=patient,
+            request_=request_,
+            subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -2395,6 +2467,7 @@ async def healthcareservice_search(
             service_category=service_category,
             service_type=service_type,
             specialty=specialty,
+            request=request,
         ),
     )
     result.validate()
@@ -2445,6 +2518,7 @@ async def imagingstudy_search(
             started=started,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -2493,6 +2567,7 @@ async def immunization_search(
             status_reason=status_reason,
             target_disease=target_disease,
             vaccine_code=vaccine_code,
+            request=request,
         ),
     )
     result.validate()
@@ -2523,6 +2598,7 @@ async def immunizationevaluation_search(
             patient=patient,
             status=status,
             target_disease=target_disease,
+            request=request,
         ),
     )
     result.validate()
@@ -2555,6 +2631,7 @@ async def immunizationrecommendation_search(
             support=support,
             target_disease=target_disease,
             vaccine_type=vaccine_type,
+            request=request,
         ),
     )
     result.validate()
@@ -2607,6 +2684,7 @@ async def implementationguide_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -2651,6 +2729,7 @@ async def insuranceplan_search(
             phonetic=phonetic,
             status=status,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -2693,6 +2772,7 @@ async def invoice_search(
             totalgross=totalgross,
             totalnet=totalnet,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -2757,6 +2837,7 @@ async def library_search(
             type_=type_,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -2771,7 +2852,7 @@ async def linkage_search(
 ) -> FHIRResourceType:
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
-        await callable_(author=author, item=item, source=source),
+        await callable_(author=author, item=item, source=source, request=request),
     )
     result.validate()
 
@@ -2811,6 +2892,7 @@ async def list_search(
             status=status,
             subject=subject,
             title=title,
+            request=request,
         ),
     )
     result.validate()
@@ -2857,6 +2939,7 @@ async def location_search(
             partof=partof,
             status=status,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -2917,6 +3000,7 @@ async def measure_search(
             topic=topic,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -2951,6 +3035,7 @@ async def measurereport_search(
             reporter=reporter,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -2993,6 +3078,7 @@ async def media_search(
             subject=subject,
             type_=type_,
             view=view,
+            request=request,
         ),
     )
     result.validate()
@@ -3027,6 +3113,7 @@ async def medication_search(
             lot_number=lot_number,
             manufacturer=manufacturer,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -3069,6 +3156,7 @@ async def medicationadministration_search(
             request_=request_,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -3115,6 +3203,7 @@ async def medicationdispense_search(
             type_=type_,
             whenhandedover=whenhandedover,
             whenprepared=whenprepared,
+            request=request,
         ),
     )
     result.validate()
@@ -3157,6 +3246,7 @@ async def medicationknowledge_search(
             monograph_type=monograph_type,
             source_cost=source_cost,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -3205,6 +3295,7 @@ async def medicationrequest_search(
             requester=requester,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -3243,6 +3334,7 @@ async def medicationstatement_search(
             source=source,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -3257,7 +3349,12 @@ async def medicinalproduct_search(
 ) -> FHIRResourceType:
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
-        await callable_(identifier=identifier, name=name, name_language=name_language),
+        await callable_(
+            identifier=identifier,
+            name=name,
+            name_language=name_language,
+            request=request,
+        ),
     )
     result.validate()
 
@@ -3283,6 +3380,7 @@ async def medicinalproductauthorization_search(
             identifier=identifier,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -3296,7 +3394,8 @@ async def medicinalproductcontraindication_search(
     request: Request, response: Response, subject: str
 ) -> FHIRResourceType:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType], await callable_(subject=subject)
+        FHIRInteractionResult[FHIRResourceType],
+        await callable_(subject=subject, request=request),
     )
     result.validate()
 
@@ -3309,7 +3408,8 @@ async def medicinalproductindication_search(
     request: Request, response: Response, subject: str
 ) -> FHIRResourceType:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType], await callable_(subject=subject)
+        FHIRInteractionResult[FHIRResourceType],
+        await callable_(subject=subject, request=request),
     )
     result.validate()
 
@@ -3322,7 +3422,8 @@ async def medicinalproductinteraction_search(
     request: Request, response: Response, subject: str
 ) -> FHIRResourceType:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType], await callable_(subject=subject)
+        FHIRInteractionResult[FHIRResourceType],
+        await callable_(subject=subject, request=request),
     )
     result.validate()
 
@@ -3336,7 +3437,7 @@ async def medicinalproductpackaged_search(
 ) -> FHIRResourceType:
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
-        await callable_(identifier=identifier, subject=subject),
+        await callable_(identifier=identifier, subject=subject, request=request),
     )
     result.validate()
 
@@ -3355,7 +3456,10 @@ async def medicinalproductpharmaceutical_search(
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
         await callable_(
-            identifier=identifier, route=route, target_species=target_species
+            identifier=identifier,
+            route=route,
+            target_species=target_species,
+            request=request,
         ),
     )
     result.validate()
@@ -3369,7 +3473,8 @@ async def medicinalproductundesirableeffect_search(
     request: Request, response: Response, subject: str
 ) -> FHIRResourceType:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType], await callable_(subject=subject)
+        FHIRInteractionResult[FHIRResourceType],
+        await callable_(subject=subject, request=request),
     )
     result.validate()
 
@@ -3423,6 +3528,7 @@ async def messagedefinition_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -3467,6 +3573,7 @@ async def messageheader_search(
             source=source,
             source_uri=source_uri,
             target=target,
+            request=request,
         ),
     )
     result.validate()
@@ -3509,6 +3616,7 @@ async def molecularsequence_search(
             variant_start=variant_start,
             window_end=window_end,
             window_start=window_start,
+            request=request,
         ),
     )
     result.validate()
@@ -3563,6 +3671,7 @@ async def namingsystem_search(
             telecom=telecom,
             type_=type_,
             value=value,
+            request=request,
         ),
     )
     result.validate()
@@ -3603,6 +3712,7 @@ async def nutritionorder_search(
             provider=provider,
             status=status,
             supplement=supplement,
+            request=request,
         ),
     )
     result.validate()
@@ -3695,6 +3805,7 @@ async def observation_search(
             value_date=value_date,
             value_quantity=value_quantity,
             value_string=value_string,
+            request=request,
         ),
     )
     result.validate()
@@ -3755,6 +3866,7 @@ async def operationdefinition_search(
             type_=type_,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -3797,6 +3909,7 @@ async def organization_search(
             partof=partof,
             phonetic=phonetic,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -3841,6 +3954,7 @@ async def organizationaffiliation_search(
             service=service,
             specialty=specialty,
             telecom=telecom,
+            request=request,
         ),
     )
     result.validate()
@@ -3903,6 +4017,7 @@ async def patient_search(
             phone=phone,
             phonetic=phonetic,
             telecom=telecom,
+            request=request,
         ),
     )
     result.validate()
@@ -3933,6 +4048,7 @@ async def paymentnotice_search(
             request_=request_,
             response_=response_,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -3965,6 +4081,7 @@ async def paymentreconciliation_search(
             request_=request_,
             requestor=requestor,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -4019,6 +4136,7 @@ async def person_search(
             practitioner=practitioner,
             relatedperson=relatedperson,
             telecom=telecom,
+            request=request,
         ),
     )
     result.validate()
@@ -4083,6 +4201,7 @@ async def plandefinition_search(
             type_=type_,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -4133,6 +4252,7 @@ async def practitioner_search(
             phone=phone,
             phonetic=phonetic,
             telecom=telecom,
+            request=request,
         ),
     )
     result.validate()
@@ -4175,6 +4295,7 @@ async def practitionerrole_search(
             service=service,
             specialty=specialty,
             telecom=telecom,
+            request=request,
         ),
     )
     result.validate()
@@ -4223,6 +4344,7 @@ async def procedure_search(
             reason_reference=reason_reference,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -4259,6 +4381,7 @@ async def provenance_search(
             signature_type=signature_type,
             target=target,
             when=when,
+            request=request,
         ),
     )
     result.validate()
@@ -4313,6 +4436,7 @@ async def questionnaire_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -4351,6 +4475,7 @@ async def questionnaireresponse_search(
             source=source,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -4401,6 +4526,7 @@ async def relatedperson_search(
             phonetic=phonetic,
             relationship=relationship,
             telecom=telecom,
+            request=request,
         ),
     )
     result.validate()
@@ -4445,6 +4571,7 @@ async def requestgroup_search(
             priority=priority,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -4505,6 +4632,7 @@ async def researchdefinition_search(
             topic=topic,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -4565,6 +4693,7 @@ async def researchelementdefinition_search(
             topic=topic,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -4607,6 +4736,7 @@ async def researchstudy_search(
             sponsor=sponsor,
             status=status,
             title=title,
+            request=request,
         ),
     )
     result.validate()
@@ -4635,6 +4765,7 @@ async def researchsubject_search(
             patient=patient,
             status=status,
             study=study,
+            request=request,
         ),
     )
     result.validate()
@@ -4671,6 +4802,7 @@ async def riskassessment_search(
             probability=probability,
             risk=risk,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -4719,6 +4851,7 @@ async def riskevidencesynthesis_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -4749,6 +4882,7 @@ async def schedule_search(
             service_category=service_category,
             service_type=service_type,
             specialty=specialty,
+            request=request,
         ),
     )
     result.validate()
@@ -4803,6 +4937,7 @@ async def searchparameter_search(
             type_=type_,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -4861,6 +4996,7 @@ async def servicerequest_search(
             specimen=specimen,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -4893,6 +5029,7 @@ async def slot_search(
             specialty=specialty,
             start=start,
             status=status,
+            request=request,
         ),
     )
     result.validate()
@@ -4933,6 +5070,7 @@ async def specimen_search(
             status=status,
             subject=subject,
             type_=type_,
+            request=request,
         ),
     )
     result.validate()
@@ -4947,7 +5085,9 @@ async def specimendefinition_search(
 ) -> FHIRResourceType:
     result = cast(
         FHIRInteractionResult[FHIRResourceType],
-        await callable_(container=container, identifier=identifier, type_=type_),
+        await callable_(
+            container=container, identifier=identifier, type_=type_, request=request
+        ),
     )
     result.validate()
 
@@ -5015,6 +5155,7 @@ async def structuredefinition_search(
             url=url,
             valueset=valueset,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -5061,6 +5202,7 @@ async def structuremap_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -5089,6 +5231,7 @@ async def subscription_search(
             status=status,
             type_=type_,
             url=url,
+            request=request,
         ),
     )
     result.validate()
@@ -5121,6 +5264,7 @@ async def substance_search(
             quantity=quantity,
             status=status,
             substance_reference=substance_reference,
+            request=request,
         ),
     )
     result.validate()
@@ -5133,7 +5277,10 @@ async def substance_search(
 async def substancespecification_search(
     request: Request, response: Response, code: str
 ) -> FHIRResourceType:
-    result = cast(FHIRInteractionResult[FHIRResourceType], await callable_(code=code))
+    result = cast(
+        FHIRInteractionResult[FHIRResourceType],
+        await callable_(code=code, request=request),
+    )
     result.validate()
 
     assert result.resource is not None, "FHIR search interaction must return a bundle"
@@ -5158,6 +5305,7 @@ async def supplydelivery_search(
             receiver=receiver,
             status=status,
             supplier=supplier,
+            request=request,
         ),
     )
     result.validate()
@@ -5188,6 +5336,7 @@ async def supplyrequest_search(
             status=status,
             subject=subject,
             supplier=supplier,
+            request=request,
         ),
     )
     result.validate()
@@ -5242,6 +5391,7 @@ async def task_search(
             requester=requester,
             status=status,
             subject=subject,
+            request=request,
         ),
     )
     result.validate()
@@ -5286,6 +5436,7 @@ async def terminologycapabilities_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -5314,6 +5465,7 @@ async def testreport_search(
             result_=result_,
             tester=tester,
             testscript=testscript,
+            request=request,
         ),
     )
     result.validate()
@@ -5362,6 +5514,7 @@ async def testscript_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -5414,6 +5567,7 @@ async def valueset_search(
             title=title,
             url=url,
             version=version,
+            request=request,
         ),
     )
     result.validate()
@@ -5427,7 +5581,8 @@ async def verificationresult_search(
     request: Request, response: Response, target: str
 ) -> FHIRResourceType:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType], await callable_(target=target)
+        FHIRInteractionResult[FHIRResourceType],
+        await callable_(target=target, request=request),
     )
     result.validate()
 
@@ -5455,6 +5610,7 @@ async def visionprescription_search(
             patient=patient,
             prescriber=prescriber,
             status=status,
+            request=request,
         ),
     )
     result.validate()

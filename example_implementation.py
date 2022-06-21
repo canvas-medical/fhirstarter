@@ -31,7 +31,9 @@ provider = FHIRProvider()
 
 # Register the patient create FHIR interaction with the provider
 @provider.register_create_interaction(Patient)
-async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
+async def patient_create(
+    resource: Patient, **kwargs: str
+) -> FHIRInteractionResult[Patient]:
     # All Canvas-to-FHIR mapping code for a Patient create operation goes here. For a create
     # operation, an integration message is sent to the integration message router.
     patient = deepcopy(resource)
@@ -43,7 +45,7 @@ async def patient_create(resource: Patient) -> FHIRInteractionResult[Patient]:
 
 # Register the patient read FHIR interaction with the provider
 @provider.register_read_interaction(Patient)
-async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
+async def patient_read(id_: Id, **kwargs: str) -> FHIRInteractionResult[Patient]:
     # All Canvas-to-FHIR mapping code for a Patient read operation goes here. For a read operation,
     # a GraphQL request is issued, and then the result is mapped on to the FHIR Patient resource to
     # be returned.
@@ -57,7 +59,7 @@ async def patient_read(id_: Id) -> FHIRInteractionResult[Patient]:
 # Register the patient search FHIR interaction with the provider
 @provider.register_search_interaction(Patient)
 async def patient_search(
-    family: str | None = None, **kwargs: Any
+    family: str | None = None, **kwargs: str
 ) -> FHIRInteractionResult[Bundle]:
     # All Canvas-to-FHIR mapping code for a Patient search operation goes here. For a search
     # operation, a GraphQL request is issued, and then the result is mapped on to the FHIR Bundle
@@ -81,7 +83,9 @@ async def patient_search(
 
 # Register the patient update FHIR interaction with the provider
 @provider.register_update_interaction(Patient)
-async def patient_update(id_: Id, resource: Patient) -> FHIRInteractionResult[Patient]:
+async def patient_update(
+    id_: Id, resource: Patient, **kwargs: str
+) -> FHIRInteractionResult[Patient]:
     # All Canvas-to-FHIR mapping code for a Patient update operation goes here. For an update
     # operation, an integration message is sent to the integration message router.
     if id_ not in DATABASE:
