@@ -6,7 +6,6 @@ from typing import Any, Generic, Protocol, TypeVar
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
-from more_itertools import quantify
 
 FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
 
@@ -21,40 +20,27 @@ class FHIRInteractionType(Enum):
         return self.value < other.value
 
 
-@dataclass(frozen=True, kw_only=True)
-class FHIRInteractionResult(Generic[FHIRResourceType]):
-    id_: Id | None = None
-    resource: FHIRResourceType | None = None
-
-    def validate(self) -> None:
-        assert (
-            quantify((self.id_ is None, self.resource is None)) == 1
-        ), "One and only one of 'id_' and 'resource' must be specified on a FHIRInteractionResult"
-
-
-class FHIRCreateInteractionCallable(Protocol[FHIRResourceType]):
+class FHIRCreateInteractionCallable(Protocol[FHIRResourceType]):  # type: ignore
     async def __call__(
         self, resource: FHIRResourceType, **kwargs: str
-    ) -> FHIRInteractionResult[FHIRResourceType]:
+    ) -> Id | FHIRResourceType:
         ...
 
 
-class FHIRReadInteractionCallable(Protocol[FHIRResourceType]):
-    async def __call__(
-        self, id_: Id, **kwargs: str
-    ) -> FHIRInteractionResult[FHIRResourceType]:
+class FHIRReadInteractionCallable(Protocol[FHIRResourceType]):  # type: ignore
+    async def __call__(self, id_: Id, **kwargs: str) -> FHIRResourceType:
         ...
 
 
 class FHIRSearchInteractionCallable(Protocol):
-    async def __call__(self, **kwargs: str) -> FHIRInteractionResult[Bundle]:
+    async def __call__(self, **kwargs: str) -> Bundle:
         ...
 
 
-class FHIRUpdateInteractionCallable(Protocol[FHIRResourceType]):
+class FHIRUpdateInteractionCallable(Protocol[FHIRResourceType]):  # type: ignore
     async def __call__(
         self, id_: Id, resource: FHIRResourceType, **kwargs: str
-    ) -> FHIRInteractionResult[FHIRResourceType]:
+    ) -> Id | FHIRResourceType:
         ...
 
 

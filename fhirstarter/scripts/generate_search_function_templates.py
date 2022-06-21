@@ -17,9 +17,7 @@ def main() -> None:
         ]
 
         function_template = f"""async def {resource_type.lower()}_search(request: Request, response: Response, {", ".join([f"{sp}: str" for sp in search_parameter_names])}) -> Bundle:
-    result = cast(FHIRInteractionResult[Bundle], await callable_({", ".join([f"{sp}={sp}" for sp in search_parameter_names])}, request=request))
-
-    return finalize_searchset(result)"""
+    return await callable_({", ".join([f"{sp}={sp}" for sp in search_parameter_names])}, request=request)"""
 
         print(f"{function_template}\n")
 

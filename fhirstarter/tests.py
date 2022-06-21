@@ -12,34 +12,30 @@ from requests.models import Response
 from . import status
 from .exceptions import FHIRResourceNotFoundError
 from .fhirstarter import FHIRStarter
-from .provider import FHIRInteractionResult, FHIRProvider
+from .provider import FHIRProvider
 from .testclient import TestClient
 from .utils import make_operation_outcome
 
 _DATABASE: dict[str, Patient] = {}
 
 
-async def patient_create(
-    resource: Patient, **kwargs: str
-) -> FHIRInteractionResult[Patient]:
+async def patient_create(resource: Patient, **kwargs: str) -> Id:
     patient = deepcopy(resource)
     patient.id = _generate_patient_id()
     _DATABASE[patient.id] = patient
 
-    return FHIRInteractionResult[Patient](id_=patient.id)
+    return Id(patient.id)
 
 
-async def patient_read(id_: Id, **kwargs: str) -> FHIRInteractionResult[Patient]:
+async def patient_read(id_: Id, **kwargs: str) -> Patient:
     patient = _DATABASE.get(id_)
     if not patient:
         raise FHIRResourceNotFoundError
 
-    return FHIRInteractionResult[Patient](resource=patient)
+    return patient
 
 
-async def patient_search(
-    family: str | None = None, **kwargs: str
-) -> FHIRInteractionResult[Bundle]:
+async def patient_search(family: str | None = None, **kwargs: str) -> Bundle:
     patients = []
     for patient in _DATABASE.values():
         for name in patient.name:
@@ -54,19 +50,17 @@ async def patient_search(
         }
     )
 
-    return FHIRInteractionResult[Bundle](resource=bundle)
+    return bundle
 
 
-async def patient_update(
-    id_: Id, resource: Patient, **kwargs: str
-) -> FHIRInteractionResult[Patient]:
+async def patient_update(id_: Id, resource: Patient, **kwargs: str) -> Id:
     if id_ not in _DATABASE:
         raise FHIRResourceNotFoundError
 
     patient = deepcopy(resource)
     _DATABASE[id_] = patient
 
-    return FHIRInteractionResult[Patient](id_=patient.id)
+    return Id(patient.id)
 
 
 def _app(provider: FHIRProvider) -> TestClient:
@@ -285,8 +279,8 @@ def test_validation_error(client: TestClient) -> None:
     )
 
 
-def _generate_patient_id() -> str:
-    return uuid4().hex
+def _generate_patient_id() -> Id:
+    return Id(uuid4().hex)
 
 
 def _id_from_create_response(response: Response) -> str:

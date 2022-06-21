@@ -9,7 +9,7 @@ from fhir.resources.operationoutcome import OperationOutcome
 from funcy import omit
 
 from . import function_templates, status
-from .provider import FHIRInteraction, FHIRInteractionResult, FHIRResourceType
+from .provider import FHIRInteraction, FHIRResourceType
 from .search_parameters import (
     load_search_parameters,
     supported_search_parameters,
@@ -103,14 +103,10 @@ def _make_function(
 ) -> FunctionType:
     annotations |= {"request": Request, "response": Response}
     globals_ = {
-        "cast": cast,
-        "FHIRInteractionResult": FHIRInteractionResult,
-        "FHIRResourceType": interaction.resource_type,
-        "Bundle": Bundle,
         "callable_": interaction.callable_,
-        "resource_id": function_templates.resource_id,
+        "parse_result": function_templates.parse_result,
         "resource_type_str": interaction.resource_type.get_resource_type(),
-        "finalize_searchset": function_templates.finalize_searchset,
+        "FHIRResourceType": interaction.resource_type,
     }
 
     func = FunctionType(code=code, globals=globals_, argdefs=argdefs)

@@ -7,7 +7,7 @@ from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
 
-from fhirstarter import FHIRInteractionResult, FHIRProvider, FHIRStarter
+from fhirstarter import FHIRProvider, FHIRStarter
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 
 # Create the app
@@ -30,31 +30,27 @@ provider = FHIRProvider()
 
 # Register the patient create FHIR interaction with the provider
 @provider.register_create_interaction(Patient)
-async def patient_create(
-    resource: Patient, **kwargs: str
-) -> FHIRInteractionResult[Patient]:
+async def patient_create(resource: Patient, **kwargs: str) -> Id:
     patient = deepcopy(resource)
     patient.id = Id(uuid4().hex)
     DATABASE[patient.id] = patient
 
-    return FHIRInteractionResult[Patient](id_=patient.id)
+    return Id(patient.id)
 
 
 # Register the patient read FHIR interaction with the provider
 @provider.register_read_interaction(Patient)
-async def patient_read(id_: Id, **kwargs: str) -> FHIRInteractionResult[Patient]:
+async def patient_read(id_: Id, **kwargs: str) -> Patient:
     patient = DATABASE.get(id_)
     if not patient:
         raise FHIRResourceNotFoundError
 
-    return FHIRInteractionResult[Patient](resource=patient)
+    return patient
 
 
 # Register the patient search FHIR interaction with the provider
 @provider.register_search_interaction(Patient)
-async def patient_search(
-    family: str | None = None, **kwargs: str
-) -> FHIRInteractionResult[Bundle]:
+async def patient_search(family: str | None = None, **kwargs: str) -> Bundle:
     patients = []
     for patient in DATABASE.values():
         for name in patient.name:
@@ -69,21 +65,19 @@ async def patient_search(
         }
     )
 
-    return FHIRInteractionResult[Bundle](resource=bundle)
+    return bundle
 
 
 # Register the patient update FHIR interaction with the provider
 @provider.register_update_interaction(Patient)
-async def patient_update(
-    id_: Id, resource: Patient, **kwargs: str
-) -> FHIRInteractionResult[Patient]:
+async def patient_update(id_: Id, resource: Patient, **kwargs: str) -> Id:
     if id_ not in DATABASE:
         raise FHIRResourceNotFoundError
 
     patient = deepcopy(resource)
     DATABASE[id_] = patient
 
-    return FHIRInteractionResult[Patient](id_=patient.id)
+    return Id(patient.id)
 
 
 # Add the provider to the app. This will automatically generate the API routes for the interactions

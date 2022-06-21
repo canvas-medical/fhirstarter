@@ -1,10 +1,11 @@
-from typing import Any, cast
+from typing import Any
 
 from fastapi import Request, Response
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
+from fhir.resources.resource import Resource
 
-from .provider import FHIRInteractionResult, FHIRResourceType
+from .provider import FHIRResourceType
 
 resource_type_str: str | None = None
 
@@ -13,65 +14,37 @@ async def callable_(*_: Any, **__: Any) -> Any:
     return None
 
 
-def resource_id(result: FHIRInteractionResult[FHIRResourceType]) -> Id | None:
-    if result.id_ is not None:
-        return result.id_
-
-    if result.resource is not None:
-        return result.resource.id
-
-    return None
-
-
-def finalize_searchset(result: FHIRInteractionResult[Bundle]) -> Bundle:
-    result.validate()
-
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    result.resource.type = "searchset"
-
-    return cast(Bundle, result.resource)
+def parse_result(result: Id | Resource) -> tuple[Id | None, Resource | None]:
+    if isinstance(result, Resource):
+        return result.id, result
+    else:
+        return result, None
 
 
 async def create(
     request: Request, response: Response, resource: FHIRResourceType
 ) -> FHIRResourceType | None:
-    result = cast(
-        FHIRInteractionResult[FHIRResourceType],
-        await callable_(resource, request=request),
-    )
-    result.validate()
-
-    id_ = resource_id(result)
+    result = await callable_(resource, request=request)
+    id_, result_resource = parse_result(result)
 
     response.headers["Location"] = (
         f"{request.base_url}{resource_type_str}" f"/{id_}/_history/1"
     )
 
-    return result.resource
+    return result_resource
 
 
 async def read(request: Request, response: Response, id_: Id) -> FHIRResourceType:
-    result = cast(
-        FHIRInteractionResult[FHIRResourceType], await callable_(id_, request=request)
-    )
-    result.validate()
-
-    assert result.resource is not None, "FHIR read interaction must return a resource"
-
-    return result.resource
+    return await callable_(id_, request=request)
 
 
 async def update(
     request: Request, response: Response, id_: Id, resource: FHIRResourceType
 ) -> FHIRResourceType | None:
-    result = cast(
-        FHIRInteractionResult[FHIRResourceType],
-        await callable_(id_, resource, request=request),
-    )
-    result.validate()
+    result = await callable_(id_, resource, request=request)
+    _, result_resource = parse_result(result)
 
-    return result.resource
+    return result_resource
 
 
 async def account_search(
@@ -86,22 +59,17 @@ async def account_search(
     subject: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier,
-            name=name,
-            owner=owner,
-            patient=patient,
-            period=period,
-            status=status,
-            subject=subject,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        identifier=identifier,
+        name=name,
+        owner=owner,
+        patient=patient,
+        period=period,
+        status=status,
+        subject=subject,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def activitydefinition_search(
@@ -130,36 +98,31 @@ async def activitydefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            composed_of=composed_of,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            depends_on=depends_on,
-            derived_from=derived_from,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            predecessor=predecessor,
-            publisher=publisher,
-            status=status,
-            successor=successor,
-            title=title,
-            topic=topic,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        composed_of=composed_of,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        depends_on=depends_on,
+        derived_from=derived_from,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        predecessor=predecessor,
+        publisher=publisher,
+        status=status,
+        successor=successor,
+        title=title,
+        topic=topic,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def adverseevent_search(
@@ -178,26 +141,21 @@ async def adverseevent_search(
     subject: str,
     substance: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            actuality=actuality,
-            category=category,
-            date=date,
-            event=event,
-            location=location,
-            recorder=recorder,
-            resultingcondition=resultingcondition,
-            seriousness=seriousness,
-            severity=severity,
-            study=study,
-            subject=subject,
-            substance=substance,
-            request=request,
-        ),
+    return await callable_(
+        actuality=actuality,
+        category=category,
+        date=date,
+        event=event,
+        location=location,
+        recorder=recorder,
+        resultingcondition=resultingcondition,
+        seriousness=seriousness,
+        severity=severity,
+        study=study,
+        subject=subject,
+        substance=substance,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def allergyintolerance_search(
@@ -220,30 +178,25 @@ async def allergyintolerance_search(
     type_: str,
     verification_status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            asserter=asserter,
-            category=category,
-            clinical_status=clinical_status,
-            code=code,
-            criticality=criticality,
-            date=date,
-            identifier=identifier,
-            last_date=last_date,
-            manifestation=manifestation,
-            onset=onset,
-            patient=patient,
-            recorder=recorder,
-            route=route,
-            severity=severity,
-            type_=type_,
-            verification_status=verification_status,
-            request=request,
-        ),
+    return await callable_(
+        asserter=asserter,
+        category=category,
+        clinical_status=clinical_status,
+        code=code,
+        criticality=criticality,
+        date=date,
+        identifier=identifier,
+        last_date=last_date,
+        manifestation=manifestation,
+        onset=onset,
+        patient=patient,
+        recorder=recorder,
+        route=route,
+        severity=severity,
+        type_=type_,
+        verification_status=verification_status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def appointment_search(
@@ -267,31 +220,26 @@ async def appointment_search(
     status: str,
     supporting_info: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            actor=actor,
-            appointment_type=appointment_type,
-            based_on=based_on,
-            date=date,
-            identifier=identifier,
-            location=location,
-            part_status=part_status,
-            patient=patient,
-            practitioner=practitioner,
-            reason_code=reason_code,
-            reason_reference=reason_reference,
-            service_category=service_category,
-            service_type=service_type,
-            slot=slot,
-            specialty=specialty,
-            status=status,
-            supporting_info=supporting_info,
-            request=request,
-        ),
+    return await callable_(
+        actor=actor,
+        appointment_type=appointment_type,
+        based_on=based_on,
+        date=date,
+        identifier=identifier,
+        location=location,
+        part_status=part_status,
+        patient=patient,
+        practitioner=practitioner,
+        reason_code=reason_code,
+        reason_reference=reason_reference,
+        service_category=service_category,
+        service_type=service_type,
+        slot=slot,
+        specialty=specialty,
+        status=status,
+        supporting_info=supporting_info,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def appointmentresponse_search(
@@ -305,21 +253,16 @@ async def appointmentresponse_search(
     patient: str,
     practitioner: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            actor=actor,
-            appointment=appointment,
-            identifier=identifier,
-            location=location,
-            part_status=part_status,
-            patient=patient,
-            practitioner=practitioner,
-            request=request,
-        ),
+    return await callable_(
+        actor=actor,
+        appointment=appointment,
+        identifier=identifier,
+        location=location,
+        part_status=part_status,
+        patient=patient,
+        practitioner=practitioner,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def auditevent_search(
@@ -344,32 +287,27 @@ async def auditevent_search(
     subtype: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            action=action,
-            address=address,
-            agent=agent,
-            agent_name=agent_name,
-            agent_role=agent_role,
-            altid=altid,
-            date=date,
-            entity=entity,
-            entity_name=entity_name,
-            entity_role=entity_role,
-            entity_type=entity_type,
-            outcome=outcome,
-            patient=patient,
-            policy=policy,
-            site=site,
-            source=source,
-            subtype=subtype,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        action=action,
+        address=address,
+        agent=agent,
+        agent_name=agent_name,
+        agent_role=agent_role,
+        altid=altid,
+        date=date,
+        entity=entity,
+        entity_name=entity_name,
+        entity_role=entity_role,
+        entity_type=entity_type,
+        outcome=outcome,
+        patient=patient,
+        policy=policy,
+        site=site,
+        source=source,
+        subtype=subtype,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def basic_search(
@@ -382,20 +320,15 @@ async def basic_search(
     patient: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            author=author,
-            code=code,
-            created=created,
-            identifier=identifier,
-            patient=patient,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        author=author,
+        code=code,
+        created=created,
+        identifier=identifier,
+        patient=patient,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def bodystructure_search(
@@ -406,18 +339,13 @@ async def bodystructure_search(
     morphology: str,
     patient: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier,
-            location=location,
-            morphology=morphology,
-            patient=patient,
-            request=request,
-        ),
+    return await callable_(
+        identifier=identifier,
+        location=location,
+        morphology=morphology,
+        patient=patient,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def capabilitystatement_search(
@@ -447,37 +375,32 @@ async def capabilitystatement_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            fhirversion=fhirversion,
-            format_=format_,
-            guide=guide,
-            jurisdiction=jurisdiction,
-            mode=mode,
-            name=name,
-            publisher=publisher,
-            resource=resource,
-            resource_profile=resource_profile,
-            security_service=security_service,
-            software=software,
-            status=status,
-            supported_profile=supported_profile,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        fhirversion=fhirversion,
+        format_=format_,
+        guide=guide,
+        jurisdiction=jurisdiction,
+        mode=mode,
+        name=name,
+        publisher=publisher,
+        resource=resource,
+        resource_profile=resource_profile,
+        security_service=security_service,
+        software=software,
+        status=status,
+        supported_profile=supported_profile,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def careplan_search(
@@ -504,34 +427,29 @@ async def careplan_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            activity_code=activity_code,
-            activity_date=activity_date,
-            activity_reference=activity_reference,
-            based_on=based_on,
-            care_team=care_team,
-            category=category,
-            condition=condition,
-            date=date,
-            encounter=encounter,
-            goal=goal,
-            identifier=identifier,
-            instantiates_canonical=instantiates_canonical,
-            instantiates_uri=instantiates_uri,
-            intent=intent,
-            part_of=part_of,
-            patient=patient,
-            performer=performer,
-            replaces=replaces,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        activity_code=activity_code,
+        activity_date=activity_date,
+        activity_reference=activity_reference,
+        based_on=based_on,
+        care_team=care_team,
+        category=category,
+        condition=condition,
+        date=date,
+        encounter=encounter,
+        goal=goal,
+        identifier=identifier,
+        instantiates_canonical=instantiates_canonical,
+        instantiates_uri=instantiates_uri,
+        intent=intent,
+        part_of=part_of,
+        patient=patient,
+        performer=performer,
+        replaces=replaces,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def careteam_search(
@@ -546,22 +464,17 @@ async def careteam_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            category=category,
-            date=date,
-            encounter=encounter,
-            identifier=identifier,
-            participant=participant,
-            patient=patient,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        category=category,
+        date=date,
+        encounter=encounter,
+        identifier=identifier,
+        participant=participant,
+        patient=patient,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def chargeitem_search(
@@ -585,31 +498,26 @@ async def chargeitem_search(
     service: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            account=account,
-            code=code,
-            context=context,
-            entered_date=entered_date,
-            enterer=enterer,
-            factor_override=factor_override,
-            identifier=identifier,
-            occurrence=occurrence,
-            patient=patient,
-            performer_actor=performer_actor,
-            performer_function=performer_function,
-            performing_organization=performing_organization,
-            price_override=price_override,
-            quantity=quantity,
-            requesting_organization=requesting_organization,
-            service=service,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        account=account,
+        code=code,
+        context=context,
+        entered_date=entered_date,
+        enterer=enterer,
+        factor_override=factor_override,
+        identifier=identifier,
+        occurrence=occurrence,
+        patient=patient,
+        performer_actor=performer_actor,
+        performer_function=performer_function,
+        performing_organization=performing_organization,
+        price_override=price_override,
+        quantity=quantity,
+        requesting_organization=requesting_organization,
+        service=service,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def chargeitemdefinition_search(
@@ -631,29 +539,24 @@ async def chargeitemdefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            publisher=publisher,
-            status=status,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        publisher=publisher,
+        status=status,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def claim_search(
@@ -677,31 +580,26 @@ async def claim_search(
     subdetail_udi: str,
     use: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            care_team=care_team,
-            created=created,
-            detail_udi=detail_udi,
-            encounter=encounter,
-            enterer=enterer,
-            facility=facility,
-            identifier=identifier,
-            insurer=insurer,
-            item_udi=item_udi,
-            patient=patient,
-            payee=payee,
-            priority=priority,
-            procedure_udi=procedure_udi,
-            provider=provider,
-            status=status,
-            subdetail_udi=subdetail_udi,
-            use=use,
-            request=request,
-        ),
+    return await callable_(
+        care_team=care_team,
+        created=created,
+        detail_udi=detail_udi,
+        encounter=encounter,
+        enterer=enterer,
+        facility=facility,
+        identifier=identifier,
+        insurer=insurer,
+        item_udi=item_udi,
+        patient=patient,
+        payee=payee,
+        priority=priority,
+        procedure_udi=procedure_udi,
+        provider=provider,
+        status=status,
+        subdetail_udi=subdetail_udi,
+        use=use,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def claimresponse_search(
@@ -719,25 +617,20 @@ async def claimresponse_search(
     status: str,
     use: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            created=created,
-            disposition=disposition,
-            identifier=identifier,
-            insurer=insurer,
-            outcome=outcome,
-            patient=patient,
-            payment_date=payment_date,
-            request_=request_,
-            requestor=requestor,
-            status=status,
-            use=use,
-            request=request,
-        ),
+    return await callable_(
+        created=created,
+        disposition=disposition,
+        identifier=identifier,
+        insurer=insurer,
+        outcome=outcome,
+        patient=patient,
+        payment_date=payment_date,
+        request_=request_,
+        requestor=requestor,
+        status=status,
+        use=use,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def clinicalimpression_search(
@@ -757,27 +650,22 @@ async def clinicalimpression_search(
     subject: str,
     supporting_info: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            assessor=assessor,
-            date=date,
-            encounter=encounter,
-            finding_code=finding_code,
-            finding_ref=finding_ref,
-            identifier=identifier,
-            investigation=investigation,
-            patient=patient,
-            previous=previous,
-            problem=problem,
-            status=status,
-            subject=subject,
-            supporting_info=supporting_info,
-            request=request,
-        ),
+    return await callable_(
+        assessor=assessor,
+        date=date,
+        encounter=encounter,
+        finding_code=finding_code,
+        finding_ref=finding_ref,
+        identifier=identifier,
+        investigation=investigation,
+        patient=patient,
+        previous=previous,
+        problem=problem,
+        status=status,
+        subject=subject,
+        supporting_info=supporting_info,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def codesystem_search(
@@ -804,34 +692,29 @@ async def codesystem_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            code=code,
-            content_mode=content_mode,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            language=language,
-            name=name,
-            publisher=publisher,
-            status=status,
-            supplements=supplements,
-            system=system,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        code=code,
+        content_mode=content_mode,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        language=language,
+        name=name,
+        publisher=publisher,
+        status=status,
+        supplements=supplements,
+        system=system,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def communication_search(
@@ -853,29 +736,24 @@ async def communication_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            based_on=based_on,
-            category=category,
-            encounter=encounter,
-            identifier=identifier,
-            instantiates_canonical=instantiates_canonical,
-            instantiates_uri=instantiates_uri,
-            medium=medium,
-            part_of=part_of,
-            patient=patient,
-            received=received,
-            recipient=recipient,
-            sender=sender,
-            sent=sent,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        based_on=based_on,
+        category=category,
+        encounter=encounter,
+        identifier=identifier,
+        instantiates_canonical=instantiates_canonical,
+        instantiates_uri=instantiates_uri,
+        medium=medium,
+        part_of=part_of,
+        patient=patient,
+        received=received,
+        recipient=recipient,
+        sender=sender,
+        sent=sent,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def communicationrequest_search(
@@ -898,30 +776,25 @@ async def communicationrequest_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            authored=authored,
-            based_on=based_on,
-            category=category,
-            encounter=encounter,
-            group_identifier=group_identifier,
-            identifier=identifier,
-            medium=medium,
-            occurrence=occurrence,
-            patient=patient,
-            priority=priority,
-            recipient=recipient,
-            replaces=replaces,
-            requester=requester,
-            sender=sender,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        authored=authored,
+        based_on=based_on,
+        category=category,
+        encounter=encounter,
+        group_identifier=group_identifier,
+        identifier=identifier,
+        medium=medium,
+        occurrence=occurrence,
+        patient=patient,
+        priority=priority,
+        recipient=recipient,
+        replaces=replaces,
+        requester=requester,
+        sender=sender,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def compartmentdefinition_search(
@@ -942,28 +815,23 @@ async def compartmentdefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            code=code,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            name=name,
-            publisher=publisher,
-            resource=resource,
-            status=status,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        code=code,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        name=name,
+        publisher=publisher,
+        resource=resource,
+        status=status,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def composition_search(
@@ -988,32 +856,27 @@ async def composition_search(
     title: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            attester=attester,
-            author=author,
-            category=category,
-            confidentiality=confidentiality,
-            context=context,
-            date=date,
-            encounter=encounter,
-            entry=entry,
-            identifier=identifier,
-            patient=patient,
-            period=period,
-            related_id=related_id,
-            related_ref=related_ref,
-            section=section,
-            status=status,
-            subject=subject,
-            title=title,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        attester=attester,
+        author=author,
+        category=category,
+        confidentiality=confidentiality,
+        context=context,
+        date=date,
+        encounter=encounter,
+        entry=entry,
+        identifier=identifier,
+        patient=patient,
+        period=period,
+        related_id=related_id,
+        related_ref=related_ref,
+        section=section,
+        status=status,
+        subject=subject,
+        title=title,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def conceptmap_search(
@@ -1046,40 +909,35 @@ async def conceptmap_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            dependson=dependson,
-            description=description,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            other=other,
-            product=product,
-            publisher=publisher,
-            source=source,
-            source_code=source_code,
-            source_system=source_system,
-            source_uri=source_uri,
-            status=status,
-            target=target,
-            target_code=target_code,
-            target_system=target_system,
-            target_uri=target_uri,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        dependson=dependson,
+        description=description,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        other=other,
+        product=product,
+        publisher=publisher,
+        source=source,
+        source_code=source_code,
+        source_system=source_system,
+        source_uri=source_uri,
+        status=status,
+        target=target,
+        target_code=target_code,
+        target_system=target_system,
+        target_uri=target_uri,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def condition_search(
@@ -1107,35 +965,30 @@ async def condition_search(
     subject: str,
     verification_status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            abatement_age=abatement_age,
-            abatement_date=abatement_date,
-            abatement_string=abatement_string,
-            asserter=asserter,
-            body_site=body_site,
-            category=category,
-            clinical_status=clinical_status,
-            code=code,
-            encounter=encounter,
-            evidence=evidence,
-            evidence_detail=evidence_detail,
-            identifier=identifier,
-            onset_age=onset_age,
-            onset_date=onset_date,
-            onset_info=onset_info,
-            patient=patient,
-            recorded_date=recorded_date,
-            severity=severity,
-            stage=stage,
-            subject=subject,
-            verification_status=verification_status,
-            request=request,
-        ),
+    return await callable_(
+        abatement_age=abatement_age,
+        abatement_date=abatement_date,
+        abatement_string=abatement_string,
+        asserter=asserter,
+        body_site=body_site,
+        category=category,
+        clinical_status=clinical_status,
+        code=code,
+        encounter=encounter,
+        evidence=evidence,
+        evidence_detail=evidence_detail,
+        identifier=identifier,
+        onset_age=onset_age,
+        onset_date=onset_date,
+        onset_info=onset_info,
+        patient=patient,
+        recorded_date=recorded_date,
+        severity=severity,
+        stage=stage,
+        subject=subject,
+        verification_status=verification_status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def consent_search(
@@ -1157,29 +1010,24 @@ async def consent_search(
     source_reference: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            action=action,
-            actor=actor,
-            category=category,
-            consentor=consentor,
-            data=data,
-            date=date,
-            identifier=identifier,
-            organization=organization,
-            patient=patient,
-            period=period,
-            purpose=purpose,
-            scope=scope,
-            security_label=security_label,
-            source_reference=source_reference,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        action=action,
+        actor=actor,
+        category=category,
+        consentor=consentor,
+        data=data,
+        date=date,
+        identifier=identifier,
+        organization=organization,
+        patient=patient,
+        period=period,
+        purpose=purpose,
+        scope=scope,
+        security_label=security_label,
+        source_reference=source_reference,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def contract_search(
@@ -1196,24 +1044,19 @@ async def contract_search(
     subject: str,
     url: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            authority=authority,
-            domain=domain,
-            identifier=identifier,
-            instantiates=instantiates,
-            issued=issued,
-            patient=patient,
-            signer=signer,
-            status=status,
-            subject=subject,
-            url=url,
-            request=request,
-        ),
+    return await callable_(
+        authority=authority,
+        domain=domain,
+        identifier=identifier,
+        instantiates=instantiates,
+        issued=issued,
+        patient=patient,
+        signer=signer,
+        status=status,
+        subject=subject,
+        url=url,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def coverage_search(
@@ -1231,25 +1074,20 @@ async def coverage_search(
     subscriber: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            beneficiary=beneficiary,
-            class_type=class_type,
-            class_value=class_value,
-            dependent=dependent,
-            identifier=identifier,
-            patient=patient,
-            payor=payor,
-            policy_holder=policy_holder,
-            status=status,
-            subscriber=subscriber,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        beneficiary=beneficiary,
+        class_type=class_type,
+        class_value=class_value,
+        dependent=dependent,
+        identifier=identifier,
+        patient=patient,
+        payor=payor,
+        policy_holder=policy_holder,
+        status=status,
+        subscriber=subscriber,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def coverageeligibilityrequest_search(
@@ -1263,21 +1101,16 @@ async def coverageeligibilityrequest_search(
     provider: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            created=created,
-            enterer=enterer,
-            facility=facility,
-            identifier=identifier,
-            patient=patient,
-            provider=provider,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        created=created,
+        enterer=enterer,
+        facility=facility,
+        identifier=identifier,
+        patient=patient,
+        provider=provider,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def coverageeligibilityresponse_search(
@@ -1293,23 +1126,18 @@ async def coverageeligibilityresponse_search(
     requestor: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            created=created,
-            disposition=disposition,
-            identifier=identifier,
-            insurer=insurer,
-            outcome=outcome,
-            patient=patient,
-            request_=request_,
-            requestor=requestor,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        created=created,
+        disposition=disposition,
+        identifier=identifier,
+        insurer=insurer,
+        outcome=outcome,
+        patient=patient,
+        request_=request_,
+        requestor=requestor,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def detectedissue_search(
@@ -1322,20 +1150,15 @@ async def detectedissue_search(
     implicated: str,
     patient: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            author=author,
-            code=code,
-            identified=identified,
-            identifier=identifier,
-            implicated=implicated,
-            patient=patient,
-            request=request,
-        ),
+    return await callable_(
+        author=author,
+        code=code,
+        identified=identified,
+        identifier=identifier,
+        implicated=implicated,
+        patient=patient,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def device_search(
@@ -1354,39 +1177,29 @@ async def device_search(
     udi_di: str,
     url: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            device_name=device_name,
-            identifier=identifier,
-            location=location,
-            manufacturer=manufacturer,
-            model=model,
-            organization=organization,
-            patient=patient,
-            status=status,
-            type_=type_,
-            udi_carrier=udi_carrier,
-            udi_di=udi_di,
-            url=url,
-            request=request,
-        ),
+    return await callable_(
+        device_name=device_name,
+        identifier=identifier,
+        location=location,
+        manufacturer=manufacturer,
+        model=model,
+        organization=organization,
+        patient=patient,
+        status=status,
+        type_=type_,
+        udi_carrier=udi_carrier,
+        udi_di=udi_di,
+        url=url,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def devicedefinition_search(
     request: Request, response: Response, identifier: str, parent: str, type_: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier, parent=parent, type_=type_, request=request
-        ),
+    return await callable_(
+        identifier=identifier, parent=parent, type_=type_, request=request
     )
-
-    return finalize_searchset(result)
 
 
 async def devicemetric_search(
@@ -1398,19 +1211,14 @@ async def devicemetric_search(
     source: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            category=category,
-            identifier=identifier,
-            parent=parent,
-            source=source,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        category=category,
+        identifier=identifier,
+        parent=parent,
+        source=source,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def devicerequest_search(
@@ -1435,32 +1243,27 @@ async def devicerequest_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            authored_on=authored_on,
-            based_on=based_on,
-            code=code,
-            device=device,
-            encounter=encounter,
-            event_date=event_date,
-            group_identifier=group_identifier,
-            identifier=identifier,
-            instantiates_canonical=instantiates_canonical,
-            instantiates_uri=instantiates_uri,
-            insurance=insurance,
-            intent=intent,
-            patient=patient,
-            performer=performer,
-            prior_request=prior_request,
-            requester=requester,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        authored_on=authored_on,
+        based_on=based_on,
+        code=code,
+        device=device,
+        encounter=encounter,
+        event_date=event_date,
+        group_identifier=group_identifier,
+        identifier=identifier,
+        instantiates_canonical=instantiates_canonical,
+        instantiates_uri=instantiates_uri,
+        insurance=insurance,
+        intent=intent,
+        patient=patient,
+        performer=performer,
+        prior_request=prior_request,
+        requester=requester,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def deviceusestatement_search(
@@ -1471,18 +1274,13 @@ async def deviceusestatement_search(
     patient: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            device=device,
-            identifier=identifier,
-            patient=patient,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        device=device,
+        identifier=identifier,
+        patient=patient,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def diagnosticreport_search(
@@ -1505,30 +1303,25 @@ async def diagnosticreport_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            based_on=based_on,
-            category=category,
-            code=code,
-            conclusion=conclusion,
-            date=date,
-            encounter=encounter,
-            identifier=identifier,
-            issued=issued,
-            media=media,
-            patient=patient,
-            performer=performer,
-            result_=result_,
-            results_interpreter=results_interpreter,
-            specimen=specimen,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        based_on=based_on,
+        category=category,
+        code=code,
+        conclusion=conclusion,
+        date=date,
+        encounter=encounter,
+        identifier=identifier,
+        issued=issued,
+        media=media,
+        patient=patient,
+        performer=performer,
+        result_=result_,
+        results_interpreter=results_interpreter,
+        specimen=specimen,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def documentmanifest_search(
@@ -1548,27 +1341,22 @@ async def documentmanifest_search(
     subject: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            author=author,
-            created=created,
-            description=description,
-            identifier=identifier,
-            item=item,
-            patient=patient,
-            recipient=recipient,
-            related_id=related_id,
-            related_ref=related_ref,
-            source=source,
-            status=status,
-            subject=subject,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        author=author,
+        created=created,
+        description=description,
+        identifier=identifier,
+        item=item,
+        patient=patient,
+        recipient=recipient,
+        related_id=related_id,
+        related_ref=related_ref,
+        source=source,
+        status=status,
+        subject=subject,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def documentreference_search(
@@ -1600,39 +1388,34 @@ async def documentreference_search(
     subject: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            authenticator=authenticator,
-            author=author,
-            category=category,
-            contenttype=contenttype,
-            custodian=custodian,
-            date=date,
-            description=description,
-            encounter=encounter,
-            event=event,
-            facility=facility,
-            format_=format_,
-            identifier=identifier,
-            language=language,
-            location=location,
-            patient=patient,
-            period=period,
-            related=related,
-            relatesto=relatesto,
-            relation=relation,
-            relationship=relationship,
-            security_label=security_label,
-            setting=setting,
-            status=status,
-            subject=subject,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        authenticator=authenticator,
+        author=author,
+        category=category,
+        contenttype=contenttype,
+        custodian=custodian,
+        date=date,
+        description=description,
+        encounter=encounter,
+        event=event,
+        facility=facility,
+        format_=format_,
+        identifier=identifier,
+        language=language,
+        location=location,
+        patient=patient,
+        period=period,
+        related=related,
+        relatesto=relatesto,
+        relation=relation,
+        relationship=relationship,
+        security_label=security_label,
+        setting=setting,
+        status=status,
+        subject=subject,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def effectevidencesynthesis_search(
@@ -1655,30 +1438,25 @@ async def effectevidencesynthesis_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            status=status,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        status=status,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def encounter_search(
@@ -1708,37 +1486,32 @@ async def encounter_search(
     subject: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            account=account,
-            appointment=appointment,
-            based_on=based_on,
-            class_=class_,
-            date=date,
-            diagnosis=diagnosis,
-            episode_of_care=episode_of_care,
-            identifier=identifier,
-            length=length,
-            location=location,
-            location_period=location_period,
-            part_of=part_of,
-            participant=participant,
-            participant_type=participant_type,
-            patient=patient,
-            practitioner=practitioner,
-            reason_code=reason_code,
-            reason_reference=reason_reference,
-            service_provider=service_provider,
-            special_arrangement=special_arrangement,
-            status=status,
-            subject=subject,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        account=account,
+        appointment=appointment,
+        based_on=based_on,
+        class_=class_,
+        date=date,
+        diagnosis=diagnosis,
+        episode_of_care=episode_of_care,
+        identifier=identifier,
+        length=length,
+        location=location,
+        location_period=location_period,
+        part_of=part_of,
+        participant=participant,
+        participant_type=participant_type,
+        patient=patient,
+        practitioner=practitioner,
+        reason_code=reason_code,
+        reason_reference=reason_reference,
+        service_provider=service_provider,
+        special_arrangement=special_arrangement,
+        status=status,
+        subject=subject,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def endpoint_search(
@@ -1751,20 +1524,15 @@ async def endpoint_search(
     payload_type: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            connection_type=connection_type,
-            identifier=identifier,
-            name=name,
-            organization=organization,
-            payload_type=payload_type,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        connection_type=connection_type,
+        identifier=identifier,
+        name=name,
+        organization=organization,
+        payload_type=payload_type,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def enrollmentrequest_search(
@@ -1775,31 +1543,21 @@ async def enrollmentrequest_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier,
-            patient=patient,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        identifier=identifier,
+        patient=patient,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def enrollmentresponse_search(
     request: Request, response: Response, identifier: str, request_: str, status: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier, request_=request_, status=status, request=request
-        ),
+    return await callable_(
+        identifier=identifier, request_=request_, status=status, request=request
     )
-
-    return finalize_searchset(result)
 
 
 async def episodeofcare_search(
@@ -1815,23 +1573,18 @@ async def episodeofcare_search(
     status: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            care_manager=care_manager,
-            condition=condition,
-            date=date,
-            identifier=identifier,
-            incoming_referral=incoming_referral,
-            organization=organization,
-            patient=patient,
-            status=status,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        care_manager=care_manager,
+        condition=condition,
+        date=date,
+        identifier=identifier,
+        incoming_referral=incoming_referral,
+        organization=organization,
+        patient=patient,
+        status=status,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def eventdefinition_search(
@@ -1860,36 +1613,31 @@ async def eventdefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            composed_of=composed_of,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            depends_on=depends_on,
-            derived_from=derived_from,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            predecessor=predecessor,
-            publisher=publisher,
-            status=status,
-            successor=successor,
-            title=title,
-            topic=topic,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        composed_of=composed_of,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        depends_on=depends_on,
+        derived_from=derived_from,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        predecessor=predecessor,
+        publisher=publisher,
+        status=status,
+        successor=successor,
+        title=title,
+        topic=topic,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def evidence_search(
@@ -1918,36 +1666,31 @@ async def evidence_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            composed_of=composed_of,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            depends_on=depends_on,
-            derived_from=derived_from,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            predecessor=predecessor,
-            publisher=publisher,
-            status=status,
-            successor=successor,
-            title=title,
-            topic=topic,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        composed_of=composed_of,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        depends_on=depends_on,
+        derived_from=derived_from,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        predecessor=predecessor,
+        publisher=publisher,
+        status=status,
+        successor=successor,
+        title=title,
+        topic=topic,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def evidencevariable_search(
@@ -1976,36 +1719,31 @@ async def evidencevariable_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            composed_of=composed_of,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            depends_on=depends_on,
-            derived_from=derived_from,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            predecessor=predecessor,
-            publisher=publisher,
-            status=status,
-            successor=successor,
-            title=title,
-            topic=topic,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        composed_of=composed_of,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        depends_on=depends_on,
+        derived_from=derived_from,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        predecessor=predecessor,
+        publisher=publisher,
+        status=status,
+        successor=successor,
+        title=title,
+        topic=topic,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def examplescenario_search(
@@ -2025,27 +1763,22 @@ async def examplescenario_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            status=status,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        status=status,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def explanationofbenefit_search(
@@ -2069,31 +1802,26 @@ async def explanationofbenefit_search(
     status: str,
     subdetail_udi: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            care_team=care_team,
-            claim=claim,
-            coverage=coverage,
-            created=created,
-            detail_udi=detail_udi,
-            disposition=disposition,
-            encounter=encounter,
-            enterer=enterer,
-            facility=facility,
-            identifier=identifier,
-            item_udi=item_udi,
-            patient=patient,
-            payee=payee,
-            procedure_udi=procedure_udi,
-            provider=provider,
-            status=status,
-            subdetail_udi=subdetail_udi,
-            request=request,
-        ),
+    return await callable_(
+        care_team=care_team,
+        claim=claim,
+        coverage=coverage,
+        created=created,
+        detail_udi=detail_udi,
+        disposition=disposition,
+        encounter=encounter,
+        enterer=enterer,
+        facility=facility,
+        identifier=identifier,
+        item_udi=item_udi,
+        patient=patient,
+        payee=payee,
+        procedure_udi=procedure_udi,
+        provider=provider,
+        status=status,
+        subdetail_udi=subdetail_udi,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def familymemberhistory_search(
@@ -2109,23 +1837,18 @@ async def familymemberhistory_search(
     sex: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            code=code,
-            date=date,
-            identifier=identifier,
-            instantiates_canonical=instantiates_canonical,
-            instantiates_uri=instantiates_uri,
-            patient=patient,
-            relationship=relationship,
-            sex=sex,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        code=code,
+        date=date,
+        identifier=identifier,
+        instantiates_canonical=instantiates_canonical,
+        instantiates_uri=instantiates_uri,
+        patient=patient,
+        relationship=relationship,
+        sex=sex,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def flag_search(
@@ -2138,20 +1861,15 @@ async def flag_search(
     patient: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            author=author,
-            date=date,
-            encounter=encounter,
-            identifier=identifier,
-            patient=patient,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        author=author,
+        date=date,
+        encounter=encounter,
+        identifier=identifier,
+        patient=patient,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def goal_search(
@@ -2166,22 +1884,17 @@ async def goal_search(
     subject: str,
     target_date: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            achievement_status=achievement_status,
-            category=category,
-            identifier=identifier,
-            lifecycle_status=lifecycle_status,
-            patient=patient,
-            start_date=start_date,
-            subject=subject,
-            target_date=target_date,
-            request=request,
-        ),
+    return await callable_(
+        achievement_status=achievement_status,
+        category=category,
+        identifier=identifier,
+        lifecycle_status=lifecycle_status,
+        patient=patient,
+        start_date=start_date,
+        subject=subject,
+        target_date=target_date,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def graphdefinition_search(
@@ -2202,28 +1915,23 @@ async def graphdefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            start=start,
-            status=status,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        start=start,
+        status=status,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def group_search(
@@ -2240,24 +1948,19 @@ async def group_search(
     type_: str,
     value: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            actual=actual,
-            characteristic=characteristic,
-            characteristic_value=characteristic_value,
-            code=code,
-            exclude=exclude,
-            identifier=identifier,
-            managing_entity=managing_entity,
-            member=member,
-            type_=type_,
-            value=value,
-            request=request,
-        ),
+    return await callable_(
+        actual=actual,
+        characteristic=characteristic,
+        characteristic_value=characteristic_value,
+        code=code,
+        exclude=exclude,
+        identifier=identifier,
+        managing_entity=managing_entity,
+        member=member,
+        type_=type_,
+        value=value,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def guidanceresponse_search(
@@ -2268,18 +1971,13 @@ async def guidanceresponse_search(
     request_: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier,
-            patient=patient,
-            request_=request_,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        identifier=identifier,
+        patient=patient,
+        request_=request_,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def healthcareservice_search(
@@ -2298,26 +1996,21 @@ async def healthcareservice_search(
     service_type: str,
     specialty: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            active=active,
-            characteristic=characteristic,
-            coverage_area=coverage_area,
-            endpoint=endpoint,
-            identifier=identifier,
-            location=location,
-            name=name,
-            organization=organization,
-            program=program,
-            service_category=service_category,
-            service_type=service_type,
-            specialty=specialty,
-            request=request,
-        ),
+    return await callable_(
+        active=active,
+        characteristic=characteristic,
+        coverage_area=coverage_area,
+        endpoint=endpoint,
+        identifier=identifier,
+        location=location,
+        name=name,
+        organization=organization,
+        program=program,
+        service_category=service_category,
+        service_type=service_type,
+        specialty=specialty,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def imagingstudy_search(
@@ -2341,31 +2034,26 @@ async def imagingstudy_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            basedon=basedon,
-            bodysite=bodysite,
-            dicom_class=dicom_class,
-            encounter=encounter,
-            endpoint=endpoint,
-            identifier=identifier,
-            instance=instance,
-            interpreter=interpreter,
-            modality=modality,
-            patient=patient,
-            performer=performer,
-            reason=reason,
-            referrer=referrer,
-            series=series,
-            started=started,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        basedon=basedon,
+        bodysite=bodysite,
+        dicom_class=dicom_class,
+        encounter=encounter,
+        endpoint=endpoint,
+        identifier=identifier,
+        instance=instance,
+        interpreter=interpreter,
+        modality=modality,
+        patient=patient,
+        performer=performer,
+        reason=reason,
+        referrer=referrer,
+        series=series,
+        started=started,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def immunization_search(
@@ -2388,30 +2076,25 @@ async def immunization_search(
     target_disease: str,
     vaccine_code: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            date=date,
-            identifier=identifier,
-            location=location,
-            lot_number=lot_number,
-            manufacturer=manufacturer,
-            patient=patient,
-            performer=performer,
-            reaction=reaction,
-            reaction_date=reaction_date,
-            reason_code=reason_code,
-            reason_reference=reason_reference,
-            series=series,
-            status=status,
-            status_reason=status_reason,
-            target_disease=target_disease,
-            vaccine_code=vaccine_code,
-            request=request,
-        ),
+    return await callable_(
+        date=date,
+        identifier=identifier,
+        location=location,
+        lot_number=lot_number,
+        manufacturer=manufacturer,
+        patient=patient,
+        performer=performer,
+        reaction=reaction,
+        reaction_date=reaction_date,
+        reason_code=reason_code,
+        reason_reference=reason_reference,
+        series=series,
+        status=status,
+        status_reason=status_reason,
+        target_disease=target_disease,
+        vaccine_code=vaccine_code,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def immunizationevaluation_search(
@@ -2425,21 +2108,16 @@ async def immunizationevaluation_search(
     status: str,
     target_disease: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            date=date,
-            dose_status=dose_status,
-            identifier=identifier,
-            immunization_event=immunization_event,
-            patient=patient,
-            status=status,
-            target_disease=target_disease,
-            request=request,
-        ),
+    return await callable_(
+        date=date,
+        dose_status=dose_status,
+        identifier=identifier,
+        immunization_event=immunization_event,
+        patient=patient,
+        status=status,
+        target_disease=target_disease,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def immunizationrecommendation_search(
@@ -2454,22 +2132,17 @@ async def immunizationrecommendation_search(
     target_disease: str,
     vaccine_type: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            date=date,
-            identifier=identifier,
-            information=information,
-            patient=patient,
-            status=status,
-            support=support,
-            target_disease=target_disease,
-            vaccine_type=vaccine_type,
-            request=request,
-        ),
+    return await callable_(
+        date=date,
+        identifier=identifier,
+        information=information,
+        patient=patient,
+        status=status,
+        support=support,
+        target_disease=target_disease,
+        vaccine_type=vaccine_type,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def implementationguide_search(
@@ -2494,32 +2167,27 @@ async def implementationguide_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            depends_on=depends_on,
-            description=description,
-            experimental=experimental,
-            global_=global_,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            resource=resource,
-            status=status,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        depends_on=depends_on,
+        description=description,
+        experimental=experimental,
+        global_=global_,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        resource=resource,
+        status=status,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def insuranceplan_search(
@@ -2540,28 +2208,23 @@ async def insuranceplan_search(
     status: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            address=address,
-            address_city=address_city,
-            address_country=address_country,
-            address_postalcode=address_postalcode,
-            address_state=address_state,
-            address_use=address_use,
-            administered_by=administered_by,
-            endpoint=endpoint,
-            identifier=identifier,
-            name=name,
-            owned_by=owned_by,
-            phonetic=phonetic,
-            status=status,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        address=address,
+        address_city=address_city,
+        address_country=address_country,
+        address_postalcode=address_postalcode,
+        address_state=address_state,
+        address_use=address_use,
+        administered_by=administered_by,
+        endpoint=endpoint,
+        identifier=identifier,
+        name=name,
+        owned_by=owned_by,
+        phonetic=phonetic,
+        status=status,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def invoice_search(
@@ -2581,27 +2244,22 @@ async def invoice_search(
     totalnet: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            account=account,
-            date=date,
-            identifier=identifier,
-            issuer=issuer,
-            participant=participant,
-            participant_role=participant_role,
-            patient=patient,
-            recipient=recipient,
-            status=status,
-            subject=subject,
-            totalgross=totalgross,
-            totalnet=totalnet,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        account=account,
+        date=date,
+        identifier=identifier,
+        issuer=issuer,
+        participant=participant,
+        participant_role=participant_role,
+        patient=patient,
+        recipient=recipient,
+        status=status,
+        subject=subject,
+        totalgross=totalgross,
+        totalnet=totalnet,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def library_search(
@@ -2632,49 +2290,39 @@ async def library_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            composed_of=composed_of,
-            content_type=content_type,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            depends_on=depends_on,
-            derived_from=derived_from,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            predecessor=predecessor,
-            publisher=publisher,
-            status=status,
-            successor=successor,
-            title=title,
-            topic=topic,
-            type_=type_,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        composed_of=composed_of,
+        content_type=content_type,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        depends_on=depends_on,
+        derived_from=derived_from,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        predecessor=predecessor,
+        publisher=publisher,
+        status=status,
+        successor=successor,
+        title=title,
+        topic=topic,
+        type_=type_,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def linkage_search(
     request: Request, response: Response, author: str, item: str, source: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(author=author, item=item, source=source, request=request),
-    )
-
-    return finalize_searchset(result)
+    return await callable_(author=author, item=item, source=source, request=request)
 
 
 async def list_search(
@@ -2693,26 +2341,21 @@ async def list_search(
     subject: str,
     title: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            code=code,
-            date=date,
-            empty_reason=empty_reason,
-            encounter=encounter,
-            identifier=identifier,
-            item=item,
-            notes=notes,
-            patient=patient,
-            source=source,
-            status=status,
-            subject=subject,
-            title=title,
-            request=request,
-        ),
+    return await callable_(
+        code=code,
+        date=date,
+        empty_reason=empty_reason,
+        encounter=encounter,
+        identifier=identifier,
+        item=item,
+        notes=notes,
+        patient=patient,
+        source=source,
+        status=status,
+        subject=subject,
+        title=title,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def location_search(
@@ -2734,29 +2377,24 @@ async def location_search(
     status: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            address=address,
-            address_city=address_city,
-            address_country=address_country,
-            address_postalcode=address_postalcode,
-            address_state=address_state,
-            address_use=address_use,
-            endpoint=endpoint,
-            identifier=identifier,
-            name=name,
-            near=near,
-            operational_status=operational_status,
-            organization=organization,
-            partof=partof,
-            status=status,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        address=address,
+        address_city=address_city,
+        address_country=address_country,
+        address_postalcode=address_postalcode,
+        address_state=address_state,
+        address_use=address_use,
+        endpoint=endpoint,
+        identifier=identifier,
+        name=name,
+        near=near,
+        operational_status=operational_status,
+        organization=organization,
+        partof=partof,
+        status=status,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def measure_search(
@@ -2785,36 +2423,31 @@ async def measure_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            composed_of=composed_of,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            depends_on=depends_on,
-            derived_from=derived_from,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            predecessor=predecessor,
-            publisher=publisher,
-            status=status,
-            successor=successor,
-            title=title,
-            topic=topic,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        composed_of=composed_of,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        depends_on=depends_on,
+        derived_from=derived_from,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        predecessor=predecessor,
+        publisher=publisher,
+        status=status,
+        successor=successor,
+        title=title,
+        topic=topic,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def measurereport_search(
@@ -2830,23 +2463,18 @@ async def measurereport_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            date=date,
-            evaluated_resource=evaluated_resource,
-            identifier=identifier,
-            measure=measure,
-            patient=patient,
-            period=period,
-            reporter=reporter,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        date=date,
+        evaluated_resource=evaluated_resource,
+        identifier=identifier,
+        measure=measure,
+        patient=patient,
+        period=period,
+        reporter=reporter,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def media_search(
@@ -2866,27 +2494,22 @@ async def media_search(
     type_: str,
     view: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            based_on=based_on,
-            created=created,
-            device=device,
-            encounter=encounter,
-            identifier=identifier,
-            modality=modality,
-            operator=operator,
-            patient=patient,
-            site=site,
-            status=status,
-            subject=subject,
-            type_=type_,
-            view=view,
-            request=request,
-        ),
+    return await callable_(
+        based_on=based_on,
+        created=created,
+        device=device,
+        encounter=encounter,
+        identifier=identifier,
+        modality=modality,
+        operator=operator,
+        patient=patient,
+        site=site,
+        status=status,
+        subject=subject,
+        type_=type_,
+        view=view,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def medication_search(
@@ -2902,23 +2525,18 @@ async def medication_search(
     manufacturer: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            code=code,
-            expiration_date=expiration_date,
-            form=form,
-            identifier=identifier,
-            ingredient=ingredient,
-            ingredient_code=ingredient_code,
-            lot_number=lot_number,
-            manufacturer=manufacturer,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        code=code,
+        expiration_date=expiration_date,
+        form=form,
+        identifier=identifier,
+        ingredient=ingredient,
+        ingredient_code=ingredient_code,
+        lot_number=lot_number,
+        manufacturer=manufacturer,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def medicationadministration_search(
@@ -2938,27 +2556,22 @@ async def medicationadministration_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            code=code,
-            context=context,
-            device=device,
-            effective_time=effective_time,
-            identifier=identifier,
-            medication=medication,
-            patient=patient,
-            performer=performer,
-            reason_given=reason_given,
-            reason_not_given=reason_not_given,
-            request_=request_,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        code=code,
+        context=context,
+        device=device,
+        effective_time=effective_time,
+        identifier=identifier,
+        medication=medication,
+        patient=patient,
+        performer=performer,
+        reason_given=reason_given,
+        reason_not_given=reason_not_given,
+        request_=request_,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def medicationdispense_search(
@@ -2980,29 +2593,24 @@ async def medicationdispense_search(
     whenhandedover: str,
     whenprepared: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            code=code,
-            context=context,
-            destination=destination,
-            identifier=identifier,
-            medication=medication,
-            patient=patient,
-            performer=performer,
-            prescription=prescription,
-            receiver=receiver,
-            responsibleparty=responsibleparty,
-            status=status,
-            subject=subject,
-            type_=type_,
-            whenhandedover=whenhandedover,
-            whenprepared=whenprepared,
-            request=request,
-        ),
+    return await callable_(
+        code=code,
+        context=context,
+        destination=destination,
+        identifier=identifier,
+        medication=medication,
+        patient=patient,
+        performer=performer,
+        prescription=prescription,
+        receiver=receiver,
+        responsibleparty=responsibleparty,
+        status=status,
+        subject=subject,
+        type_=type_,
+        whenhandedover=whenhandedover,
+        whenprepared=whenprepared,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def medicationknowledge_search(
@@ -3022,27 +2630,22 @@ async def medicationknowledge_search(
     source_cost: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            classification=classification,
-            classification_type=classification_type,
-            code=code,
-            doseform=doseform,
-            ingredient=ingredient,
-            ingredient_code=ingredient_code,
-            manufacturer=manufacturer,
-            monitoring_program_name=monitoring_program_name,
-            monitoring_program_type=monitoring_program_type,
-            monograph=monograph,
-            monograph_type=monograph_type,
-            source_cost=source_cost,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        classification=classification,
+        classification_type=classification_type,
+        code=code,
+        doseform=doseform,
+        ingredient=ingredient,
+        ingredient_code=ingredient_code,
+        manufacturer=manufacturer,
+        monitoring_program_name=monitoring_program_name,
+        monitoring_program_type=monitoring_program_type,
+        monograph=monograph,
+        monograph_type=monograph_type,
+        source_cost=source_cost,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def medicationrequest_search(
@@ -3065,30 +2668,25 @@ async def medicationrequest_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            authoredon=authoredon,
-            category=category,
-            code=code,
-            date=date,
-            encounter=encounter,
-            identifier=identifier,
-            intended_dispenser=intended_dispenser,
-            intended_performer=intended_performer,
-            intended_performertype=intended_performertype,
-            intent=intent,
-            medication=medication,
-            patient=patient,
-            priority=priority,
-            requester=requester,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        authoredon=authoredon,
+        category=category,
+        code=code,
+        date=date,
+        encounter=encounter,
+        identifier=identifier,
+        intended_dispenser=intended_dispenser,
+        intended_performer=intended_performer,
+        intended_performertype=intended_performertype,
+        intent=intent,
+        medication=medication,
+        patient=patient,
+        priority=priority,
+        requester=requester,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def medicationstatement_search(
@@ -3106,41 +2704,28 @@ async def medicationstatement_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            category=category,
-            code=code,
-            context=context,
-            effective=effective,
-            identifier=identifier,
-            medication=medication,
-            part_of=part_of,
-            patient=patient,
-            source=source,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        category=category,
+        code=code,
+        context=context,
+        effective=effective,
+        identifier=identifier,
+        medication=medication,
+        part_of=part_of,
+        patient=patient,
+        source=source,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def medicinalproduct_search(
     request: Request, response: Response, identifier: str, name: str, name_language: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier,
-            name=name,
-            name_language=name_language,
-            request=request,
-        ),
+    return await callable_(
+        identifier=identifier, name=name, name_language=name_language, request=request
     )
-
-    return finalize_searchset(result)
 
 
 async def medicinalproductauthorization_search(
@@ -3152,60 +2737,38 @@ async def medicinalproductauthorization_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            country=country,
-            holder=holder,
-            identifier=identifier,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        country=country,
+        holder=holder,
+        identifier=identifier,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def medicinalproductcontraindication_search(
     request: Request, response: Response, subject: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle], await callable_(subject=subject, request=request)
-    )
-
-    return finalize_searchset(result)
+    return await callable_(subject=subject, request=request)
 
 
 async def medicinalproductindication_search(
     request: Request, response: Response, subject: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle], await callable_(subject=subject, request=request)
-    )
-
-    return finalize_searchset(result)
+    return await callable_(subject=subject, request=request)
 
 
 async def medicinalproductinteraction_search(
     request: Request, response: Response, subject: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle], await callable_(subject=subject, request=request)
-    )
-
-    return finalize_searchset(result)
+    return await callable_(subject=subject, request=request)
 
 
 async def medicinalproductpackaged_search(
     request: Request, response: Response, identifier: str, subject: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(identifier=identifier, subject=subject, request=request),
-    )
-
-    return finalize_searchset(result)
+    return await callable_(identifier=identifier, subject=subject, request=request)
 
 
 async def medicinalproductpharmaceutical_search(
@@ -3215,27 +2778,18 @@ async def medicinalproductpharmaceutical_search(
     route: str,
     target_species: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier,
-            route=route,
-            target_species=target_species,
-            request=request,
-        ),
+    return await callable_(
+        identifier=identifier,
+        route=route,
+        target_species=target_species,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def medicinalproductundesirableeffect_search(
     request: Request, response: Response, subject: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle], await callable_(subject=subject, request=request)
-    )
-
-    return finalize_searchset(result)
+    return await callable_(subject=subject, request=request)
 
 
 async def messagedefinition_search(
@@ -3261,33 +2815,28 @@ async def messagedefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            category=category,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            event=event,
-            focus=focus,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            parent=parent,
-            publisher=publisher,
-            status=status,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        category=category,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        event=event,
+        focus=focus,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        parent=parent,
+        publisher=publisher,
+        status=status,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def messageheader_search(
@@ -3308,28 +2857,23 @@ async def messageheader_search(
     source_uri: str,
     target: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            author=author,
-            code=code,
-            destination=destination,
-            destination_uri=destination_uri,
-            enterer=enterer,
-            event=event,
-            focus=focus,
-            receiver=receiver,
-            response_id=response_id,
-            responsible=responsible,
-            sender=sender,
-            source=source,
-            source_uri=source_uri,
-            target=target,
-            request=request,
-        ),
+    return await callable_(
+        author=author,
+        code=code,
+        destination=destination,
+        destination_uri=destination_uri,
+        enterer=enterer,
+        event=event,
+        focus=focus,
+        receiver=receiver,
+        response_id=response_id,
+        responsible=responsible,
+        sender=sender,
+        source=source,
+        source_uri=source_uri,
+        target=target,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def molecularsequence_search(
@@ -3349,27 +2893,22 @@ async def molecularsequence_search(
     window_end: str,
     window_start: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            chromosome=chromosome,
-            chromosome_variant_coordinate=chromosome_variant_coordinate,
-            chromosome_window_coordinate=chromosome_window_coordinate,
-            identifier=identifier,
-            patient=patient,
-            referenceseqid=referenceseqid,
-            referenceseqid_variant_coordinate=referenceseqid_variant_coordinate,
-            referenceseqid_window_coordinate=referenceseqid_window_coordinate,
-            type_=type_,
-            variant_end=variant_end,
-            variant_start=variant_start,
-            window_end=window_end,
-            window_start=window_start,
-            request=request,
-        ),
+    return await callable_(
+        chromosome=chromosome,
+        chromosome_variant_coordinate=chromosome_variant_coordinate,
+        chromosome_window_coordinate=chromosome_window_coordinate,
+        identifier=identifier,
+        patient=patient,
+        referenceseqid=referenceseqid,
+        referenceseqid_variant_coordinate=referenceseqid_variant_coordinate,
+        referenceseqid_window_coordinate=referenceseqid_window_coordinate,
+        type_=type_,
+        variant_end=variant_end,
+        variant_start=variant_start,
+        window_end=window_end,
+        window_start=window_start,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def namingsystem_search(
@@ -3395,33 +2934,28 @@ async def namingsystem_search(
     type_: str,
     value: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            contact=contact,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            id_type=id_type,
-            jurisdiction=jurisdiction,
-            kind=kind,
-            name=name,
-            period=period,
-            publisher=publisher,
-            responsible=responsible,
-            status=status,
-            telecom=telecom,
-            type_=type_,
-            value=value,
-            request=request,
-        ),
+    return await callable_(
+        contact=contact,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        id_type=id_type,
+        jurisdiction=jurisdiction,
+        kind=kind,
+        name=name,
+        period=period,
+        publisher=publisher,
+        responsible=responsible,
+        status=status,
+        telecom=telecom,
+        type_=type_,
+        value=value,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def nutritionorder_search(
@@ -3440,26 +2974,21 @@ async def nutritionorder_search(
     status: str,
     supplement: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            additive=additive,
-            datetime=datetime,
-            encounter=encounter,
-            formula=formula,
-            identifier=identifier,
-            instantiates_canonical=instantiates_canonical,
-            instantiates_uri=instantiates_uri,
-            oraldiet=oraldiet,
-            patient=patient,
-            provider=provider,
-            status=status,
-            supplement=supplement,
-            request=request,
-        ),
+    return await callable_(
+        additive=additive,
+        datetime=datetime,
+        encounter=encounter,
+        formula=formula,
+        identifier=identifier,
+        instantiates_canonical=instantiates_canonical,
+        instantiates_uri=instantiates_uri,
+        oraldiet=oraldiet,
+        patient=patient,
+        provider=provider,
+        status=status,
+        supplement=supplement,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def observation_search(
@@ -3504,52 +3033,47 @@ async def observation_search(
     value_quantity: str,
     value_string: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            based_on=based_on,
-            category=category,
-            code=code,
-            code_value_concept=code_value_concept,
-            code_value_date=code_value_date,
-            code_value_quantity=code_value_quantity,
-            code_value_string=code_value_string,
-            combo_code=combo_code,
-            combo_code_value_concept=combo_code_value_concept,
-            combo_code_value_quantity=combo_code_value_quantity,
-            combo_data_absent_reason=combo_data_absent_reason,
-            combo_value_concept=combo_value_concept,
-            combo_value_quantity=combo_value_quantity,
-            component_code=component_code,
-            component_code_value_concept=component_code_value_concept,
-            component_code_value_quantity=component_code_value_quantity,
-            component_data_absent_reason=component_data_absent_reason,
-            component_value_concept=component_value_concept,
-            component_value_quantity=component_value_quantity,
-            data_absent_reason=data_absent_reason,
-            date=date,
-            derived_from=derived_from,
-            device=device,
-            encounter=encounter,
-            focus=focus,
-            has_member=has_member,
-            identifier=identifier,
-            method=method,
-            part_of=part_of,
-            patient=patient,
-            performer=performer,
-            specimen=specimen,
-            status=status,
-            subject=subject,
-            value_concept=value_concept,
-            value_date=value_date,
-            value_quantity=value_quantity,
-            value_string=value_string,
-            request=request,
-        ),
+    return await callable_(
+        based_on=based_on,
+        category=category,
+        code=code,
+        code_value_concept=code_value_concept,
+        code_value_date=code_value_date,
+        code_value_quantity=code_value_quantity,
+        code_value_string=code_value_string,
+        combo_code=combo_code,
+        combo_code_value_concept=combo_code_value_concept,
+        combo_code_value_quantity=combo_code_value_quantity,
+        combo_data_absent_reason=combo_data_absent_reason,
+        combo_value_concept=combo_value_concept,
+        combo_value_quantity=combo_value_quantity,
+        component_code=component_code,
+        component_code_value_concept=component_code_value_concept,
+        component_code_value_quantity=component_code_value_quantity,
+        component_data_absent_reason=component_data_absent_reason,
+        component_value_concept=component_value_concept,
+        component_value_quantity=component_value_quantity,
+        data_absent_reason=data_absent_reason,
+        date=date,
+        derived_from=derived_from,
+        device=device,
+        encounter=encounter,
+        focus=focus,
+        has_member=has_member,
+        identifier=identifier,
+        method=method,
+        part_of=part_of,
+        patient=patient,
+        performer=performer,
+        specimen=specimen,
+        status=status,
+        subject=subject,
+        value_concept=value_concept,
+        value_date=value_date,
+        value_quantity=value_quantity,
+        value_string=value_string,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def operationdefinition_search(
@@ -3578,36 +3102,31 @@ async def operationdefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            base=base,
-            code=code,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            input_profile=input_profile,
-            instance=instance,
-            jurisdiction=jurisdiction,
-            kind=kind,
-            name=name,
-            output_profile=output_profile,
-            publisher=publisher,
-            status=status,
-            system=system,
-            title=title,
-            type_=type_,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        base=base,
+        code=code,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        input_profile=input_profile,
+        instance=instance,
+        jurisdiction=jurisdiction,
+        kind=kind,
+        name=name,
+        output_profile=output_profile,
+        publisher=publisher,
+        status=status,
+        system=system,
+        title=title,
+        type_=type_,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def organization_search(
@@ -3627,27 +3146,22 @@ async def organization_search(
     phonetic: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            active=active,
-            address=address,
-            address_city=address_city,
-            address_country=address_country,
-            address_postalcode=address_postalcode,
-            address_state=address_state,
-            address_use=address_use,
-            endpoint=endpoint,
-            identifier=identifier,
-            name=name,
-            partof=partof,
-            phonetic=phonetic,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        active=active,
+        address=address,
+        address_city=address_city,
+        address_country=address_country,
+        address_postalcode=address_postalcode,
+        address_state=address_state,
+        address_use=address_use,
+        endpoint=endpoint,
+        identifier=identifier,
+        name=name,
+        partof=partof,
+        phonetic=phonetic,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def organizationaffiliation_search(
@@ -3668,28 +3182,23 @@ async def organizationaffiliation_search(
     specialty: str,
     telecom: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            active=active,
-            date=date,
-            email=email,
-            endpoint=endpoint,
-            identifier=identifier,
-            location=location,
-            network=network,
-            participating_organization=participating_organization,
-            phone=phone,
-            primary_organization=primary_organization,
-            role=role,
-            service=service,
-            specialty=specialty,
-            telecom=telecom,
-            request=request,
-        ),
+    return await callable_(
+        active=active,
+        date=date,
+        email=email,
+        endpoint=endpoint,
+        identifier=identifier,
+        location=location,
+        network=network,
+        participating_organization=participating_organization,
+        phone=phone,
+        primary_organization=primary_organization,
+        role=role,
+        service=service,
+        specialty=specialty,
+        telecom=telecom,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def patient_search(
@@ -3719,37 +3228,32 @@ async def patient_search(
     phonetic: str,
     telecom: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            active=active,
-            address=address,
-            address_city=address_city,
-            address_country=address_country,
-            address_postalcode=address_postalcode,
-            address_state=address_state,
-            address_use=address_use,
-            birthdate=birthdate,
-            death_date=death_date,
-            deceased=deceased,
-            email=email,
-            family=family,
-            gender=gender,
-            general_practitioner=general_practitioner,
-            given=given,
-            identifier=identifier,
-            language=language,
-            link=link,
-            name=name,
-            organization=organization,
-            phone=phone,
-            phonetic=phonetic,
-            telecom=telecom,
-            request=request,
-        ),
+    return await callable_(
+        active=active,
+        address=address,
+        address_city=address_city,
+        address_country=address_country,
+        address_postalcode=address_postalcode,
+        address_state=address_state,
+        address_use=address_use,
+        birthdate=birthdate,
+        death_date=death_date,
+        deceased=deceased,
+        email=email,
+        family=family,
+        gender=gender,
+        general_practitioner=general_practitioner,
+        given=given,
+        identifier=identifier,
+        language=language,
+        link=link,
+        name=name,
+        organization=organization,
+        phone=phone,
+        phonetic=phonetic,
+        telecom=telecom,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def paymentnotice_search(
@@ -3763,21 +3267,16 @@ async def paymentnotice_search(
     response_: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            created=created,
-            identifier=identifier,
-            payment_status=payment_status,
-            provider=provider,
-            request_=request_,
-            response_=response_,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        created=created,
+        identifier=identifier,
+        payment_status=payment_status,
+        provider=provider,
+        request_=request_,
+        response_=response_,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def paymentreconciliation_search(
@@ -3792,22 +3291,17 @@ async def paymentreconciliation_search(
     requestor: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            created=created,
-            disposition=disposition,
-            identifier=identifier,
-            outcome=outcome,
-            payment_issuer=payment_issuer,
-            request_=request_,
-            requestor=requestor,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        created=created,
+        disposition=disposition,
+        identifier=identifier,
+        outcome=outcome,
+        payment_issuer=payment_issuer,
+        request_=request_,
+        requestor=requestor,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def person_search(
@@ -3833,33 +3327,28 @@ async def person_search(
     relatedperson: str,
     telecom: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            address=address,
-            address_city=address_city,
-            address_country=address_country,
-            address_postalcode=address_postalcode,
-            address_state=address_state,
-            address_use=address_use,
-            birthdate=birthdate,
-            email=email,
-            gender=gender,
-            identifier=identifier,
-            link=link,
-            name=name,
-            organization=organization,
-            patient=patient,
-            phone=phone,
-            phonetic=phonetic,
-            practitioner=practitioner,
-            relatedperson=relatedperson,
-            telecom=telecom,
-            request=request,
-        ),
+    return await callable_(
+        address=address,
+        address_city=address_city,
+        address_country=address_country,
+        address_postalcode=address_postalcode,
+        address_state=address_state,
+        address_use=address_use,
+        birthdate=birthdate,
+        email=email,
+        gender=gender,
+        identifier=identifier,
+        link=link,
+        name=name,
+        organization=organization,
+        patient=patient,
+        phone=phone,
+        phonetic=phonetic,
+        practitioner=practitioner,
+        relatedperson=relatedperson,
+        telecom=telecom,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def plandefinition_search(
@@ -3890,38 +3379,33 @@ async def plandefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            composed_of=composed_of,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            definition=definition,
-            depends_on=depends_on,
-            derived_from=derived_from,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            predecessor=predecessor,
-            publisher=publisher,
-            status=status,
-            successor=successor,
-            title=title,
-            topic=topic,
-            type_=type_,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        composed_of=composed_of,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        definition=definition,
+        depends_on=depends_on,
+        derived_from=derived_from,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        predecessor=predecessor,
+        publisher=publisher,
+        status=status,
+        successor=successor,
+        title=title,
+        topic=topic,
+        type_=type_,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def practitioner_search(
@@ -3945,31 +3429,26 @@ async def practitioner_search(
     phonetic: str,
     telecom: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            active=active,
-            address=address,
-            address_city=address_city,
-            address_country=address_country,
-            address_postalcode=address_postalcode,
-            address_state=address_state,
-            address_use=address_use,
-            communication=communication,
-            email=email,
-            family=family,
-            gender=gender,
-            given=given,
-            identifier=identifier,
-            name=name,
-            phone=phone,
-            phonetic=phonetic,
-            telecom=telecom,
-            request=request,
-        ),
+    return await callable_(
+        active=active,
+        address=address,
+        address_city=address_city,
+        address_country=address_country,
+        address_postalcode=address_postalcode,
+        address_state=address_state,
+        address_use=address_use,
+        communication=communication,
+        email=email,
+        family=family,
+        gender=gender,
+        given=given,
+        identifier=identifier,
+        name=name,
+        phone=phone,
+        phonetic=phonetic,
+        telecom=telecom,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def practitionerrole_search(
@@ -3989,27 +3468,22 @@ async def practitionerrole_search(
     specialty: str,
     telecom: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            active=active,
-            date=date,
-            email=email,
-            endpoint=endpoint,
-            identifier=identifier,
-            location=location,
-            organization=organization,
-            phone=phone,
-            practitioner=practitioner,
-            role=role,
-            service=service,
-            specialty=specialty,
-            telecom=telecom,
-            request=request,
-        ),
+    return await callable_(
+        active=active,
+        date=date,
+        email=email,
+        endpoint=endpoint,
+        identifier=identifier,
+        location=location,
+        organization=organization,
+        phone=phone,
+        practitioner=practitioner,
+        role=role,
+        service=service,
+        specialty=specialty,
+        telecom=telecom,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def procedure_search(
@@ -4032,30 +3506,25 @@ async def procedure_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            based_on=based_on,
-            category=category,
-            code=code,
-            date=date,
-            encounter=encounter,
-            identifier=identifier,
-            instantiates_canonical=instantiates_canonical,
-            instantiates_uri=instantiates_uri,
-            location=location,
-            part_of=part_of,
-            patient=patient,
-            performer=performer,
-            reason_code=reason_code,
-            reason_reference=reason_reference,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        based_on=based_on,
+        category=category,
+        code=code,
+        date=date,
+        encounter=encounter,
+        identifier=identifier,
+        instantiates_canonical=instantiates_canonical,
+        instantiates_uri=instantiates_uri,
+        location=location,
+        part_of=part_of,
+        patient=patient,
+        performer=performer,
+        reason_code=reason_code,
+        reason_reference=reason_reference,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def provenance_search(
@@ -4072,24 +3541,19 @@ async def provenance_search(
     target: str,
     when: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            agent=agent,
-            agent_role=agent_role,
-            agent_type=agent_type,
-            entity=entity,
-            location=location,
-            patient=patient,
-            recorded=recorded,
-            signature_type=signature_type,
-            target=target,
-            when=when,
-            request=request,
-        ),
+    return await callable_(
+        agent=agent,
+        agent_role=agent_role,
+        agent_type=agent_type,
+        entity=entity,
+        location=location,
+        patient=patient,
+        recorded=recorded,
+        signature_type=signature_type,
+        target=target,
+        when=when,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def questionnaire_search(
@@ -4115,33 +3579,28 @@ async def questionnaire_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            code=code,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            definition=definition,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            status=status,
-            subject_type=subject_type,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        code=code,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        definition=definition,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        status=status,
+        subject_type=subject_type,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def questionnaireresponse_search(
@@ -4159,25 +3618,20 @@ async def questionnaireresponse_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            author=author,
-            authored=authored,
-            based_on=based_on,
-            encounter=encounter,
-            identifier=identifier,
-            part_of=part_of,
-            patient=patient,
-            questionnaire=questionnaire,
-            source=source,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        author=author,
+        authored=authored,
+        based_on=based_on,
+        encounter=encounter,
+        identifier=identifier,
+        part_of=part_of,
+        patient=patient,
+        questionnaire=questionnaire,
+        source=source,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def relatedperson_search(
@@ -4201,31 +3655,26 @@ async def relatedperson_search(
     relationship: str,
     telecom: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            active=active,
-            address=address,
-            address_city=address_city,
-            address_country=address_country,
-            address_postalcode=address_postalcode,
-            address_state=address_state,
-            address_use=address_use,
-            birthdate=birthdate,
-            email=email,
-            gender=gender,
-            identifier=identifier,
-            name=name,
-            patient=patient,
-            phone=phone,
-            phonetic=phonetic,
-            relationship=relationship,
-            telecom=telecom,
-            request=request,
-        ),
+    return await callable_(
+        active=active,
+        address=address,
+        address_city=address_city,
+        address_country=address_country,
+        address_postalcode=address_postalcode,
+        address_state=address_state,
+        address_use=address_use,
+        birthdate=birthdate,
+        email=email,
+        gender=gender,
+        identifier=identifier,
+        name=name,
+        patient=patient,
+        phone=phone,
+        phonetic=phonetic,
+        relationship=relationship,
+        telecom=telecom,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def requestgroup_search(
@@ -4246,28 +3695,23 @@ async def requestgroup_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            author=author,
-            authored=authored,
-            code=code,
-            encounter=encounter,
-            group_identifier=group_identifier,
-            identifier=identifier,
-            instantiates_canonical=instantiates_canonical,
-            instantiates_uri=instantiates_uri,
-            intent=intent,
-            participant=participant,
-            patient=patient,
-            priority=priority,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        author=author,
+        authored=authored,
+        code=code,
+        encounter=encounter,
+        group_identifier=group_identifier,
+        identifier=identifier,
+        instantiates_canonical=instantiates_canonical,
+        instantiates_uri=instantiates_uri,
+        intent=intent,
+        participant=participant,
+        patient=patient,
+        priority=priority,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def researchdefinition_search(
@@ -4296,36 +3740,31 @@ async def researchdefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            composed_of=composed_of,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            depends_on=depends_on,
-            derived_from=derived_from,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            predecessor=predecessor,
-            publisher=publisher,
-            status=status,
-            successor=successor,
-            title=title,
-            topic=topic,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        composed_of=composed_of,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        depends_on=depends_on,
+        derived_from=derived_from,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        predecessor=predecessor,
+        publisher=publisher,
+        status=status,
+        successor=successor,
+        title=title,
+        topic=topic,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def researchelementdefinition_search(
@@ -4354,36 +3793,31 @@ async def researchelementdefinition_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            composed_of=composed_of,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            depends_on=depends_on,
-            derived_from=derived_from,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            predecessor=predecessor,
-            publisher=publisher,
-            status=status,
-            successor=successor,
-            title=title,
-            topic=topic,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        composed_of=composed_of,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        depends_on=depends_on,
+        derived_from=derived_from,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        predecessor=predecessor,
+        publisher=publisher,
+        status=status,
+        successor=successor,
+        title=title,
+        topic=topic,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def researchstudy_search(
@@ -4403,27 +3837,22 @@ async def researchstudy_search(
     status: str,
     title: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            category=category,
-            date=date,
-            focus=focus,
-            identifier=identifier,
-            keyword=keyword,
-            location=location,
-            partof=partof,
-            principalinvestigator=principalinvestigator,
-            protocol=protocol,
-            site=site,
-            sponsor=sponsor,
-            status=status,
-            title=title,
-            request=request,
-        ),
+    return await callable_(
+        category=category,
+        date=date,
+        focus=focus,
+        identifier=identifier,
+        keyword=keyword,
+        location=location,
+        partof=partof,
+        principalinvestigator=principalinvestigator,
+        protocol=protocol,
+        site=site,
+        sponsor=sponsor,
+        status=status,
+        title=title,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def researchsubject_search(
@@ -4436,20 +3865,15 @@ async def researchsubject_search(
     status: str,
     study: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            date=date,
-            identifier=identifier,
-            individual=individual,
-            patient=patient,
-            status=status,
-            study=study,
-            request=request,
-        ),
+    return await callable_(
+        date=date,
+        identifier=identifier,
+        individual=individual,
+        patient=patient,
+        status=status,
+        study=study,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def riskassessment_search(
@@ -4466,24 +3890,19 @@ async def riskassessment_search(
     risk: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            condition=condition,
-            date=date,
-            encounter=encounter,
-            identifier=identifier,
-            method=method,
-            patient=patient,
-            performer=performer,
-            probability=probability,
-            risk=risk,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        condition=condition,
+        date=date,
+        encounter=encounter,
+        identifier=identifier,
+        method=method,
+        patient=patient,
+        performer=performer,
+        probability=probability,
+        risk=risk,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def riskevidencesynthesis_search(
@@ -4506,30 +3925,25 @@ async def riskevidencesynthesis_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            effective=effective,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            status=status,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        effective=effective,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        status=status,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def schedule_search(
@@ -4543,21 +3957,16 @@ async def schedule_search(
     service_type: str,
     specialty: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            active=active,
-            actor=actor,
-            date=date,
-            identifier=identifier,
-            service_category=service_category,
-            service_type=service_type,
-            specialty=specialty,
-            request=request,
-        ),
+    return await callable_(
+        active=active,
+        actor=actor,
+        date=date,
+        identifier=identifier,
+        service_category=service_category,
+        service_type=service_type,
+        specialty=specialty,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def searchparameter_search(
@@ -4583,33 +3992,28 @@ async def searchparameter_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            base=base,
-            code=code,
-            component=component,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            derived_from=derived_from,
-            description=description,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            status=status,
-            target=target,
-            type_=type_,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        base=base,
+        code=code,
+        component=component,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        derived_from=derived_from,
+        description=description,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        status=status,
+        target=target,
+        type_=type_,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def servicerequest_search(
@@ -4637,35 +4041,30 @@ async def servicerequest_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            authored=authored,
-            based_on=based_on,
-            body_site=body_site,
-            category=category,
-            code=code,
-            encounter=encounter,
-            identifier=identifier,
-            instantiates_canonical=instantiates_canonical,
-            instantiates_uri=instantiates_uri,
-            intent=intent,
-            occurrence=occurrence,
-            patient=patient,
-            performer=performer,
-            performer_type=performer_type,
-            priority=priority,
-            replaces=replaces,
-            requester=requester,
-            requisition=requisition,
-            specimen=specimen,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        authored=authored,
+        based_on=based_on,
+        body_site=body_site,
+        category=category,
+        code=code,
+        encounter=encounter,
+        identifier=identifier,
+        instantiates_canonical=instantiates_canonical,
+        instantiates_uri=instantiates_uri,
+        intent=intent,
+        occurrence=occurrence,
+        patient=patient,
+        performer=performer,
+        performer_type=performer_type,
+        priority=priority,
+        replaces=replaces,
+        requester=requester,
+        requisition=requisition,
+        specimen=specimen,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def slot_search(
@@ -4680,22 +4079,17 @@ async def slot_search(
     start: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            appointment_type=appointment_type,
-            identifier=identifier,
-            schedule=schedule,
-            service_category=service_category,
-            service_type=service_type,
-            specialty=specialty,
-            start=start,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        appointment_type=appointment_type,
+        identifier=identifier,
+        schedule=schedule,
+        service_category=service_category,
+        service_type=service_type,
+        specialty=specialty,
+        start=start,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def specimen_search(
@@ -4714,39 +4108,29 @@ async def specimen_search(
     subject: str,
     type_: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            accession=accession,
-            bodysite=bodysite,
-            collected=collected,
-            collector=collector,
-            container=container,
-            container_id=container_id,
-            identifier=identifier,
-            parent=parent,
-            patient=patient,
-            status=status,
-            subject=subject,
-            type_=type_,
-            request=request,
-        ),
+    return await callable_(
+        accession=accession,
+        bodysite=bodysite,
+        collected=collected,
+        collector=collector,
+        container=container,
+        container_id=container_id,
+        identifier=identifier,
+        parent=parent,
+        patient=patient,
+        status=status,
+        subject=subject,
+        type_=type_,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def specimendefinition_search(
     request: Request, response: Response, container: str, identifier: str, type_: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            container=container, identifier=identifier, type_=type_, request=request
-        ),
+    return await callable_(
+        container=container, identifier=identifier, type_=type_, request=request
     )
-
-    return finalize_searchset(result)
 
 
 async def structuredefinition_search(
@@ -4779,40 +4163,35 @@ async def structuredefinition_search(
     valueset: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            abstract=abstract,
-            base=base,
-            base_path=base_path,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            derivation=derivation,
-            description=description,
-            experimental=experimental,
-            ext_context=ext_context,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            keyword=keyword,
-            kind=kind,
-            name=name,
-            path=path,
-            publisher=publisher,
-            status=status,
-            title=title,
-            type_=type_,
-            url=url,
-            valueset=valueset,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        abstract=abstract,
+        base=base,
+        base_path=base_path,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        derivation=derivation,
+        description=description,
+        experimental=experimental,
+        ext_context=ext_context,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        keyword=keyword,
+        kind=kind,
+        name=name,
+        path=path,
+        publisher=publisher,
+        status=status,
+        title=title,
+        type_=type_,
+        url=url,
+        valueset=valueset,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def structuremap_search(
@@ -4834,29 +4213,24 @@ async def structuremap_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            status=status,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        status=status,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def subscription_search(
@@ -4869,20 +4243,15 @@ async def subscription_search(
     type_: str,
     url: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            contact=contact,
-            criteria=criteria,
-            payload=payload,
-            status=status,
-            type_=type_,
-            url=url,
-            request=request,
-        ),
+    return await callable_(
+        contact=contact,
+        criteria=criteria,
+        payload=payload,
+        status=status,
+        type_=type_,
+        url=url,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def substance_search(
@@ -4897,32 +4266,23 @@ async def substance_search(
     status: str,
     substance_reference: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            category=category,
-            code=code,
-            container_identifier=container_identifier,
-            expiry=expiry,
-            identifier=identifier,
-            quantity=quantity,
-            status=status,
-            substance_reference=substance_reference,
-            request=request,
-        ),
+    return await callable_(
+        category=category,
+        code=code,
+        container_identifier=container_identifier,
+        expiry=expiry,
+        identifier=identifier,
+        quantity=quantity,
+        status=status,
+        substance_reference=substance_reference,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def substancespecification_search(
     request: Request, response: Response, code: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle], await callable_(code=code, request=request)
-    )
-
-    return finalize_searchset(result)
+    return await callable_(code=code, request=request)
 
 
 async def supplydelivery_search(
@@ -4934,19 +4294,14 @@ async def supplydelivery_search(
     status: str,
     supplier: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier,
-            patient=patient,
-            receiver=receiver,
-            status=status,
-            supplier=supplier,
-            request=request,
-        ),
+    return await callable_(
+        identifier=identifier,
+        patient=patient,
+        receiver=receiver,
+        status=status,
+        supplier=supplier,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def supplyrequest_search(
@@ -4960,21 +4315,16 @@ async def supplyrequest_search(
     subject: str,
     supplier: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            category=category,
-            date=date,
-            identifier=identifier,
-            requester=requester,
-            status=status,
-            subject=subject,
-            supplier=supplier,
-            request=request,
-        ),
+    return await callable_(
+        category=category,
+        date=date,
+        identifier=identifier,
+        requester=requester,
+        status=status,
+        subject=subject,
+        supplier=supplier,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def task_search(
@@ -5000,33 +4350,28 @@ async def task_search(
     status: str,
     subject: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            authored_on=authored_on,
-            based_on=based_on,
-            business_status=business_status,
-            code=code,
-            encounter=encounter,
-            focus=focus,
-            group_identifier=group_identifier,
-            identifier=identifier,
-            intent=intent,
-            modified=modified,
-            owner=owner,
-            part_of=part_of,
-            patient=patient,
-            performer=performer,
-            period=period,
-            priority=priority,
-            requester=requester,
-            status=status,
-            subject=subject,
-            request=request,
-        ),
+    return await callable_(
+        authored_on=authored_on,
+        based_on=based_on,
+        business_status=business_status,
+        code=code,
+        encounter=encounter,
+        focus=focus,
+        group_identifier=group_identifier,
+        identifier=identifier,
+        intent=intent,
+        modified=modified,
+        owner=owner,
+        part_of=part_of,
+        patient=patient,
+        performer=performer,
+        period=period,
+        priority=priority,
+        requester=requester,
+        status=status,
+        subject=subject,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def terminologycapabilities_search(
@@ -5047,28 +4392,23 @@ async def terminologycapabilities_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            status=status,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        status=status,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def testreport_search(
@@ -5081,20 +4421,15 @@ async def testreport_search(
     tester: str,
     testscript: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            identifier=identifier,
-            issued=issued,
-            participant=participant,
-            result_=result_,
-            tester=tester,
-            testscript=testscript,
-            request=request,
-        ),
+    return await callable_(
+        identifier=identifier,
+        issued=issued,
+        participant=participant,
+        result_=result_,
+        tester=tester,
+        testscript=testscript,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def testscript_search(
@@ -5117,30 +4452,25 @@ async def testscript_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            status=status,
-            testscript_capability=testscript_capability,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        status=status,
+        testscript_capability=testscript_capability,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def valueset_search(
@@ -5165,42 +4495,33 @@ async def valueset_search(
     url: str,
     version: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            code=code,
-            context=context,
-            context_quantity=context_quantity,
-            context_type=context_type,
-            context_type_quantity=context_type_quantity,
-            context_type_value=context_type_value,
-            date=date,
-            description=description,
-            expansion=expansion,
-            identifier=identifier,
-            jurisdiction=jurisdiction,
-            name=name,
-            publisher=publisher,
-            reference=reference,
-            status=status,
-            title=title,
-            url=url,
-            version=version,
-            request=request,
-        ),
+    return await callable_(
+        code=code,
+        context=context,
+        context_quantity=context_quantity,
+        context_type=context_type,
+        context_type_quantity=context_type_quantity,
+        context_type_value=context_type_value,
+        date=date,
+        description=description,
+        expansion=expansion,
+        identifier=identifier,
+        jurisdiction=jurisdiction,
+        name=name,
+        publisher=publisher,
+        reference=reference,
+        status=status,
+        title=title,
+        url=url,
+        version=version,
+        request=request,
     )
-
-    return finalize_searchset(result)
 
 
 async def verificationresult_search(
     request: Request, response: Response, target: str
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle], await callable_(target=target, request=request)
-    )
-
-    return finalize_searchset(result)
+    return await callable_(target=target, request=request)
 
 
 async def visionprescription_search(
@@ -5213,17 +4534,12 @@ async def visionprescription_search(
     prescriber: str,
     status: str,
 ) -> Bundle:
-    result = cast(
-        FHIRInteractionResult[Bundle],
-        await callable_(
-            datewritten=datewritten,
-            encounter=encounter,
-            identifier=identifier,
-            patient=patient,
-            prescriber=prescriber,
-            status=status,
-            request=request,
-        ),
+    return await callable_(
+        datewritten=datewritten,
+        encounter=encounter,
+        identifier=identifier,
+        patient=patient,
+        prescriber=prescriber,
+        status=status,
+        request=request,
     )
-
-    return finalize_searchset(result)
