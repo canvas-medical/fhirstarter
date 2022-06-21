@@ -1,2 +1,2 @@
-# fhirstarter-prototype
-Prototyping and experimentation for a Python FHIR API service
+# fhirstarter
+FHIR server built on top of FastAPI and FHIR Resources
