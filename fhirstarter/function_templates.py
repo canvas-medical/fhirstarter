@@ -1,11 +1,16 @@
 from typing import Any, cast
 
 from fastapi import Request, Response
+from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 
 from .provider import FHIRInteractionResult, FHIRResourceType
 
 resource_type_str: str | None = None
+
+
+async def callable_(*_: Any, **__: Any) -> Any:
+    return None
 
 
 def resource_id(result: FHIRInteractionResult[FHIRResourceType]) -> Id | None:
@@ -18,8 +23,14 @@ def resource_id(result: FHIRInteractionResult[FHIRResourceType]) -> Id | None:
     return None
 
 
-async def callable_(*_: Any, **__: Any) -> Any:
-    return None
+def finalize_searchset(result: FHIRInteractionResult[Bundle]) -> Bundle:
+    result.validate()
+
+    assert result.resource is not None, "FHIR search interaction must return a bundle"
+
+    result.resource.type = "searchset"
+
+    return cast(Bundle, result.resource)
 
 
 async def create(
@@ -74,9 +85,9 @@ async def account_search(
     status: str,
     subject: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier,
             name=name,
@@ -89,11 +100,8 @@ async def account_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def activitydefinition_search(
@@ -121,9 +129,9 @@ async def activitydefinition_search(
     topic: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             composed_of=composed_of,
             context=context,
@@ -150,11 +158,8 @@ async def activitydefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def adverseevent_search(
@@ -172,9 +177,9 @@ async def adverseevent_search(
     study: str,
     subject: str,
     substance: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             actuality=actuality,
             category=category,
@@ -191,11 +196,8 @@ async def adverseevent_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def allergyintolerance_search(
@@ -217,9 +219,9 @@ async def allergyintolerance_search(
     severity: str,
     type_: str,
     verification_status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             asserter=asserter,
             category=category,
@@ -240,11 +242,8 @@ async def allergyintolerance_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def appointment_search(
@@ -267,9 +266,9 @@ async def appointment_search(
     specialty: str,
     status: str,
     supporting_info: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             actor=actor,
             appointment_type=appointment_type,
@@ -291,11 +290,8 @@ async def appointment_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def appointmentresponse_search(
@@ -308,9 +304,9 @@ async def appointmentresponse_search(
     part_status: str,
     patient: str,
     practitioner: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             actor=actor,
             appointment=appointment,
@@ -322,11 +318,8 @@ async def appointmentresponse_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def auditevent_search(
@@ -350,9 +343,9 @@ async def auditevent_search(
     source: str,
     subtype: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             action=action,
             address=address,
@@ -375,11 +368,8 @@ async def auditevent_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def basic_search(
@@ -391,9 +381,9 @@ async def basic_search(
     identifier: str,
     patient: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             author=author,
             code=code,
@@ -404,11 +394,8 @@ async def basic_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def bodystructure_search(
@@ -418,9 +405,9 @@ async def bodystructure_search(
     location: str,
     morphology: str,
     patient: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier,
             location=location,
@@ -429,11 +416,8 @@ async def bodystructure_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def capabilitystatement_search(
@@ -462,9 +446,9 @@ async def capabilitystatement_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -492,11 +476,8 @@ async def capabilitystatement_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def careplan_search(
@@ -522,9 +503,9 @@ async def careplan_search(
     replaces: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             activity_code=activity_code,
             activity_date=activity_date,
@@ -549,11 +530,8 @@ async def careplan_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def careteam_search(
@@ -567,9 +545,9 @@ async def careteam_search(
     patient: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             category=category,
             date=date,
@@ -582,11 +560,8 @@ async def careteam_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def chargeitem_search(
@@ -609,9 +584,9 @@ async def chargeitem_search(
     requesting_organization: str,
     service: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             account=account,
             code=code,
@@ -633,11 +608,8 @@ async def chargeitem_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def chargeitemdefinition_search(
@@ -658,9 +630,9 @@ async def chargeitemdefinition_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -680,11 +652,8 @@ async def chargeitemdefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def claim_search(
@@ -707,9 +676,9 @@ async def claim_search(
     status: str,
     subdetail_udi: str,
     use: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             care_team=care_team,
             created=created,
@@ -731,11 +700,8 @@ async def claim_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def claimresponse_search(
@@ -752,9 +718,9 @@ async def claimresponse_search(
     requestor: str,
     status: str,
     use: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             created=created,
             disposition=disposition,
@@ -770,11 +736,8 @@ async def claimresponse_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def clinicalimpression_search(
@@ -793,9 +756,9 @@ async def clinicalimpression_search(
     status: str,
     subject: str,
     supporting_info: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             assessor=assessor,
             date=date,
@@ -813,11 +776,8 @@ async def clinicalimpression_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def codesystem_search(
@@ -843,9 +803,9 @@ async def codesystem_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             code=code,
             content_mode=content_mode,
@@ -870,11 +830,8 @@ async def codesystem_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def communication_search(
@@ -895,9 +852,9 @@ async def communication_search(
     sent: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             based_on=based_on,
             category=category,
@@ -917,11 +874,8 @@ async def communication_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def communicationrequest_search(
@@ -943,9 +897,9 @@ async def communicationrequest_search(
     sender: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             authored=authored,
             based_on=based_on,
@@ -966,11 +920,8 @@ async def communicationrequest_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def compartmentdefinition_search(
@@ -990,9 +941,9 @@ async def compartmentdefinition_search(
     status: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             code=code,
             context=context,
@@ -1011,11 +962,8 @@ async def compartmentdefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def composition_search(
@@ -1039,9 +987,9 @@ async def composition_search(
     subject: str,
     title: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             attester=attester,
             author=author,
@@ -1064,11 +1012,8 @@ async def composition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def conceptmap_search(
@@ -1100,9 +1045,9 @@ async def conceptmap_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -1133,11 +1078,8 @@ async def conceptmap_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def condition_search(
@@ -1164,9 +1106,9 @@ async def condition_search(
     stage: str,
     subject: str,
     verification_status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             abatement_age=abatement_age,
             abatement_date=abatement_date,
@@ -1192,11 +1134,8 @@ async def condition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def consent_search(
@@ -1217,9 +1156,9 @@ async def consent_search(
     security_label: str,
     source_reference: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             action=action,
             actor=actor,
@@ -1239,11 +1178,8 @@ async def consent_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def contract_search(
@@ -1259,9 +1195,9 @@ async def contract_search(
     status: str,
     subject: str,
     url: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             authority=authority,
             domain=domain,
@@ -1276,11 +1212,8 @@ async def contract_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def coverage_search(
@@ -1297,9 +1230,9 @@ async def coverage_search(
     status: str,
     subscriber: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             beneficiary=beneficiary,
             class_type=class_type,
@@ -1315,11 +1248,8 @@ async def coverage_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def coverageeligibilityrequest_search(
@@ -1332,9 +1262,9 @@ async def coverageeligibilityrequest_search(
     patient: str,
     provider: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             created=created,
             enterer=enterer,
@@ -1346,11 +1276,8 @@ async def coverageeligibilityrequest_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def coverageeligibilityresponse_search(
@@ -1365,9 +1292,9 @@ async def coverageeligibilityresponse_search(
     request_: str,
     requestor: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             created=created,
             disposition=disposition,
@@ -1381,11 +1308,8 @@ async def coverageeligibilityresponse_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def detectedissue_search(
@@ -1397,9 +1321,9 @@ async def detectedissue_search(
     identifier: str,
     implicated: str,
     patient: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             author=author,
             code=code,
@@ -1410,11 +1334,8 @@ async def detectedissue_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def device_search(
@@ -1432,9 +1353,9 @@ async def device_search(
     udi_carrier: str,
     udi_di: str,
     url: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             device_name=device_name,
             identifier=identifier,
@@ -1451,27 +1372,21 @@ async def device_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def devicedefinition_search(
     request: Request, response: Response, identifier: str, parent: str, type_: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier, parent=parent, type_=type_, request=request
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def devicemetric_search(
@@ -1482,9 +1397,9 @@ async def devicemetric_search(
     parent: str,
     source: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             category=category,
             identifier=identifier,
@@ -1494,11 +1409,8 @@ async def devicemetric_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def devicerequest_search(
@@ -1522,9 +1434,9 @@ async def devicerequest_search(
     requester: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             authored_on=authored_on,
             based_on=based_on,
@@ -1547,11 +1459,8 @@ async def devicerequest_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def deviceusestatement_search(
@@ -1561,9 +1470,9 @@ async def deviceusestatement_search(
     identifier: str,
     patient: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             device=device,
             identifier=identifier,
@@ -1572,11 +1481,8 @@ async def deviceusestatement_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def diagnosticreport_search(
@@ -1598,9 +1504,9 @@ async def diagnosticreport_search(
     specimen: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             based_on=based_on,
             category=category,
@@ -1621,11 +1527,8 @@ async def diagnosticreport_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def documentmanifest_search(
@@ -1644,9 +1547,9 @@ async def documentmanifest_search(
     status: str,
     subject: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             author=author,
             created=created,
@@ -1664,11 +1567,8 @@ async def documentmanifest_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def documentreference_search(
@@ -1699,9 +1599,9 @@ async def documentreference_search(
     status: str,
     subject: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             authenticator=authenticator,
             author=author,
@@ -1731,11 +1631,8 @@ async def documentreference_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def effectevidencesynthesis_search(
@@ -1757,9 +1654,9 @@ async def effectevidencesynthesis_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -1780,11 +1677,8 @@ async def effectevidencesynthesis_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def encounter_search(
@@ -1813,9 +1707,9 @@ async def encounter_search(
     status: str,
     subject: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             account=account,
             appointment=appointment,
@@ -1843,11 +1737,8 @@ async def encounter_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def endpoint_search(
@@ -1859,9 +1750,9 @@ async def endpoint_search(
     organization: str,
     payload_type: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             connection_type=connection_type,
             identifier=identifier,
@@ -1872,11 +1763,8 @@ async def endpoint_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def enrollmentrequest_search(
@@ -1886,9 +1774,9 @@ async def enrollmentrequest_search(
     patient: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier,
             patient=patient,
@@ -1897,27 +1785,21 @@ async def enrollmentrequest_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def enrollmentresponse_search(
     request: Request, response: Response, identifier: str, request_: str, status: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier, request_=request_, status=status, request=request
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def episodeofcare_search(
@@ -1932,9 +1814,9 @@ async def episodeofcare_search(
     patient: str,
     status: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             care_manager=care_manager,
             condition=condition,
@@ -1948,11 +1830,8 @@ async def episodeofcare_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def eventdefinition_search(
@@ -1980,9 +1859,9 @@ async def eventdefinition_search(
     topic: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             composed_of=composed_of,
             context=context,
@@ -2009,11 +1888,8 @@ async def eventdefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def evidence_search(
@@ -2041,9 +1917,9 @@ async def evidence_search(
     topic: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             composed_of=composed_of,
             context=context,
@@ -2070,11 +1946,8 @@ async def evidence_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def evidencevariable_search(
@@ -2102,9 +1975,9 @@ async def evidencevariable_search(
     topic: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             composed_of=composed_of,
             context=context,
@@ -2131,11 +2004,8 @@ async def evidencevariable_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def examplescenario_search(
@@ -2154,9 +2024,9 @@ async def examplescenario_search(
     status: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -2174,11 +2044,8 @@ async def examplescenario_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def explanationofbenefit_search(
@@ -2201,9 +2068,9 @@ async def explanationofbenefit_search(
     provider: str,
     status: str,
     subdetail_udi: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             care_team=care_team,
             claim=claim,
@@ -2225,11 +2092,8 @@ async def explanationofbenefit_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def familymemberhistory_search(
@@ -2244,9 +2108,9 @@ async def familymemberhistory_search(
     relationship: str,
     sex: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             code=code,
             date=date,
@@ -2260,11 +2124,8 @@ async def familymemberhistory_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def flag_search(
@@ -2276,9 +2137,9 @@ async def flag_search(
     identifier: str,
     patient: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             author=author,
             date=date,
@@ -2289,11 +2150,8 @@ async def flag_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def goal_search(
@@ -2307,9 +2165,9 @@ async def goal_search(
     start_date: str,
     subject: str,
     target_date: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             achievement_status=achievement_status,
             category=category,
@@ -2322,11 +2180,8 @@ async def goal_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def graphdefinition_search(
@@ -2346,9 +2201,9 @@ async def graphdefinition_search(
     status: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -2367,11 +2222,8 @@ async def graphdefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def group_search(
@@ -2387,9 +2239,9 @@ async def group_search(
     member: str,
     type_: str,
     value: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             actual=actual,
             characteristic=characteristic,
@@ -2404,11 +2256,8 @@ async def group_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def guidanceresponse_search(
@@ -2418,9 +2267,9 @@ async def guidanceresponse_search(
     patient: str,
     request_: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier,
             patient=patient,
@@ -2429,11 +2278,8 @@ async def guidanceresponse_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def healthcareservice_search(
@@ -2451,9 +2297,9 @@ async def healthcareservice_search(
     service_category: str,
     service_type: str,
     specialty: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             active=active,
             characteristic=characteristic,
@@ -2470,11 +2316,8 @@ async def healthcareservice_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def imagingstudy_search(
@@ -2497,9 +2340,9 @@ async def imagingstudy_search(
     started: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             basedon=basedon,
             bodysite=bodysite,
@@ -2521,11 +2364,8 @@ async def imagingstudy_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def immunization_search(
@@ -2547,9 +2387,9 @@ async def immunization_search(
     status_reason: str,
     target_disease: str,
     vaccine_code: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             date=date,
             identifier=identifier,
@@ -2570,11 +2410,8 @@ async def immunization_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def immunizationevaluation_search(
@@ -2587,9 +2424,9 @@ async def immunizationevaluation_search(
     patient: str,
     status: str,
     target_disease: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             date=date,
             dose_status=dose_status,
@@ -2601,11 +2438,8 @@ async def immunizationevaluation_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def immunizationrecommendation_search(
@@ -2619,9 +2453,9 @@ async def immunizationrecommendation_search(
     support: str,
     target_disease: str,
     vaccine_type: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             date=date,
             identifier=identifier,
@@ -2634,11 +2468,8 @@ async def immunizationrecommendation_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def implementationguide_search(
@@ -2662,9 +2493,9 @@ async def implementationguide_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -2687,11 +2518,8 @@ async def implementationguide_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def insuranceplan_search(
@@ -2711,9 +2539,9 @@ async def insuranceplan_search(
     phonetic: str,
     status: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             address=address,
             address_city=address_city,
@@ -2732,11 +2560,8 @@ async def insuranceplan_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def invoice_search(
@@ -2755,9 +2580,9 @@ async def invoice_search(
     totalgross: str,
     totalnet: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             account=account,
             date=date,
@@ -2775,11 +2600,8 @@ async def invoice_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def library_search(
@@ -2809,9 +2631,9 @@ async def library_search(
     type_: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             composed_of=composed_of,
             content_type=content_type,
@@ -2840,25 +2662,19 @@ async def library_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def linkage_search(
     request: Request, response: Response, author: str, item: str, source: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(author=author, item=item, source=source, request=request),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def list_search(
@@ -2876,9 +2692,9 @@ async def list_search(
     status: str,
     subject: str,
     title: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             code=code,
             date=date,
@@ -2895,11 +2711,8 @@ async def list_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def location_search(
@@ -2920,9 +2733,9 @@ async def location_search(
     partof: str,
     status: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             address=address,
             address_city=address_city,
@@ -2942,11 +2755,8 @@ async def location_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def measure_search(
@@ -2974,9 +2784,9 @@ async def measure_search(
     topic: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             composed_of=composed_of,
             context=context,
@@ -3003,11 +2813,8 @@ async def measure_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def measurereport_search(
@@ -3022,9 +2829,9 @@ async def measurereport_search(
     reporter: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             date=date,
             evaluated_resource=evaluated_resource,
@@ -3038,11 +2845,8 @@ async def measurereport_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def media_search(
@@ -3061,9 +2865,9 @@ async def media_search(
     subject: str,
     type_: str,
     view: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             based_on=based_on,
             created=created,
@@ -3081,11 +2885,8 @@ async def media_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medication_search(
@@ -3100,9 +2901,9 @@ async def medication_search(
     lot_number: str,
     manufacturer: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             code=code,
             expiration_date=expiration_date,
@@ -3116,11 +2917,8 @@ async def medication_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicationadministration_search(
@@ -3139,9 +2937,9 @@ async def medicationadministration_search(
     request_: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             code=code,
             context=context,
@@ -3159,11 +2957,8 @@ async def medicationadministration_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicationdispense_search(
@@ -3184,9 +2979,9 @@ async def medicationdispense_search(
     type_: str,
     whenhandedover: str,
     whenprepared: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             code=code,
             context=context,
@@ -3206,11 +3001,8 @@ async def medicationdispense_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicationknowledge_search(
@@ -3229,9 +3021,9 @@ async def medicationknowledge_search(
     monograph_type: str,
     source_cost: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             classification=classification,
             classification_type=classification_type,
@@ -3249,11 +3041,8 @@ async def medicationknowledge_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicationrequest_search(
@@ -3275,9 +3064,9 @@ async def medicationrequest_search(
     requester: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             authoredon=authoredon,
             category=category,
@@ -3298,11 +3087,8 @@ async def medicationrequest_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicationstatement_search(
@@ -3319,9 +3105,9 @@ async def medicationstatement_search(
     source: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             category=category,
             code=code,
@@ -3337,18 +3123,15 @@ async def medicationstatement_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicinalproduct_search(
     request: Request, response: Response, identifier: str, name: str, name_language: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier,
             name=name,
@@ -3356,11 +3139,8 @@ async def medicinalproduct_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicinalproductauthorization_search(
@@ -3371,9 +3151,9 @@ async def medicinalproductauthorization_search(
     identifier: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             country=country,
             holder=holder,
@@ -3383,67 +3163,49 @@ async def medicinalproductauthorization_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicinalproductcontraindication_search(
     request: Request, response: Response, subject: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
-        await callable_(subject=subject, request=request),
+        FHIRInteractionResult[Bundle], await callable_(subject=subject, request=request)
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicinalproductindication_search(
     request: Request, response: Response, subject: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
-        await callable_(subject=subject, request=request),
+        FHIRInteractionResult[Bundle], await callable_(subject=subject, request=request)
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicinalproductinteraction_search(
     request: Request, response: Response, subject: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
-        await callable_(subject=subject, request=request),
+        FHIRInteractionResult[Bundle], await callable_(subject=subject, request=request)
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicinalproductpackaged_search(
     request: Request, response: Response, identifier: str, subject: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(identifier=identifier, subject=subject, request=request),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicinalproductpharmaceutical_search(
@@ -3452,9 +3214,9 @@ async def medicinalproductpharmaceutical_search(
     identifier: str,
     route: str,
     target_species: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier,
             route=route,
@@ -3462,25 +3224,18 @@ async def medicinalproductpharmaceutical_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def medicinalproductundesirableeffect_search(
     request: Request, response: Response, subject: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
-        await callable_(subject=subject, request=request),
+        FHIRInteractionResult[Bundle], await callable_(subject=subject, request=request)
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def messagedefinition_search(
@@ -3505,9 +3260,9 @@ async def messagedefinition_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             category=category,
             context=context,
@@ -3531,11 +3286,8 @@ async def messagedefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def messageheader_search(
@@ -3555,9 +3307,9 @@ async def messageheader_search(
     source: str,
     source_uri: str,
     target: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             author=author,
             code=code,
@@ -3576,11 +3328,8 @@ async def messageheader_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def molecularsequence_search(
@@ -3599,9 +3348,9 @@ async def molecularsequence_search(
     variant_start: str,
     window_end: str,
     window_start: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             chromosome=chromosome,
             chromosome_variant_coordinate=chromosome_variant_coordinate,
@@ -3619,11 +3368,8 @@ async def molecularsequence_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def namingsystem_search(
@@ -3648,9 +3394,9 @@ async def namingsystem_search(
     telecom: str,
     type_: str,
     value: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             contact=contact,
             context=context,
@@ -3674,11 +3420,8 @@ async def namingsystem_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def nutritionorder_search(
@@ -3696,9 +3439,9 @@ async def nutritionorder_search(
     provider: str,
     status: str,
     supplement: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             additive=additive,
             datetime=datetime,
@@ -3715,11 +3458,8 @@ async def nutritionorder_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def observation_search(
@@ -3763,9 +3503,9 @@ async def observation_search(
     value_date: str,
     value_quantity: str,
     value_string: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             based_on=based_on,
             category=category,
@@ -3808,11 +3548,8 @@ async def observation_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def operationdefinition_search(
@@ -3840,9 +3577,9 @@ async def operationdefinition_search(
     type_: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             base=base,
             code=code,
@@ -3869,11 +3606,8 @@ async def operationdefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def organization_search(
@@ -3892,9 +3626,9 @@ async def organization_search(
     partof: str,
     phonetic: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             active=active,
             address=address,
@@ -3912,11 +3646,8 @@ async def organization_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def organizationaffiliation_search(
@@ -3936,9 +3667,9 @@ async def organizationaffiliation_search(
     service: str,
     specialty: str,
     telecom: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             active=active,
             date=date,
@@ -3957,11 +3688,8 @@ async def organizationaffiliation_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def patient_search(
@@ -3990,9 +3718,9 @@ async def patient_search(
     phone: str,
     phonetic: str,
     telecom: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             active=active,
             address=address,
@@ -4020,11 +3748,8 @@ async def patient_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def paymentnotice_search(
@@ -4037,9 +3762,9 @@ async def paymentnotice_search(
     request_: str,
     response_: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             created=created,
             identifier=identifier,
@@ -4051,11 +3776,8 @@ async def paymentnotice_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def paymentreconciliation_search(
@@ -4069,9 +3791,9 @@ async def paymentreconciliation_search(
     request_: str,
     requestor: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             created=created,
             disposition=disposition,
@@ -4084,11 +3806,8 @@ async def paymentreconciliation_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def person_search(
@@ -4113,9 +3832,9 @@ async def person_search(
     practitioner: str,
     relatedperson: str,
     telecom: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             address=address,
             address_city=address_city,
@@ -4139,11 +3858,8 @@ async def person_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def plandefinition_search(
@@ -4173,9 +3889,9 @@ async def plandefinition_search(
     type_: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             composed_of=composed_of,
             context=context,
@@ -4204,11 +3920,8 @@ async def plandefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def practitioner_search(
@@ -4231,9 +3944,9 @@ async def practitioner_search(
     phone: str,
     phonetic: str,
     telecom: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             active=active,
             address=address,
@@ -4255,11 +3968,8 @@ async def practitioner_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def practitionerrole_search(
@@ -4278,9 +3988,9 @@ async def practitionerrole_search(
     service: str,
     specialty: str,
     telecom: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             active=active,
             date=date,
@@ -4298,11 +4008,8 @@ async def practitionerrole_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def procedure_search(
@@ -4324,9 +4031,9 @@ async def procedure_search(
     reason_reference: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             based_on=based_on,
             category=category,
@@ -4347,11 +4054,8 @@ async def procedure_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def provenance_search(
@@ -4367,9 +4071,9 @@ async def provenance_search(
     signature_type: str,
     target: str,
     when: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             agent=agent,
             agent_role=agent_role,
@@ -4384,11 +4088,8 @@ async def provenance_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def questionnaire_search(
@@ -4413,9 +4114,9 @@ async def questionnaire_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             code=code,
             context=context,
@@ -4439,11 +4140,8 @@ async def questionnaire_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def questionnaireresponse_search(
@@ -4460,9 +4158,9 @@ async def questionnaireresponse_search(
     source: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             author=author,
             authored=authored,
@@ -4478,11 +4176,8 @@ async def questionnaireresponse_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def relatedperson_search(
@@ -4505,9 +4200,9 @@ async def relatedperson_search(
     phonetic: str,
     relationship: str,
     telecom: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             active=active,
             address=address,
@@ -4529,11 +4224,8 @@ async def relatedperson_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def requestgroup_search(
@@ -4553,9 +4245,9 @@ async def requestgroup_search(
     priority: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             author=author,
             authored=authored,
@@ -4574,11 +4266,8 @@ async def requestgroup_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def researchdefinition_search(
@@ -4606,9 +4295,9 @@ async def researchdefinition_search(
     topic: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             composed_of=composed_of,
             context=context,
@@ -4635,11 +4324,8 @@ async def researchdefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def researchelementdefinition_search(
@@ -4667,9 +4353,9 @@ async def researchelementdefinition_search(
     topic: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             composed_of=composed_of,
             context=context,
@@ -4696,11 +4382,8 @@ async def researchelementdefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def researchstudy_search(
@@ -4719,9 +4402,9 @@ async def researchstudy_search(
     sponsor: str,
     status: str,
     title: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             category=category,
             date=date,
@@ -4739,11 +4422,8 @@ async def researchstudy_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def researchsubject_search(
@@ -4755,9 +4435,9 @@ async def researchsubject_search(
     patient: str,
     status: str,
     study: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             date=date,
             identifier=identifier,
@@ -4768,11 +4448,8 @@ async def researchsubject_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def riskassessment_search(
@@ -4788,9 +4465,9 @@ async def riskassessment_search(
     probability: str,
     risk: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             condition=condition,
             date=date,
@@ -4805,11 +4482,8 @@ async def riskassessment_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def riskevidencesynthesis_search(
@@ -4831,9 +4505,9 @@ async def riskevidencesynthesis_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -4854,11 +4528,8 @@ async def riskevidencesynthesis_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def schedule_search(
@@ -4871,9 +4542,9 @@ async def schedule_search(
     service_category: str,
     service_type: str,
     specialty: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             active=active,
             actor=actor,
@@ -4885,11 +4556,8 @@ async def schedule_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def searchparameter_search(
@@ -4914,9 +4582,9 @@ async def searchparameter_search(
     type_: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             base=base,
             code=code,
@@ -4940,11 +4608,8 @@ async def searchparameter_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def servicerequest_search(
@@ -4971,9 +4636,9 @@ async def servicerequest_search(
     specimen: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             authored=authored,
             based_on=based_on,
@@ -4999,11 +4664,8 @@ async def servicerequest_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def slot_search(
@@ -5017,9 +4679,9 @@ async def slot_search(
     specialty: str,
     start: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             appointment_type=appointment_type,
             identifier=identifier,
@@ -5032,11 +4694,8 @@ async def slot_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def specimen_search(
@@ -5054,9 +4713,9 @@ async def specimen_search(
     status: str,
     subject: str,
     type_: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             accession=accession,
             bodysite=bodysite,
@@ -5073,27 +4732,21 @@ async def specimen_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def specimendefinition_search(
     request: Request, response: Response, container: str, identifier: str, type_: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             container=container, identifier=identifier, type_=type_, request=request
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def structuredefinition_search(
@@ -5125,9 +4778,9 @@ async def structuredefinition_search(
     url: str,
     valueset: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             abstract=abstract,
             base=base,
@@ -5158,11 +4811,8 @@ async def structuredefinition_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def structuremap_search(
@@ -5183,9 +4833,9 @@ async def structuremap_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -5205,11 +4855,8 @@ async def structuremap_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def subscription_search(
@@ -5221,9 +4868,9 @@ async def subscription_search(
     status: str,
     type_: str,
     url: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             contact=contact,
             criteria=criteria,
@@ -5234,11 +4881,8 @@ async def subscription_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def substance_search(
@@ -5252,9 +4896,9 @@ async def substance_search(
     quantity: str,
     status: str,
     substance_reference: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             category=category,
             code=code,
@@ -5267,25 +4911,18 @@ async def substance_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def substancespecification_search(
     request: Request, response: Response, code: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
-        await callable_(code=code, request=request),
+        FHIRInteractionResult[Bundle], await callable_(code=code, request=request)
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def supplydelivery_search(
@@ -5296,9 +4933,9 @@ async def supplydelivery_search(
     receiver: str,
     status: str,
     supplier: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier,
             patient=patient,
@@ -5308,11 +4945,8 @@ async def supplydelivery_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def supplyrequest_search(
@@ -5325,9 +4959,9 @@ async def supplyrequest_search(
     status: str,
     subject: str,
     supplier: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             category=category,
             date=date,
@@ -5339,11 +4973,8 @@ async def supplyrequest_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def task_search(
@@ -5368,9 +4999,9 @@ async def task_search(
     requester: str,
     status: str,
     subject: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             authored_on=authored_on,
             based_on=based_on,
@@ -5394,11 +5025,8 @@ async def task_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def terminologycapabilities_search(
@@ -5418,9 +5046,9 @@ async def terminologycapabilities_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -5439,11 +5067,8 @@ async def terminologycapabilities_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def testreport_search(
@@ -5455,9 +5080,9 @@ async def testreport_search(
     result_: str,
     tester: str,
     testscript: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             identifier=identifier,
             issued=issued,
@@ -5468,11 +5093,8 @@ async def testreport_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def testscript_search(
@@ -5494,9 +5116,9 @@ async def testscript_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             context=context,
             context_quantity=context_quantity,
@@ -5517,11 +5139,8 @@ async def testscript_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def valueset_search(
@@ -5545,9 +5164,9 @@ async def valueset_search(
     title: str,
     url: str,
     version: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             code=code,
             context=context,
@@ -5570,25 +5189,18 @@ async def valueset_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def verificationresult_search(
     request: Request, response: Response, target: str
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
-        await callable_(target=target, request=request),
+        FHIRInteractionResult[Bundle], await callable_(target=target, request=request)
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)
 
 
 async def visionprescription_search(
@@ -5600,9 +5212,9 @@ async def visionprescription_search(
     patient: str,
     prescriber: str,
     status: str,
-) -> FHIRResourceType:
+) -> Bundle:
     result = cast(
-        FHIRInteractionResult[FHIRResourceType],
+        FHIRInteractionResult[Bundle],
         await callable_(
             datewritten=datewritten,
             encounter=encounter,
@@ -5613,8 +5225,5 @@ async def visionprescription_search(
             request=request,
         ),
     )
-    result.validate()
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource
+    return finalize_searchset(result)

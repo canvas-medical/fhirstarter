@@ -16,13 +16,10 @@ def main() -> None:
             for name in sorted(search_parameters.keys())
         ]
 
-        function_template = f"""async def {resource_type.lower()}_search(request: Request, response: Response, {", ".join([f"{sp}: str" for sp in search_parameter_names])}) -> FHIRResourceType:
-    result = cast(FHIRInteractionResult[FHIRResourceType], await callable_({", ".join([f"{sp}={sp}" for sp in search_parameter_names])}, request=request))
-    result.validate()
+        function_template = f"""async def {resource_type.lower()}_search(request: Request, response: Response, {", ".join([f"{sp}: str" for sp in search_parameter_names])}) -> Bundle:
+    result = cast(FHIRInteractionResult[Bundle], await callable_({", ".join([f"{sp}={sp}" for sp in search_parameter_names])}, request=request))
 
-    assert result.resource is not None, "FHIR search interaction must return a bundle"
-
-    return result.resource"""
+    return finalize_searchset(result)"""
 
         print(f"{function_template}\n")
 

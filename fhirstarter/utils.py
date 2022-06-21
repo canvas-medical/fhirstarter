@@ -106,9 +106,11 @@ def _make_function(
         "cast": cast,
         "FHIRInteractionResult": FHIRInteractionResult,
         "FHIRResourceType": interaction.resource_type,
+        "Bundle": Bundle,
         "callable_": interaction.callable_,
         "resource_id": function_templates.resource_id,
         "resource_type_str": interaction.resource_type.get_resource_type(),
+        "finalize_searchset": function_templates.finalize_searchset,
     }
 
     func = FunctionType(code=code, globals=globals_, argdefs=argdefs)

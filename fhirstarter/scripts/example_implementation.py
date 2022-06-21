@@ -1,5 +1,4 @@
 from copy import deepcopy
-from typing import Any
 from uuid import uuid4
 
 import uvicorn
@@ -34,8 +33,6 @@ provider = FHIRProvider()
 async def patient_create(
     resource: Patient, **kwargs: str
 ) -> FHIRInteractionResult[Patient]:
-    # All Canvas-to-FHIR mapping code for a Patient create operation goes here. For a create
-    # operation, an integration message is sent to the integration message router.
     patient = deepcopy(resource)
     patient.id = Id(uuid4().hex)
     DATABASE[patient.id] = patient
@@ -46,9 +43,6 @@ async def patient_create(
 # Register the patient read FHIR interaction with the provider
 @provider.register_read_interaction(Patient)
 async def patient_read(id_: Id, **kwargs: str) -> FHIRInteractionResult[Patient]:
-    # All Canvas-to-FHIR mapping code for a Patient read operation goes here. For a read operation,
-    # a GraphQL request is issued, and then the result is mapped on to the FHIR Patient resource to
-    # be returned.
     patient = DATABASE.get(id_)
     if not patient:
         raise FHIRResourceNotFoundError
@@ -61,9 +55,6 @@ async def patient_read(id_: Id, **kwargs: str) -> FHIRInteractionResult[Patient]
 async def patient_search(
     family: str | None = None, **kwargs: str
 ) -> FHIRInteractionResult[Bundle]:
-    # All Canvas-to-FHIR mapping code for a Patient search operation goes here. For a search
-    # operation, a GraphQL request is issued, and then the result is mapped on to the FHIR Bundle
-    # Patient resource to be returned.
     patients = []
     for patient in DATABASE.values():
         for name in patient.name:
@@ -86,8 +77,6 @@ async def patient_search(
 async def patient_update(
     id_: Id, resource: Patient, **kwargs: str
 ) -> FHIRInteractionResult[Patient]:
-    # All Canvas-to-FHIR mapping code for a Patient update operation goes here. For an update
-    # operation, an integration message is sent to the integration message router.
     if id_ not in DATABASE:
         raise FHIRResourceNotFoundError
 
