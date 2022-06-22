@@ -1,6 +1,6 @@
 # fhirstarter
 
-A FHIR server built on top of FastAPI and FHIR Resources.
+A FHIR API built on top of FastAPI and FHIR Resources.
 
 ## Installation
 
