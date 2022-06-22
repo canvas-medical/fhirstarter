@@ -1,3 +1,5 @@
+"""Utility functions for creation of routes and responses."""
+
 from collections.abc import Callable, Mapping
 from functools import partial
 from types import CodeType, FunctionType
@@ -20,6 +22,7 @@ from .search_parameters import (
 def make_operation_outcome(
     severity: str, code: str, details_text: str
 ) -> OperationOutcome:
+    """Create a simple OperationOutcome given a severity, code, and details."""
     return OperationOutcome(
         **{
             "issue": [
@@ -38,6 +41,7 @@ def make_function(
     annotations: Mapping[str, Any],
     argdefs: tuple[Any, ...],
 ) -> FunctionType:
+    """Make a function suitable for creation of a FHIR create, read, or update API route."""
     code = getattr(function_templates, interaction.interaction_type.value).__code__
 
     return _make_function(interaction, annotations, code, argdefs)
@@ -47,6 +51,19 @@ def make_function(
 def make_search_function(
     interaction: FHIRInteraction[FHIRResourceType], post: bool
 ) -> FunctionType:
+    """
+    Make a function suitable for creation of a FHIR search API route.
+
+    Creation of a search function is more complex than creation of a create, read, or update
+    function due to the variability of search parameters, and due to the need to support GET and
+    POST.
+
+    Search parameter descriptions are pulled from the FHIR specification.
+
+    Aside from definition of glabals, argument defaults, and annotations, the most important thing
+    this function does is to set the "include_in_schema" value for each search parameter, based on
+    the search parameters that the provided callable supports.
+    """
     function_template = getattr(
         function_templates,
         f"{interaction.resource_type.get_resource_type().lower()}_"
@@ -101,9 +118,11 @@ def _make_function(
     code: CodeType,
     argdefs: tuple[Any, ...],
 ) -> FunctionType:
+    """Make a function suitable for creation of a FHIR create, read, or updates API route."""
     annotations |= {"request": Request, "response": Response}
     globals_ = {
         "callable_": interaction.callable_,
+        "cast": cast,
         "parse_result": function_templates.parse_result,
         "resource_type_str": interaction.resource_type.get_resource_type(),
         "FHIRResourceType": interaction.resource_type,
@@ -116,6 +135,7 @@ def _make_function(
 
 
 def create_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+    """Provide arguments for creation of a FHIR create API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
     return {
@@ -135,6 +155,7 @@ def create_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[st
 
 
 def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+    """Provide arguments for creation of a FHIR read API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
     return {
@@ -154,6 +175,7 @@ def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str,
 def search_route_args(
     interaction: FHIRInteraction[FHIRResourceType], post: bool
 ) -> dict[str, Any]:
+    """Provide arguments for creation of a FHIR search API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
     return {
@@ -171,6 +193,7 @@ def search_route_args(
 
 
 def update_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+    """Provide arguments for creation of a FHIR update API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
     return {
@@ -194,6 +217,7 @@ def _responses(
     interaction: FHIRInteraction[FHIRResourceType],
     *responses: Callable[[FHIRInteraction[FHIRResourceType]], _Responses],
 ) -> _Responses:
+    """Combine the responses documentation for a FHIR interaction into a single dictionary."""
     merged_responses: _Responses = {}
     for response in responses:
         merged_responses |= response(interaction)
@@ -203,6 +227,7 @@ def _responses(
 def _ok(
     interaction: FHIRInteraction[FHIRResourceType], search: bool = False
 ) -> _Responses:
+    """Return documentation for an HTTP 200 OK response."""
     return {
         status.HTTP_200_OK: {
             "model": interaction.resource_type if not search else Bundle,
@@ -213,6 +238,7 @@ def _ok(
 
 
 def _created(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
+    """Documentation for an HTTP 201 Created response."""
     return {
         status.HTTP_201_CREATED: {
             "model": interaction.resource_type,
@@ -222,6 +248,7 @@ def _created(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
 
 
 def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
+    """Documentation for an HTTP 400 Bad Request response."""
     return {
         status.HTTP_400_BAD_REQUEST: {
             "model": OperationOutcome,
@@ -233,6 +260,7 @@ def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
 
 
 def _not_found(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
+    """Documentation for an HTTP 404 Not Found response."""
     return {
         status.HTTP_404_NOT_FOUND: {
             "model": OperationOutcome,
@@ -242,6 +270,7 @@ def _not_found(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
 
 
 def _unprocessable_entity(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
+    """Documentation for an HTTP 422 Unprocessable Entity response."""
     return {
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "model": OperationOutcome,

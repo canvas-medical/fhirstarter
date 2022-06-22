@@ -1,3 +1,10 @@
+"""
+Standard exception types for reporting errors.
+
+The exception classes defined here provide a response method which will return a JSONResponse
+containing an OperationOutcome and an HTTP status code.
+"""
+
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -9,6 +16,8 @@ from .utils import make_operation_outcome
 
 
 class FHIRException(Exception, ABC):
+    """Abstract base class for all FHIR exceptions."""
+
     def response(self) -> JSONResponse:
         return JSONResponse(
             content=self._operation_outcome().dict(), status_code=self._status_code()
@@ -24,6 +33,12 @@ class FHIRException(Exception, ABC):
 
 
 class FHIRGeneralError(FHIRException):
+    """
+    General FHIR exception class.
+
+    This class allows the caller to pass in a predefined OperationOutcome.
+    """
+
     def __init__(
         self, status_code: int, severity: str, code: str, details_text: str, *args: Any
     ) -> None:
@@ -47,6 +62,13 @@ class FHIRGeneralError(FHIRException):
 
 
 class FHIRInteractionError(FHIRException, ABC):
+    """
+    Abstract base class for exceptions that occur during FHIR interactions.
+
+    This class provides a set_request method that provides concrete subclasses with the request
+    object for additional context.
+    """
+
     def __init__(self, *args: Any) -> None:
         super().__init__(*args)
         self._request: Request | None = None
@@ -56,6 +78,8 @@ class FHIRInteractionError(FHIRException, ABC):
 
 
 class FHIRResourceNotFoundError(FHIRInteractionError):
+    """FHIR exception class for 404 not found errors."""
+
     def _status_code(self) -> int:
         return status.HTTP_404_NOT_FOUND
 

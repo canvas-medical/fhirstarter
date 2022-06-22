@@ -1,3 +1,8 @@
+"""
+An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR
+interactions (i.e. endpoints) that perform create, read, search, and update operations.
+"""
+
 from copy import deepcopy
 from uuid import uuid4
 

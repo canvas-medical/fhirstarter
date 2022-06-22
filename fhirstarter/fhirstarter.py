@@ -1,3 +1,53 @@
+"""
+FHIRStarter class, exception handlers, and middleware.
+
+The approach taken by FHIRStarter to define API routes is somewhat novel. Typically, API routes are
+created in FastAPI by using decorators on functions that implement the API routes. However, because
+the FHIR standard specifies exactly what API routes should look like, is it not necessary for, and
+would potentially introduce inconsistency if developers defined API routes.
+
+To enforce the methodology of API route creation, FHIRStarter instead asks the developer to provide
+a callable with a recognizable function signature, and then decorate it with a FHIRStarter decorator
+to register and designate it as a FHIR interaction. FHIRStarter takes care of the rest.
+
+Developers are not precluded from adding API routes in the typical way with FastAPI decorators,
+however this should be done only in special cases.
+
+The features that FHIRStarter provides are:
+
+* Automatic, standardized API route creation
+* Automatically generated capability statement and capability statement API route
+* An exception-handling framework that produces FHIR-friendly responses (i.e. OperationOutcomes)
+* Automatically generated integrated documentation generated from the FHIR specification.
+
+The most novel aspect of FHIRStarter is that dynamically creates the functions that implement API
+routes. It accomplishes this by using the Python type FunctionType. Creation of a FunctionType
+produces a callable that can be used like any Python callable, and these callables can be passed to
+FastAPI during API route creation.
+
+The data required to create a FunctionType are the following:
+
+* A code object
+* A dictionary of globals, which define all external symbols in the function template
+* A tuple of argument defaults
+* Type annotations for function arguments
+
+The code object is obtained from the function templates defined in this package. These code objects
+are simple functions that just pass through the request to another callable: the callable that the
+developer decorates when registering a FHIR interaction.
+
+The globals dictianary provides the context needed for the callable to run. This dictionary defines
+the symbols referenced by the code of the callable. If globals are not defiend, then the symbols the
+code object references will be undefined.
+
+The argument defaults and type annotations must be defined correctly for FastAPI API route creation
+and documentation generation to work properly.0
+
+FastAPI generates API routes and API documentation based on the list of function arguments, the type
+annotations, and default arguments. If a FunctionType is properly created using the data listed
+above then it is suitable to be passed to FastAPI as a callable.
+"""
+
 import itertools
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
@@ -50,7 +100,20 @@ from .utils import (
 
 
 class FHIRStarter(FastAPI):
+    """
+    FHIRStarter class.
+
+    Handles collection of FHIR providers, creation of API routes, middleware, exception handling,
+    and capability statement requests.
+    """
+
     def __init__(self, **kwargs: Any) -> None:
+        """
+        On app creation, the following occurs:
+        * Static routes are created (e.g. the capability statement route)
+        * Middleware is added (e.g. content-type header handling)
+        * Exception handling is added
+        """
         super().__init__(**kwargs)
 
         self._capabilities: dict[  # type: ignore
@@ -72,6 +135,12 @@ class FHIRStarter(FastAPI):
         self.add_exception_handler(Exception, _exception_handler)
 
     def add_providers(self, *providers: FHIRProvider) -> None:
+        """
+        Add all FHIR interactions from all provided FHIRProviders.
+
+        Iterate over the interactions from the providers, record the capabilities (based on the
+        resource type and interaction type), and add the API route for the defined interaction.
+        """
         provider_interactions = itertools.chain.from_iterable(
             provider.interactions for provider in providers
         )
@@ -91,6 +160,19 @@ class FHIRStarter(FastAPI):
             self._add_route(interaction)
 
     def openapi(self) -> dict[str, Any]:
+        """
+        Adjust the OpenAPI schema to make it more FHIR-friendly.
+
+        Remove some default schemas that are not needed nor used, and change all content types that
+        are set to "application/json" to instead be "application/fhir+json".
+
+        This method is slightly hacky because it directly modifies the OpenAPI schema, however it
+        does make the generated documentation look nicer.
+
+        Because it directly modifies the OpenAPI schema, it is vulnerable to breakage from updates
+        to FastAPI. This is not a significant vulnerability because the core server functionality
+        will still work (i.e. this is just documentation).
+        """
         openapi_schema = super().openapi()
 
         openapi_schema["components"]["schemas"].pop("HTTPValidationError", None)
@@ -118,9 +200,7 @@ class FHIRStarter(FastAPI):
         return openapi_schema
 
     def _add_capabilities_route(self) -> None:
-        def metadata() -> CapabilityStatement:
-            return self._capability_statement()
-
+        """Add the /metadata route, which supplies the capability statement for the instance."""
         self.get(
             "/metadata",
             response_model=CapabilityStatement,
@@ -130,9 +210,10 @@ class FHIRStarter(FastAPI):
             description="The capabilities interaction retrieves the information about a server's "
             "capabilities - which portions of the FHIR specification it supports.",
             response_model_exclude_none=True,
-        )(metadata)
+        )(lambda: self._capability_statement())
 
     def _add_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+        """Call the appropriate "add route" function based on the FHIR interaction type."""
         match interaction.interaction_type:
             case FHIRInteractionType.CREATE:
                 self._add_create_route(interaction)
@@ -144,6 +225,7 @@ class FHIRStarter(FastAPI):
                 self._add_update_route(interaction)
 
     def _add_create_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+        """Add a route that supports a FHIR create interaction for the specified resource type."""
         func = make_function(
             interaction=interaction,
             annotations={"resource": interaction.resource_type},
@@ -159,6 +241,7 @@ class FHIRStarter(FastAPI):
         self.post(**create_route_args(interaction))(func)
 
     def _add_read_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+        """Add a route that supports a FHIR read interaction for the specified resource type."""
         func = make_function(
             interaction=interaction,
             annotations={"id_": Id},
@@ -174,6 +257,11 @@ class FHIRStarter(FastAPI):
         self.get(**read_route_args(interaction))(func)
 
     def _add_search_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+        """
+        Add routes that support a FHIR search interaction for the specified resource type.
+
+        Adds both GET and POST routes, as specified by the FHIR specification.
+        """
         get_func = make_search_function(interaction, post=False)
         post_func = make_search_function(interaction, post=True)
 
@@ -181,6 +269,7 @@ class FHIRStarter(FastAPI):
         self.post(**search_route_args(interaction, post=True))(post_func)
 
     def _add_update_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+        """Add a route that supports a FHIR update interaction for the specified resource type."""
         func = make_function(
             interaction=interaction,
             annotations={"id_": Id, "resource": interaction.resource_type},
@@ -202,6 +291,12 @@ class FHIRStarter(FastAPI):
 
     @cache
     def _capability_statement(self) -> CapabilityStatement:
+        """
+        Generate the capability statement for the instance based on the FHIR interactions provided.
+
+        In addition to declaring the interactions (e.g. create, read, search, and update), the
+        supported search parameters are also declared.
+        """
         search_parameters = load_search_parameters()
 
         resources = []
@@ -256,6 +351,7 @@ class FHIRStarter(FastAPI):
 async def _add_content_type_header(
     request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
 ) -> Response:
+    """Middleware function that chnages the content type header to "application/fhir+json."""
     response: Response = await call_next(request)
     if request.url.components.path not in {"/docs", "/redoc"}:
         response.headers["Content-Type"] = "application/fhir+json"
@@ -266,6 +362,11 @@ async def _add_content_type_header(
 async def _validation_exception_handler(
     _: Request, exception: RequestValidationError
 ) -> JSONResponse:
+    """
+    Validation exception handler that overrides the default FastAPI validation exception handler.
+
+    Returns an OperationOutcome.
+    """
     return _exception_json_response(
         severity="fatal",
         code="structure",
@@ -277,15 +378,23 @@ async def _validation_exception_handler(
 async def _fhir_interaction_error_handler(
     request: Request, exception: FHIRInteractionError
 ) -> JSONResponse:
+    """
+    Exception handler that catches FHIRInteractionErrors.
+
+    Set the request on the exception so that the exception has more context with which to form an
+    OperationOutcome.
+    """
     exception.set_request(request)
     return exception.response()
 
 
 async def _fhir_exception_handler(_: Request, exception: FHIRException) -> JSONResponse:
+    """General exception handler to catch all other FHIRExceptions. Returns an OperationOutcome."""
     return exception.response()
 
 
 async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
+    """General exception handler to catch server framework errors. Returns an OperationOutcome."""
     return _exception_json_response(
         severity="fatal",
         code="exception",
@@ -297,6 +406,7 @@ async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
 def _exception_json_response(
     severity: str, code: str, exception: Exception, status_code: int
 ) -> JSONResponse:
+    """Create a JSONResponse with an OperationOutcome and an HTTP status code."""
     operation_outcome = make_operation_outcome(
         severity=severity, code=code, details_text=f"{str(exception)}"
     )
