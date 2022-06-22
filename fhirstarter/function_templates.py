@@ -37,7 +37,7 @@ async def callable_(*_: Any, **__: Any) -> Any:
     return None
 
 
-def parse_result(result: Id | Resource) -> tuple[Id | None, Resource | None]:
+def split_result(result: Id | Resource) -> tuple[Id | None, Resource | None]:
     """
     Given an Id or a Resource, return an Id and a Resource.
 
@@ -68,7 +68,7 @@ async def create(
     Calls the callable, and sets the Location header based on the Id of the created resource.
     """
     result = await callable_(resource, request=request)
-    id_, result_resource = parse_result(result)
+    id_, result_resource = split_result(result)
 
     response.headers["Location"] = (
         f"{request.base_url}{resource_type_str}" f"/{id_}/_history/1"
@@ -87,7 +87,7 @@ async def update(
 ) -> FHIRResourceType | None:
     """Function template for update interactions."""
     result = await callable_(id_, resource, request=request)
-    _, result_resource = parse_result(result)
+    _, result_resource = split_result(result)
 
     return result_resource
 

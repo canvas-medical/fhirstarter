@@ -123,8 +123,8 @@ def _make_function(
     globals_ = {
         "callable_": interaction.callable_,
         "cast": cast,
-        "parse_result": function_templates.parse_result,
         "resource_type_str": interaction.resource_type.get_resource_type(),
+        "split_result": function_templates.split_result,
         "FHIRResourceType": interaction.resource_type,
     }
 
