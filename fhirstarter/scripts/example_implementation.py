@@ -21,7 +21,7 @@ app = FHIRStarter(title="FHIRStarter Example Implementation")
 # Create a "database"
 DATABASE: dict[str, Patient] = {}
 
-# Create the provider
+# Create a provider
 provider = FHIRProvider()
 
 # To register FHIR interactions with  a provider, the pieces of information the developer has to

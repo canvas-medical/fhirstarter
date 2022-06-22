@@ -18,7 +18,7 @@ The features that FHIRStarter provides are:
 * Automatic, standardized API route creation
 * Automatically generated capability statement and capability statement API route
 * An exception-handling framework that produces FHIR-friendly responses (i.e. OperationOutcomes)
-* Automatically generated integrated documentation generated from the FHIR specification.
+* Automatically generated, integrated documentation generated from the FHIR specification.
 
 The most novel aspect of FHIRStarter is that dynamically creates the functions that implement API
 routes. It accomplishes this by using the Python type FunctionType. Creation of a FunctionType
@@ -37,7 +37,7 @@ are simple functions that just pass through the request to another callable: the
 developer decorates when registering a FHIR interaction.
 
 The globals dictianary provides the context needed for the callable to run. This dictionary defines
-the symbols referenced by the code of the callable. If globals are not defiend, then the symbols the
+the symbols referenced by the code of the callable. If globals are not defined, then the symbols the
 code object references will be undefined.
 
 The argument defaults and type annotations must be defined correctly for FastAPI API route creation
