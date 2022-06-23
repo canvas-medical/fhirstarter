@@ -9,7 +9,6 @@ python = "^3.10"
 fastapi = "^0.77.1"
 "fhir.resources" = "^6.4.0"
 funcy = "^1.17"
-more-itertools = "^8.13.0"
 python-multipart = "^0.0.5"
 
 [tool.poetry.dev-dependencies]
