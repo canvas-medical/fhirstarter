@@ -40,8 +40,10 @@ async def patient_read(id_: Id, **kwargs: str) -> Patient:
     return patient
 
 
-async def patient_search(family: str | None = None, **kwargs: str) -> Bundle:
-    """Patient search FHIR interaction."""
+async def patient_search_type(
+    family: str | None = None, general_practitioner: str | None = None, **kwargs: str
+) -> Bundle:
+    """Patient search-type FHIR interaction."""
     patients = []
     for patient in _DATABASE.values():
         for name in patient.name:
@@ -86,7 +88,7 @@ def client() -> TestClient:
     provider = FHIRProvider()
     provider.register_create_interaction(Patient)(patient_create)
     provider.register_read_interaction(Patient)(patient_read)
-    provider.register_search_interaction(Patient)(patient_search)
+    provider.register_search_type_interaction(Patient)(patient_search_type)
     provider.register_update_interaction(Patient)(patient_update)
 
     return _app(provider)
@@ -126,10 +128,13 @@ def test_capability_statement(client: TestClient) -> None:
                         "interaction": [
                             {"code": "create"},
                             {"code": "read"},
-                            {"code": "search"},
+                            {"code": "search-type"},
                             {"code": "update"},
                         ],
-                        "searchParam": [{"name": "family", "type": "string"}],
+                        "searchParam": [
+                            {"name": "family", "type": "string"},
+                            {"name": "general-practitioner", "type": "reference"},
+                        ],
                     }
                 ],
             }
@@ -212,29 +217,29 @@ def test_read_not_found(client: TestClient) -> None:
     )
 
 
-def test_search(client: TestClient, create_response: Response) -> None:
-    """Test FHIR search interaction."""
-    _test_search(
+def test_search_type(client: TestClient, create_response: Response) -> None:
+    """Test FHIR search-type interaction."""
+    _test_search_type(
         create_response, lambda: client.get("/Patient", params={"family": "Baggins"})
     )
 
 
-def test_search_post(client: TestClient, create_response: Response) -> None:
-    """Test FHIR search interaction using POST."""
-    _test_search(
+def test_search_type_post(client: TestClient, create_response: Response) -> None:
+    """Test FHIR search-type interaction using POST."""
+    _test_search_type(
         create_response,
         lambda: client.post("/Patient/_search", data={"family": "Baggins"}),
     )
 
 
-def _test_search(
-    create_response: Response, search_func: Callable[..., Response]
+def _test_search_type(
+    create_response: Response, search_type_func: Callable[..., Response]
 ) -> None:
     id_ = _id_from_create_response(create_response)
-    search_response = search_func()
+    search_type_response = search_type_func()
 
     _assert_expected_response(
-        search_response,
+        search_type_response,
         status.HTTP_200_OK,
         content={
             "resourceType": "Bundle",

@@ -24,8 +24,8 @@ def main() -> None:
             for name in sorted(search_parameters.keys())
         ]
 
-        function_template = f"""async def {resource_type.lower()}_search(request: Request, response: Response, {", ".join([f"{sp}: str" for sp in search_parameter_names])}) -> Bundle:
-    \"\"\"Function template for {resource_type} search interaction.\"\"\" 
+        function_template = f"""async def {resource_type.lower()}_search_type(request: Request, response: Response, {", ".join([f"{sp}: str" for sp in search_parameter_names])}) -> Bundle:
+    \"\"\"Function template for {resource_type} search-type interaction.\"\"\" 
     return await callable_({", ".join([f"{sp}={sp}" for sp in search_parameter_names])}, request=request)"""
 
         print(f"{function_template}\n")

@@ -65,19 +65,23 @@ from fhir.resources.resource import Resource
 
 from .exceptions import FHIRException, FHIRInteractionError
 from .provider import (
-    FHIRInteraction,
     FHIRInteractionType,
     FHIRProvider,
     FHIRResourceType,
+    FHIRTypeInteraction,
 )
-from .search_parameters import load_search_parameters, supported_search_parameters
+from .search_parameters import (
+    load_search_parameters,
+    supported_search_parameters,
+    var_sp_name_to_fhir_sp_name,
+)
 from .utils import (
     create_route_args,
     make_function,
     make_operation_outcome,
-    make_search_function,
+    make_search_type_function,
     read_route_args,
-    search_route_args,
+    search_type_route_args,
     update_route_args,
 )
 
@@ -117,7 +121,7 @@ class FHIRStarter(FastAPI):
         super().__init__(**kwargs)
 
         self._capabilities: dict[  # type: ignore
-            str, dict[FHIRInteractionType, FHIRInteraction]
+            str, dict[FHIRInteractionType, FHIRTypeInteraction]
         ] = defaultdict(dict)
         self._created = datetime.utcnow()
 
@@ -212,19 +216,21 @@ class FHIRStarter(FastAPI):
             response_model_exclude_none=True,
         )(lambda: self._capability_statement())
 
-    def _add_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+    def _add_route(self, interaction: FHIRTypeInteraction[FHIRResourceType]) -> None:
         """Call the appropriate "add route" function based on the FHIR interaction type."""
         match interaction.interaction_type:
             case FHIRInteractionType.CREATE:
                 self._add_create_route(interaction)
             case FHIRInteractionType.READ:
                 self._add_read_route(interaction)
-            case FHIRInteractionType.SEARCH:
-                self._add_search_route(interaction)
+            case FHIRInteractionType.SEARCH_TYPE:
+                self._add_search_type_route(interaction)
             case FHIRInteractionType.UPDATE:
                 self._add_update_route(interaction)
 
-    def _add_create_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+    def _add_create_route(
+        self, interaction: FHIRTypeInteraction[FHIRResourceType]
+    ) -> None:
         """Add a route that supports a FHIR create interaction for the specified resource type."""
         func = make_function(
             interaction=interaction,
@@ -240,7 +246,9 @@ class FHIRStarter(FastAPI):
 
         self.post(**create_route_args(interaction))(func)
 
-    def _add_read_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+    def _add_read_route(
+        self, interaction: FHIRTypeInteraction[FHIRResourceType]
+    ) -> None:
         """Add a route that supports a FHIR read interaction for the specified resource type."""
         func = make_function(
             interaction=interaction,
@@ -256,19 +264,23 @@ class FHIRStarter(FastAPI):
 
         self.get(**read_route_args(interaction))(func)
 
-    def _add_search_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+    def _add_search_type_route(
+        self, interaction: FHIRTypeInteraction[FHIRResourceType]
+    ) -> None:
         """
-        Add routes that support a FHIR search interaction for the specified resource type.
+        Add routes that support a FHIR search-type interaction for the specified resource type.
 
         Adds both GET and POST routes, as specified by the FHIR specification.
         """
-        get_func = make_search_function(interaction, post=False)
-        post_func = make_search_function(interaction, post=True)
+        get_func = make_search_type_function(interaction, post=False)
+        post_func = make_search_type_function(interaction, post=True)
 
-        self.get(**search_route_args(interaction, post=False))(get_func)
-        self.post(**search_route_args(interaction, post=True))(post_func)
+        self.get(**search_type_route_args(interaction, post=False))(get_func)
+        self.post(**search_type_route_args(interaction, post=True))(post_func)
 
-    def _add_update_route(self, interaction: FHIRInteraction[FHIRResourceType]) -> None:
+    def _add_update_route(
+        self, interaction: FHIRTypeInteraction[FHIRResourceType]
+    ) -> None:
         """Add a route that supports a FHIR update interaction for the specified resource type."""
         func = make_function(
             interaction=interaction,
@@ -294,7 +306,7 @@ class FHIRStarter(FastAPI):
         """
         Generate the capability statement for the instance based on the FHIR interactions provided.
 
-        In addition to declaring the interactions (e.g. create, read, search, and update), the
+        In addition to declaring the interactions (e.g. create, read, search-type, and update), the
         supported search parameters are also declared.
         """
         search_parameters = load_search_parameters()
@@ -308,11 +320,15 @@ class FHIRStarter(FastAPI):
                     for interaction_type in sorted(interaction_types)
                 ],
             }
-            if search_interaction := interaction_types.get(FHIRInteractionType.SEARCH):
+            if search_type_interaction := interaction_types.get(
+                FHIRInteractionType.SEARCH_TYPE
+            ):
                 supported_search_parameters_ = []
+                # TODO: Test this with a hyphenated search parameter
                 for search_parameter in supported_search_parameters(
-                    search_interaction.callable_
+                    search_type_interaction.callable_
                 ):
+                    search_parameter = var_sp_name_to_fhir_sp_name(search_parameter)
                     supported_search_parameters_.append(
                         {
                             "name": search_parameters[resource_type][search_parameter][

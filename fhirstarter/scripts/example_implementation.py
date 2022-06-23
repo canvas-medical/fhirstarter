@@ -1,6 +1,6 @@
 """
 An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR
-interactions (i.e. endpoints) that perform create, read, search, and update operations.
+interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
 """
 
 from copy import deepcopy
@@ -53,9 +53,11 @@ async def patient_read(id_: Id, **kwargs: str) -> Patient:
     return patient
 
 
-# Register the patient search FHIR interaction with the provider
-@provider.register_search_interaction(Patient)
-async def patient_search(family: str | None = None, **kwargs: str) -> Bundle:
+# Register the patient search-type FHIR interaction with the provider
+@provider.register_search_type_interaction(Patient)
+async def patient_search_type(
+    general_practitioner: str | None = None, family: str | None = None, **kwargs: str
+) -> Bundle:
     patients = []
     for patient in DATABASE.values():
         for name in patient.name:
@@ -86,7 +88,7 @@ async def patient_update(id_: Id, resource: Patient, **kwargs: str) -> Id:
 
 
 # Add the provider to the app. This will automatically generate the API routes for the interactions
-# provided by the providers (e.g. create, read, search, and update).
+# provided by the providers (e.g. create, read, search-type, and update).
 app.add_providers(provider)
 
 

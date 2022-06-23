@@ -11,7 +11,7 @@ from fhir.resources.operationoutcome import OperationOutcome
 from funcy import omit
 
 from . import function_templates, status
-from .provider import FHIRInteraction, FHIRResourceType
+from .provider import FHIRResourceType, FHIRTypeInteraction
 from .search_parameters import (
     load_search_parameters,
     supported_search_parameters,
@@ -37,24 +37,26 @@ def make_operation_outcome(
 
 
 def make_function(
-    interaction: FHIRInteraction[FHIRResourceType],
+    interaction: FHIRTypeInteraction[FHIRResourceType],
     annotations: Mapping[str, Any],
     argdefs: tuple[Any, ...],
 ) -> FunctionType:
     """Make a function suitable for creation of a FHIR create, read, or update API route."""
-    code = getattr(function_templates, interaction.interaction_type.value).__code__
+    code = getattr(
+        function_templates, interaction.interaction_type.value.replace("-", "_")
+    ).__code__
 
     return _make_function(interaction, annotations, code, argdefs)
 
 
 # TODO: If possible, map FHIR primitives to correct type annotations for better validation
-def make_search_function(
-    interaction: FHIRInteraction[FHIRResourceType], post: bool
+def make_search_type_function(
+    interaction: FHIRTypeInteraction[FHIRResourceType], post: bool
 ) -> FunctionType:
     """
-    Make a function suitable for creation of a FHIR search API route.
+    Make a function suitable for creation of a FHIR search-type API route.
 
-    Creation of a search function is more complex than creation of a create, read, or update
+    Creation of a search-type function is more complex than creation of a create, read, or update
     function due to the variability of search parameters, and due to the need to support GET and
     POST.
 
@@ -67,7 +69,7 @@ def make_search_function(
     function_template = getattr(
         function_templates,
         f"{interaction.resource_type.get_resource_type().lower()}_"
-        f"{interaction.interaction_type.value}",
+        f"{interaction.interaction_type.value.replace('-', '_')}",
     )
     variable_names = tuple(
         omit(
@@ -113,7 +115,7 @@ def make_search_function(
 
 
 def _make_function(
-    interaction: FHIRInteraction[FHIRResourceType],
+    interaction: FHIRTypeInteraction[FHIRResourceType],
     annotations: Mapping[str, Any],
     code: CodeType,
     argdefs: tuple[Any, ...],
@@ -134,7 +136,9 @@ def _make_function(
     return func
 
 
-def create_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+def create_route_args(
+    interaction: FHIRTypeInteraction[FHIRResourceType],
+) -> dict[str, Any]:
     """Provide arguments for creation of a FHIR create API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -154,7 +158,9 @@ def create_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[st
     }
 
 
-def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+def read_route_args(
+    interaction: FHIRTypeInteraction[FHIRResourceType],
+) -> dict[str, Any]:
     """Provide arguments for creation of a FHIR read API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -172,10 +178,10 @@ def read_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str,
     }
 
 
-def search_route_args(
-    interaction: FHIRInteraction[FHIRResourceType], post: bool
+def search_type_route_args(
+    interaction: FHIRTypeInteraction[FHIRResourceType], post: bool
 ) -> dict[str, Any]:
-    """Provide arguments for creation of a FHIR search API route."""
+    """Provide arguments for creation of a FHIR search-type API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
     return {
@@ -184,7 +190,7 @@ def search_route_args(
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
         "summary": f"{resource_type_str} {interaction.interaction_type.value}",
-        "description": f"The {resource_type_str} search interaction searches a set of resources "
+        "description": f"The {resource_type_str} search-type interaction searches a set of resources "
         "based on some filter criteria.",
         "responses": _responses(interaction, partial(_ok, search=True), _bad_request),
         "response_model_exclude_none": True,
@@ -192,7 +198,9 @@ def search_route_args(
     }
 
 
-def update_route_args(interaction: FHIRInteraction[FHIRResourceType]) -> dict[str, Any]:
+def update_route_args(
+    interaction: FHIRTypeInteraction[FHIRResourceType],
+) -> dict[str, Any]:
     """Provide arguments for creation of a FHIR update API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -214,8 +222,8 @@ _Responses = dict[int, dict[str, Any]]
 
 
 def _responses(
-    interaction: FHIRInteraction[FHIRResourceType],
-    *responses: Callable[[FHIRInteraction[FHIRResourceType]], _Responses],
+    interaction: FHIRTypeInteraction[FHIRResourceType],
+    *responses: Callable[[FHIRTypeInteraction[FHIRResourceType]], _Responses],
 ) -> _Responses:
     """Combine the responses documentation for a FHIR interaction into a single dictionary."""
     merged_responses: _Responses = {}
@@ -225,7 +233,7 @@ def _responses(
 
 
 def _ok(
-    interaction: FHIRInteraction[FHIRResourceType], search: bool = False
+    interaction: FHIRTypeInteraction[FHIRResourceType], search: bool = False
 ) -> _Responses:
     """Return documentation for an HTTP 200 OK response."""
     return {
@@ -237,7 +245,7 @@ def _ok(
     }
 
 
-def _created(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
+def _created(interaction: FHIRTypeInteraction[FHIRResourceType]) -> _Responses:
     """Documentation for an HTTP 201 Created response."""
     return {
         status.HTTP_201_CREATED: {
@@ -247,7 +255,7 @@ def _created(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     }
 
 
-def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
+def _bad_request(interaction: FHIRTypeInteraction[FHIRResourceType]) -> _Responses:
     """Documentation for an HTTP 400 Bad Request response."""
     return {
         status.HTTP_400_BAD_REQUEST: {
@@ -259,7 +267,7 @@ def _bad_request(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     }
 
 
-def _not_found(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
+def _not_found(interaction: FHIRTypeInteraction[FHIRResourceType]) -> _Responses:
     """Documentation for an HTTP 404 Not Found response."""
     return {
         status.HTTP_404_NOT_FOUND: {
@@ -269,7 +277,9 @@ def _not_found(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
     }
 
 
-def _unprocessable_entity(interaction: FHIRInteraction[FHIRResourceType]) -> _Responses:
+def _unprocessable_entity(
+    interaction: FHIRTypeInteraction[FHIRResourceType],
+) -> _Responses:
     """Documentation for an HTTP 422 Unprocessable Entity response."""
     return {
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
