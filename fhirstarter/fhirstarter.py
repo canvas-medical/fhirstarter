@@ -36,7 +36,7 @@ The code object is obtained from the function templates defined in this package.
 are simple functions that just pass through the request to another callable: the callable that the
 developer decorates when registering a FHIR interaction.
 
-The globals dictianary provides the context needed for the callable to run. This dictionary defines
+The globals dictionary provides the context needed for the callable to run. This dictionary defines
 the symbols referenced by the code of the callable. If globals are not defined, then the symbols the
 code object references will be undefined.
 
@@ -351,7 +351,7 @@ class FHIRStarter(FastAPI):
 async def _add_content_type_header(
     request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
 ) -> Response:
-    """Middleware function that chnages the content type header to "application/fhir+json."""
+    """Middleware function that changes the content type header to "application/fhir+json"."""
     response: Response = await call_next(request)
     if request.url.components.path not in {"/docs", "/redoc"}:
         response.headers["Content-Type"] = "application/fhir+json"

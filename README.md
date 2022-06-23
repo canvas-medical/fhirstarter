@@ -25,6 +25,7 @@ In order to stand up a FHIR server, all that is required is to create a FHIRStar
 
 ```python
 import uvicorn
+from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 from fhirstarter import FHIRProvider, FHIRStarter
 from fhirstarter.exceptions import FHIRResourceNotFoundError

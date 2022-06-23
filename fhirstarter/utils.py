@@ -60,7 +60,7 @@ def make_search_function(
 
     Search parameter descriptions are pulled from the FHIR specification.
 
-    Aside from definition of glabals, argument defaults, and annotations, the most important thing
+    Aside from definition of globals, argument defaults, and annotations, the most important thing
     this function does is to set the "include_in_schema" value for each search parameter, based on
     the search parameters that the provided callable supports.
     """

@@ -3,7 +3,7 @@ Function templates for FHIR interactions.
 
 The callables passed to FastAPI by FHIRStarter are created on the fly using these function
 templates. A callable can be created using the Python FunctionType type, and by passing it the
-the following:
+following:
 
 * A code object from a function template in this file
 * A dictionary of globals, which define all external symbols in the function template
