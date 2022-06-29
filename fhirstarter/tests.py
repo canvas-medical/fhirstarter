@@ -26,7 +26,7 @@ _DATABASE: dict[str, Patient] = {}
 async def patient_create(resource: Patient, **kwargs: str) -> Id:
     """Patient create FHIR interaction."""
     patient = deepcopy(resource)
-    patient.id = _generate_patient_id()
+    patient.id = _generate_fhir_resource_id()
     _DATABASE[patient.id] = patient
 
     return Id(patient.id)
@@ -236,7 +236,7 @@ def test_read(client: TestClient, create_response: Response) -> None:
 
 def test_read_not_found(client: TestClient) -> None:
     """Test FHIR read interaction that produces a 404 not found error."""
-    id_ = _generate_patient_id()
+    id_ = _generate_fhir_resource_id()
     read_response = client.get(f"/Patient/{id_}")
 
     _assert_expected_response(
@@ -308,7 +308,7 @@ def test_update(client: TestClient, create_response: Response) -> None:
 
 def test_update_not_found(client: TestClient) -> None:
     """Test FHIR update interaction that produces a 404 not found error."""
-    id_ = _generate_patient_id()
+    id_ = _generate_fhir_resource_id()
     put_response = client.put(f"/Patient/{id_}", json=_RESOURCE)
 
     _assert_expected_response(
@@ -340,9 +340,9 @@ def test_validation_error(client: TestClient) -> None:
     )
 
 
-def _generate_patient_id() -> Id:
-    """Generate a random patient identifier."""
-    return Id(uuid4().hex)
+def _generate_fhir_resource_id() -> Id:
+    """Generate a UUID-based FHIR Resource ID."""
+    return Id(uuid4())
 
 
 def _id_from_create_response(response: Response) -> str:
