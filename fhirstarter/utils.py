@@ -126,7 +126,7 @@ def _make_function(
         "callable_": interaction.callable_,
         "cast": cast,
         "resource_type_str": interaction.resource_type.get_resource_type(),
-        "split_result": function_templates.split_result,
+        "result_to_id_resource_tuple": function_templates.result_to_id_resource_tuple,
         "FHIRResourceType": interaction.resource_type,
     }
 
