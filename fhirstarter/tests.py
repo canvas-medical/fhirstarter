@@ -342,7 +342,7 @@ def test_validation_error(client: TestClient) -> None:
 
 def _generate_fhir_resource_id() -> Id:
     """Generate a UUID-based FHIR Resource ID."""
-    return Id(uuid4())
+    return Id(str(uuid4()))
 
 
 def _id_from_create_response(response: Response) -> str:
