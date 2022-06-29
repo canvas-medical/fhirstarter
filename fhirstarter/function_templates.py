@@ -37,7 +37,9 @@ async def callable_(*_: Any, **__: Any) -> Any:
     return None
 
 
-def result_to_id_resource_tuple(result: Id | Resource) -> tuple[Id | None, Resource | None]:
+def result_to_id_resource_tuple(
+    result: Id | Resource,
+) -> tuple[Id | None, Resource | None]:
     """
     Given an Id or a Resource, return an Id and a Resource.
 

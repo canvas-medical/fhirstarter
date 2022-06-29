@@ -1,6 +1,7 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
 import itertools
+import os
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
 from datetime import datetime
@@ -297,23 +298,24 @@ class FHIRStarter(FastAPI):
         # TODO: Status can be filled in based on environment
         # TODO: Date could be the release date (from an environment variable)
         # TODO: Add XML format
-        return CapabilityStatement(
-            **{
-                "id": str(uuid4()),
-                "status": "active",
-                "date": self._created,
-                "publisher": "Canvas Medical",
-                "kind": "instance",
-                "fhirVersion": "4.3.0",
-                "format": ["json"],
-                "rest": [
-                    {
-                        "mode": "server",
-                        "resource": resources,
-                    }
-                ],
-            }
-        )
+        capability_statement = {
+            "id": str(uuid4()),
+            "status": "active",
+            "date": self._created,
+            "kind": "instance",
+            "fhirVersion": "4.3.0",
+            "format": ["json"],
+            "rest": [
+                {
+                    "mode": "server",
+                    "resource": resources,
+                }
+            ],
+        }
+        if publisher := os.getenv("CAPABILITY_STATEMENT_PUBLISHER"):
+            capability_statement["publisher"] = publisher
+
+        return CapabilityStatement(**capability_statement)
 
 
 async def _add_content_type_header(

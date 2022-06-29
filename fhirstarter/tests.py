@@ -5,6 +5,7 @@ from typing import Any, Callable, cast
 from uuid import uuid4
 
 import pytest
+from _pytest.monkeypatch import MonkeyPatch
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
@@ -116,7 +117,6 @@ def test_capability_statement(client: TestClient) -> None:
         "status": "active",
         "date": app._created.isoformat(),
         "kind": "instance",
-        "publisher": "Canvas Medical",
         "fhirVersion": "4.3.0",
         "format": ["json"],
         "rest": [
@@ -157,7 +157,40 @@ def test_capability_statement_create_and_read(
         "status": "active",
         "date": app._created.isoformat(),
         "kind": "instance",
-        "publisher": "Canvas Medical",
+        "fhirVersion": "4.3.0",
+        "format": ["json"],
+        "rest": [
+            {
+                "mode": "server",
+                "resource": [
+                    {
+                        "type": "Patient",
+                        "interaction": [{"code": "create"}, {"code": "read"}],
+                    },
+                ],
+            }
+        ],
+    }
+
+
+def test_capability_statement_publisher(
+    client_create_and_read: TestClient, monkeypatch: MonkeyPatch
+) -> None:
+    """Test the capability statement when only FHIR create and read interactions are supported."""
+    monkeypatch.setenv("CAPABILITY_STATEMENT_PUBLISHER", "Publisher")
+
+    client = client_create_and_read
+    app = cast(FHIRStarter, client.app)
+
+    response = client.get("/metadata")
+
+    _assert_expected_response(response, status.HTTP_200_OK)
+    assert omit(response.json(), ["id"]) == {
+        "resourceType": "CapabilityStatement",
+        "status": "active",
+        "date": app._created.isoformat(),
+        "publisher": "Publisher",
+        "kind": "instance",
         "fhirVersion": "4.3.0",
         "format": ["json"],
         "rest": [
