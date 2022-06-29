@@ -1,6 +1,6 @@
 # fhirstarter
 
-A FHIR API built on top of FastAPI and FHIR Resources.
+A FHIR API built on top of [FastAPI](https://fastapi.tiangolo.com) and [FHIR Resources](https://pypi.org/project/fhir.resources/).
 
 ## Installation
 
@@ -17,7 +17,7 @@ pip install fhirstarter
 
 ## Background
 
-FHIRStarter uses a provider pattern to enable developers to plug functions into the framework that implement FHIR interactions such as create, read, search, and update, and have FHIR-compatible API routes created automatically.
+FHIRStarter uses a provider pattern to enable developers to plug functions into the framework that implement FHIR interactions such as create, read, search, and update, and have FHIR-compatible API routes created automatically. FHIR interactions that are supplied must use the resource classes defined by the [FHIR Resources](https://pypi.org/project/fhir.resources/) Python package, which is a collection of Pydantic models for FHIR resources.
 
 In order to stand up a FHIR server, all that is required is to create a FHIRStarter and a FHIRProvider instance, register a FHIR interaction with the provider, add the provider to the FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server.
 
