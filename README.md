@@ -1,6 +1,6 @@
 # fhirstarter
 
-A FHIR API built on top of [FastAPI](https://fastapi.tiangolo.com) and [FHIR Resources](https://pypi.org/project/fhir.resources/).
+A FHIR API framework built on top of [FastAPI](https://fastapi.tiangolo.com) and [FHIR Resources](https://pypi.org/project/fhir.resources/).
 
 ## Installation
 
