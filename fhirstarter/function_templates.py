@@ -21,7 +21,7 @@ from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
-from .provider import FHIRResourceType
+from .provider import ResourceType
 
 # This value is defined so that the file can be imported without errors. It is never used; instead,
 # the symbol is defined by the globals passed in on creation of FunctionTypes.
@@ -62,8 +62,8 @@ def result_to_id_resource_tuple(
 
 
 async def create(
-    request: Request, response: Response, resource: FHIRResourceType
-) -> FHIRResourceType | None:
+    request: Request, response: Response, resource: ResourceType
+) -> ResourceType | None:
     """
     Function template for create interactions.
 
@@ -79,14 +79,14 @@ async def create(
     return result_resource
 
 
-async def read(request: Request, response: Response, id_: Id) -> FHIRResourceType:
+async def read(request: Request, response: Response, id_: Id) -> ResourceType:
     """Function template for read interactions."""
-    return cast(FHIRResourceType, await callable_(id_, request=request))
+    return cast(ResourceType, await callable_(id_, request=request))
 
 
 async def update(
-    request: Request, response: Response, id_: Id, resource: FHIRResourceType
-) -> FHIRResourceType | None:
+    request: Request, response: Response, id_: Id, resource: ResourceType
+) -> ResourceType | None:
     """Function template for update interactions."""
     result = await callable_(id_, resource, request=request)
     _, result_resource = result_to_id_resource_tuple(result)

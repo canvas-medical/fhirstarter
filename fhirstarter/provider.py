@@ -9,10 +9,10 @@ from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
-FHIRResourceType = TypeVar("FHIRResourceType", bound=Resource)
+ResourceType = TypeVar("ResourceType", bound=Resource)
 
 
-class FHIRInteractionType(Enum):
+class InteractionType(Enum):
     """Enum class to specify supported FHIR interaction types."""
 
     CREATE = "create"
@@ -20,27 +20,27 @@ class FHIRInteractionType(Enum):
     SEARCH_TYPE = "search-type"
     UPDATE = "update"
 
-    def __lt__(self, other: "FHIRInteractionType") -> bool:
+    def __lt__(self, other: "InteractionType") -> bool:
         return self.value < other.value
 
 
-class FHIRCreateInteractionCallable(Protocol[FHIRResourceType]):  # type: ignore
+class CreateInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR create interaction."""
 
     async def __call__(
-        self, resource: FHIRResourceType, **kwargs: str
-    ) -> Id | FHIRResourceType:
+        self, resource: ResourceType, **kwargs: str
+    ) -> Id | ResourceType:
         ...
 
 
-class FHIRReadInteractionCallable(Protocol[FHIRResourceType]):  # type: ignore
+class ReadInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR read interaction."""
 
-    async def __call__(self, id_: Id, **kwargs: str) -> FHIRResourceType:
+    async def __call__(self, id_: Id, **kwargs: str) -> ResourceType:
         ...
 
 
-class FHIRSearchTypeInteractionCallable(Protocol):
+class SearchTypeInteractionCallable(Protocol):
     """
     Callback protocol that defines the signature of a callable for a FHIR search-type interaction.
     """
@@ -49,25 +49,25 @@ class FHIRSearchTypeInteractionCallable(Protocol):
         ...
 
 
-class FHIRUpdateInteractionCallable(Protocol[FHIRResourceType]):  # type: ignore
+class UpdateInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR update interaction."""
 
     async def __call__(
-        self, id_: Id, resource: FHIRResourceType, **kwargs: str
-    ) -> Id | FHIRResourceType:
+        self, id_: Id, resource: ResourceType, **kwargs: str
+    ) -> Id | ResourceType:
         ...
 
 
-FHIRInteractionCallable = (
-    FHIRCreateInteractionCallable[FHIRResourceType]
-    | FHIRReadInteractionCallable[FHIRResourceType]
-    | FHIRSearchTypeInteractionCallable
-    | FHIRUpdateInteractionCallable[FHIRResourceType]
+InteractionCallable = (
+    CreateInteractionCallable[ResourceType]
+    | ReadInteractionCallable[ResourceType]
+    | SearchTypeInteractionCallable
+    | UpdateInteractionCallable[ResourceType]
 )
 
 
 @dataclass(kw_only=True)
-class FHIRTypeInteraction(Generic[FHIRResourceType]):
+class TypeInteraction(Generic[ResourceType]):
     """
     Collection of values that represent a FHIR type interactions. This class can also represent
     instance level interactions.
@@ -79,12 +79,12 @@ class FHIRTypeInteraction(Generic[FHIRResourceType]):
     route_options:    Dictionary of key-value pairs that are passed on to FastAPI on route creation.
     """
 
-    resource_type: type[FHIRResourceType]
-    interaction_type: FHIRInteractionType
-    callable_: FHIRInteractionCallable[FHIRResourceType]
+    resource_type: type[ResourceType]
+    interaction_type: InteractionType
+    callable_: InteractionCallable[ResourceType]
     route_options: dict[str, Any]
 
-    def __lt__(self, other: "FHIRTypeInteraction[FHIRResourceType]") -> bool:
+    def __lt__(self, other: "TypeInteraction[ResourceType]") -> bool:
         if self.resource_type != other.resource_type:
             return bool(
                 self.resource_type.get_resource_type()
@@ -102,69 +102,67 @@ class FHIRProvider:
     interactions are added as API routes.
 
     Aside from instantiation, interaction with this class is performed solely through the register
-    decorators, e.g. register_read_interaaction. One must use these decorators to decorate
+    decorators, e.g. register_read_interaction. One must use these decorators to decorate
     functions that perform FHIR interactions.
     """
 
     def __init__(self) -> None:
-        self._interactions: list[FHIRTypeInteraction[Resource]] = []
+        self._interactions: list[TypeInteraction[Resource]] = []
 
     @property
-    def interactions(self) -> Iterable[FHIRTypeInteraction[Resource]]:
+    def interactions(self) -> Iterable[TypeInteraction[Resource]]:
         yield from self._interactions
 
     def register_create_interaction(
-        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
+        self, resource_type: type[ResourceType], *, include_in_schema: bool = True
     ) -> Callable[
-        [FHIRCreateInteractionCallable[FHIRResourceType]],
-        FHIRCreateInteractionCallable[FHIRResourceType],
+        [CreateInteractionCallable[ResourceType]],
+        CreateInteractionCallable[ResourceType],
     ]:
         """Register a FHIR create interaction."""
         return self._register_type_interaction(
-            resource_type, FHIRInteractionType.CREATE, include_in_schema
+            resource_type, InteractionType.CREATE, include_in_schema
         )
 
     def register_read_interaction(
-        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
+        self, resource_type: type[ResourceType], *, include_in_schema: bool = True
     ) -> Callable[
-        [FHIRReadInteractionCallable[FHIRResourceType]],
-        FHIRReadInteractionCallable[FHIRResourceType],
+        [ReadInteractionCallable[ResourceType]],
+        ReadInteractionCallable[ResourceType],
     ]:
         """Register a FHIR read interaction."""
         return self._register_type_interaction(
-            resource_type, FHIRInteractionType.READ, include_in_schema
+            resource_type, InteractionType.READ, include_in_schema
         )
 
     def register_search_type_interaction(
-        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
-    ) -> Callable[
-        [FHIRSearchTypeInteractionCallable], FHIRSearchTypeInteractionCallable
-    ]:
+        self, resource_type: type[ResourceType], *, include_in_schema: bool = True
+    ) -> Callable[[SearchTypeInteractionCallable], SearchTypeInteractionCallable]:
         """Register a FHIR search-type interaction."""
         return self._register_type_interaction(
-            resource_type, FHIRInteractionType.SEARCH_TYPE, include_in_schema
+            resource_type, InteractionType.SEARCH_TYPE, include_in_schema
         )
 
     def register_update_interaction(
-        self, resource_type: type[FHIRResourceType], *, include_in_schema: bool = True
+        self, resource_type: type[ResourceType], *, include_in_schema: bool = True
     ) -> Callable[
-        [FHIRUpdateInteractionCallable[FHIRResourceType]],
-        FHIRUpdateInteractionCallable[FHIRResourceType],
+        [UpdateInteractionCallable[ResourceType]],
+        UpdateInteractionCallable[ResourceType],
     ]:
         """Register a FHIR update interaction."""
         return self._register_type_interaction(
-            resource_type, FHIRInteractionType.UPDATE, include_in_schema
+            resource_type, InteractionType.UPDATE, include_in_schema
         )
 
     def _register_type_interaction(
         self,
-        resource_type: type[FHIRResourceType],
-        interaction_type: FHIRInteractionType,
+        resource_type: type[ResourceType],
+        interaction_type: InteractionType,
         include_in_schema: bool,
     ) -> Callable[[C], C]:
         def decorator(callable_: C) -> C:
             self._interactions.append(
-                FHIRTypeInteraction[FHIRResourceType](
+                TypeInteraction[ResourceType](
                     resource_type=resource_type,
                     interaction_type=interaction_type,
                     callable_=callable_,
