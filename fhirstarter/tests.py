@@ -1,7 +1,8 @@
 """FHIRStarter test cases."""
 
+from collections.abc import Callable
 from copy import deepcopy
-from typing import Any, Callable, cast
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest

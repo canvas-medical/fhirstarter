@@ -9,14 +9,18 @@ from functools import cache
 from typing import Any
 from uuid import uuid4
 
-from fastapi import Body, FastAPI, Path, Request, Response, status
+from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fhir.resources.capabilitystatement import CapabilityStatement
-from fhir.resources.fhirtypes import Id
-from fhir.resources.resource import Resource
 
 from .exceptions import FHIRException, FHIRInteractionError
+from .functions import (
+    make_create_function,
+    make_read_function,
+    make_search_type_function,
+    make_update_function,
+)
 from .provider import FHIRProvider, InteractionType, ResourceType, TypeInteraction
 from .search_parameters import (
     load_search_parameters,
@@ -25,9 +29,7 @@ from .search_parameters import (
 )
 from .utils import (
     create_route_args,
-    make_function,
     make_operation_outcome,
-    make_search_type_function,
     read_route_args,
     search_type_route_args,
     update_route_args,
@@ -178,35 +180,12 @@ class FHIRStarter(FastAPI):
 
     def _add_create_route(self, interaction: TypeInteraction[ResourceType]) -> None:
         """Add a route that supports a FHIR create interaction for the specified resource type."""
-        func = make_function(
-            interaction=interaction,
-            annotations={"resource": interaction.resource_type},
-            argdefs=(
-                Body(
-                    None,
-                    media_type="application/fhir+json",
-                    alias=interaction.resource_type.get_resource_type(),
-                ),
-            ),
-        )
-
-        self.post(**create_route_args(interaction))(func)
+        self.post(**create_route_args(interaction))(make_create_function(interaction))
 
     def _add_read_route(self, interaction: TypeInteraction[ResourceType]) -> None:
         """Add a route that supports a FHIR read interaction for the specified resource type."""
-        func = make_function(
-            interaction=interaction,
-            annotations={"id_": Id},
-            argdefs=(
-                Path(
-                    None,
-                    alias="id",
-                    description=Resource.schema()["properties"]["id"]["title"],
-                ),
-            ),
-        )
-
-        self.get(**read_route_args(interaction))(func)
+        f = make_read_function(interaction)
+        self.get(**read_route_args(interaction))(make_read_function(interaction))
 
     def _add_search_type_route(
         self, interaction: TypeInteraction[ResourceType]
@@ -216,32 +195,16 @@ class FHIRStarter(FastAPI):
 
         Adds both GET and POST routes, as specified by the FHIR specification.
         """
-        get_func = make_search_type_function(interaction, post=False)
-        post_func = make_search_type_function(interaction, post=True)
-
-        self.get(**search_type_route_args(interaction, post=False))(get_func)
-        self.post(**search_type_route_args(interaction, post=True))(post_func)
+        self.get(**search_type_route_args(interaction, post=False))(
+            make_search_type_function(interaction, post=False)
+        )
+        self.post(**search_type_route_args(interaction, post=True))(
+            make_search_type_function(interaction, post=True)
+        )
 
     def _add_update_route(self, interaction: TypeInteraction[ResourceType]) -> None:
         """Add a route that supports a FHIR update interaction for the specified resource type."""
-        func = make_function(
-            interaction=interaction,
-            annotations={"id_": Id, "resource": interaction.resource_type},
-            argdefs=(
-                Path(
-                    None,
-                    alias="id",
-                    description=Resource.schema()["properties"]["id"]["title"],
-                ),
-                Body(
-                    None,
-                    media_type="application/fhir+json",
-                    alias=interaction.resource_type.get_resource_type(),
-                ),
-            ),
-        )
-
-        self.put(**update_route_args(interaction))(func)
+        self.put(**update_route_args(interaction))(make_update_function(interaction))
 
     @cache
     def _capability_statement(self) -> CapabilityStatement:

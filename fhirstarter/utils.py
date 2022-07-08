@@ -1,22 +1,14 @@
 """Utility functions for creation of routes and responses."""
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from functools import partial
-from types import CodeType, FunctionType
-from typing import Any, cast
+from typing import Any
 
-from fastapi import Form, Query, Request, Response
 from fhir.resources.bundle import Bundle
 from fhir.resources.operationoutcome import OperationOutcome
-from funcy import omit
 
-from . import function_templates, status
+from . import status
 from .provider import ResourceType, TypeInteraction
-from .search_parameters import (
-    load_search_parameters,
-    supported_search_parameters,
-    var_sp_name_to_fhir_sp_name,
-)
 
 
 def make_operation_outcome(
@@ -34,106 +26,6 @@ def make_operation_outcome(
             ]
         }
     )
-
-
-def make_function(
-    interaction: TypeInteraction[ResourceType],
-    annotations: Mapping[str, Any],
-    argdefs: tuple[Any, ...],
-) -> FunctionType:
-    """Make a function suitable for creation of a FHIR create, read, or update API route."""
-    code = getattr(
-        function_templates, interaction.interaction_type.value.replace("-", "_")
-    ).__code__
-
-    return _make_function(interaction, annotations, code, argdefs)
-
-
-# TODO: If possible, map FHIR primitives to correct type annotations for better validation
-def make_search_type_function(
-    interaction: TypeInteraction[ResourceType], post: bool
-) -> FunctionType:
-    """
-    Make a function suitable for creation of a FHIR search-type API route.
-
-    Creation of a search-type function is more complex than creation of a create, read, or update
-    function due to the variability of search parameters, and due to the need to support GET and
-    POST.
-
-    Search parameter descriptions are pulled from the FHIR specification.
-
-    Aside from definition of globals, argument defaults, and annotations, the most important thing
-    this function does is to set the "include_in_schema" value for each search parameter, based on
-    the search parameters that the provided callable supports.
-    """
-    function_template = getattr(
-        function_templates,
-        f"{interaction.resource_type.get_resource_type().lower()}_"
-        f"{interaction.interaction_type.value.replace('-', '_')}",
-    )
-    variable_names = tuple(
-        omit(
-            function_template.__annotations__, ["request", "response", "return"]
-        ).keys()
-    )
-    supported_search_parameters_ = set(
-        supported_search_parameters(interaction.callable_)
-    )
-    search_parameters = load_search_parameters()[
-        interaction.resource_type.get_resource_type()
-    ]
-
-    annotations = {name: str for name in variable_names}
-    code = function_template.__code__
-    if post:
-        argdefs = tuple(
-            Form(
-                None,
-                alias=var_sp_name_to_fhir_sp_name(name),
-                description=search_parameters[var_sp_name_to_fhir_sp_name(name)][
-                    "description"
-                ],
-            )
-            if name in supported_search_parameters_
-            else Query(None, include_in_schema=False)
-            for name in variable_names
-        )
-    else:
-        argdefs = tuple(
-            Query(
-                None,
-                alias=var_sp_name_to_fhir_sp_name(name),
-                description=search_parameters[var_sp_name_to_fhir_sp_name(name)][
-                    "description"
-                ],
-                include_in_schema=name in supported_search_parameters_,
-            )
-            for name in variable_names
-        )
-
-    return _make_function(interaction, annotations, code, argdefs)
-
-
-def _make_function(
-    interaction: TypeInteraction[ResourceType],
-    annotations: Mapping[str, Any],
-    code: CodeType,
-    argdefs: tuple[Any, ...],
-) -> FunctionType:
-    """Make a function suitable for creation of a FHIR create, read, or updates API route."""
-    annotations |= {"request": Request, "response": Response}
-    globals_ = {
-        "callable_": interaction.callable_,
-        "cast": cast,
-        "resource_type_str": interaction.resource_type.get_resource_type(),
-        "result_to_id_resource_tuple": function_templates.result_to_id_resource_tuple,
-        "ResourceType": interaction.resource_type,
-    }
-
-    func = FunctionType(code=code, globals=globals_, argdefs=argdefs)
-    func.__annotations__ = annotations
-
-    return func
 
 
 def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
