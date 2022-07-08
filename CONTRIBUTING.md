@@ -31,16 +31,17 @@ The data required to create a FunctionType are the following:
 * A tuple of argument defaults
 * Type annotations for function arguments
 
-The code object is obtained from the function templates defined in this package. These code objects
-are simple functions that just pass through the request to another callable: the callable that the
-developer decorates when registering a FHIR interaction.
+The code object is obtained by compiling source code from an f-string. The variables in the f-string
+provide the differentiation required for all of the different FHIR resource types. These compiled
+code objects are simple functions that just pass the request through to another callable: the
+callable that the developer decorates when registering a FHIR interaction.
 
 The globals dictionary provides the context needed for the callable to run. This dictionary defines
 the symbols referenced by the code of the callable. If globals are not defined, then the symbols the
 code object references will be undefined.
 
 The argument defaults and type annotations must be defined correctly for FastAPI API route creation
-and documentation generation to work properly.0
+and documentation generation to work properly.
 
 FastAPI generates API routes and API documentation based on the list of function arguments, the type
 annotations, and default arguments. If a FunctionType is properly created using the data listed
