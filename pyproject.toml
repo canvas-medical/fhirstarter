@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fhirstarter"
-version = "0.1.1"
+version = "0.1.2"
 description = "A FHIR API framework built on top of FastAPI and FHIR Resources"
 authors = ["Christopher Sande <christopher.sande@canvasmedical.com>"]
 
