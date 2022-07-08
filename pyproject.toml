@@ -8,12 +8,12 @@ authors = ["Christopher Sande <christopher.sande@canvasmedical.com>"]
 python = "^3.10"
 fastapi = "^0.77.1"
 "fhir.resources" = "^6.4.0"
-funcy = "^1.17"
 python-multipart = "^0.0.5"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
 coverage = "^6.4.1"
+funcy = "^1.17"
 isort = "^5.10.1"
 mypy = "^0.960"
 pytest = "^7.1.2"
