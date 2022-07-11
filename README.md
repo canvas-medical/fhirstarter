@@ -11,6 +11,7 @@ pip install fhirstarter
 ## Features
 
 * Automatic, standardized API route creation
+* Automatic validation of inputs and outputs through the use of FHIR resource Pydantic models
 * Automatically generated capability statement and capability statement API route
 * An exception-handling framework that produces FHIR-friendly responses (i.e. OperationOutcomes)
 * Automatically generated, integrated documentation generated from the FHIR specification.

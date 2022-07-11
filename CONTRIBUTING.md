@@ -12,13 +12,6 @@ to register and designate it as a FHIR interaction. FHIRStarter takes care of th
 Developers are not precluded from adding API routes in the typical way with FastAPI decorators,
 however this should be done only when needed.
 
-The features that FHIRStarter provides are:
-
-* Automatic, standardized API route creation
-* Automatically generated capability statement and capability statement API route
-* An exception-handling framework that produces FHIR-friendly responses (i.e. OperationOutcomes)
-* Automatically generated, integrated documentation generated from the FHIR specification.
-
 The most novel aspect of FHIRStarter is that dynamically creates the functions that implement API
 routes. It accomplishes this by using the Python type FunctionType. Creation of a FunctionType
 produces a callable that can be used like any Python callable, and these callables can be passed to
