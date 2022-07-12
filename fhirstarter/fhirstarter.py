@@ -158,44 +158,26 @@ class FHIRStarter(FastAPI):
         )(lambda: self._capability_statement())
 
     def _add_route(self, interaction: TypeInteraction[ResourceType]) -> None:
-        """Call the appropriate "add route" function based on the FHIR interaction type."""
+        """
+        Add a route based on the FHIR interaction type.
+
+        FHIR search-type routes must support both GET and POST, so two routes are added for
+        search-type interactions.
+        """
         match interaction.interaction_type:
             case InteractionType.CREATE:
-                self._add_create_route(interaction)
+                self.post(**create_route_args(interaction))(make_create_function(interaction))
             case InteractionType.READ:
-                self._add_read_route(interaction)
+                self.get(**read_route_args(interaction))(make_read_function(interaction))
             case InteractionType.SEARCH_TYPE:
-                self._add_search_type_route(interaction)
+                self.get(**search_type_route_args(interaction, post=False))(
+                    make_search_type_function(interaction, post=False)
+                )
+                self.post(**search_type_route_args(interaction, post=True))(
+                    make_search_type_function(interaction, post=True)
+                )
             case InteractionType.UPDATE:
-                self._add_update_route(interaction)
-
-    def _add_create_route(self, interaction: TypeInteraction[ResourceType]) -> None:
-        """Add a route that supports a FHIR create interaction for the specified resource type."""
-        self.post(**create_route_args(interaction))(make_create_function(interaction))
-
-    def _add_read_route(self, interaction: TypeInteraction[ResourceType]) -> None:
-        """Add a route that supports a FHIR read interaction for the specified resource type."""
-        f = make_read_function(interaction)
-        self.get(**read_route_args(interaction))(make_read_function(interaction))
-
-    def _add_search_type_route(
-        self, interaction: TypeInteraction[ResourceType]
-    ) -> None:
-        """
-        Add routes that support a FHIR search-type interaction for the specified resource type.
-
-        Adds both GET and POST routes, as specified by the FHIR specification.
-        """
-        self.get(**search_type_route_args(interaction, post=False))(
-            make_search_type_function(interaction, post=False)
-        )
-        self.post(**search_type_route_args(interaction, post=True))(
-            make_search_type_function(interaction, post=True)
-        )
-
-    def _add_update_route(self, interaction: TypeInteraction[ResourceType]) -> None:
-        """Add a route that supports a FHIR update interaction for the specified resource type."""
-        self.put(**update_route_args(interaction))(make_update_function(interaction))
+                self.put(**update_route_args(interaction))(make_update_function(interaction))
 
     @cache
     def _capability_statement(self) -> CapabilityStatement:
