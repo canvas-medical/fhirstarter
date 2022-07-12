@@ -24,6 +24,7 @@ class InteractionType(Enum):
         return self.value < other.value
 
 
+# TODO: Revisit definition of callback protocols and see if it is possible to make Mypy like them
 class CreateInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR create interaction."""
 

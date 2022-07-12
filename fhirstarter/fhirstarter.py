@@ -35,22 +35,13 @@ from .utils import (
     update_route_args,
 )
 
-# TODO: Review documentation for read and create interactions
+# TODO: Review documentation for create, read, search, and update interactions
 # TODO: Find out if user-provided type annotations need to be validated
 # TODO: Research auto-filling path and query parameter options from the FHIR specification
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters and path/query/body parameters
 # TODO: Expose responses FastAPI argument so that developer can specify additional responses
-# - tags
-# - summary
-# - description
-# - response_description
-# - responses
-# - operation_id
-# - response class
-# - name
-# - callbacks
-# - openapi_extra
+# TODO: Look into allowing for the capability statement to be amended
 
 
 class FHIRStarter(FastAPI):
