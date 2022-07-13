@@ -166,9 +166,13 @@ class FHIRStarter(FastAPI):
         """
         match interaction.interaction_type:
             case InteractionType.CREATE:
-                self.post(**create_route_args(interaction))(make_create_function(interaction))
+                self.post(**create_route_args(interaction))(
+                    make_create_function(interaction)
+                )
             case InteractionType.READ:
-                self.get(**read_route_args(interaction))(make_read_function(interaction))
+                self.get(**read_route_args(interaction))(
+                    make_read_function(interaction)
+                )
             case InteractionType.SEARCH_TYPE:
                 self.get(**search_type_route_args(interaction, post=False))(
                     make_search_type_function(interaction, post=False)
@@ -177,7 +181,9 @@ class FHIRStarter(FastAPI):
                     make_search_type_function(interaction, post=True)
                 )
             case InteractionType.UPDATE:
-                self.put(**update_route_args(interaction))(make_update_function(interaction))
+                self.put(**update_route_args(interaction))(
+                    make_update_function(interaction)
+                )
 
     @cache
     def _capability_statement(self) -> CapabilityStatement:

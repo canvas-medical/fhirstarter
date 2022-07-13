@@ -122,7 +122,7 @@ def make_search_type_function(
 
     source = f"""async def {resource_type_str.lower()}_search_{http_method}(request, response, {", ".join(arg_names)}):
     \"\"\"Function for {resource_type_str} {interaction.interaction_type.value} interaction.\"\"\"
-    return await callable_({callable_kwargs})"""
+    return await callable_({callable_kwargs}, request=request)"""
 
     supported_search_parameters_ = set(
         supported_search_parameters(interaction.callable_)
