@@ -111,9 +111,8 @@ def make_search_type_function(
 
     Search parameter descriptions are pulled from the FHIR specification.
 
-    Aside from definition of globals, argument defaults, and annotations, the most important thing
-    this function does is to set the "include_in_schema" value for each search parameter, based on
-    the search parameters that the provided callable supports.
+    After the function is created, the function signature is changed to account for what search
+    parameters are supported by the developer-defined callable.
     """
 
     async def search_type(
@@ -138,6 +137,8 @@ def make_search_type_function(
         for name in sorted(supported_search_parameters(interaction.callable_))
     )
 
+    # TODO: Might need to add kwargs back on at the end (also potentially true for create, read,
+    #  and update)
     sig = signature(search_type)
     parameters = tuple(sig.parameters.values())[:-1]
     sig = sig.replace(parameters=parameters + search_parameters)
