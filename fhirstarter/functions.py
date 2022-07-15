@@ -146,29 +146,6 @@ def make_search_type_function(
     return search_type
 
 
-def _make_search_parameter(name: str, description: str, post: bool) -> Parameter:
-    assert _is_valid_parameter_name(name), "{} is not a valid search parameter name"
-
-    return Parameter(
-        name=name,
-        kind=Parameter.KEYWORD_ONLY,
-        default=Form(None, alias=var_name_to_qp_name(name), description=description)
-        if post
-        else Query(None, alias=var_name_to_qp_name(name), description=description),
-        annotation=str,
-    )
-
-
-def _is_valid_parameter_name(name: str) -> bool:
-    return not keyword.iskeyword(name) and name not in {
-        "format",
-        "request",
-        "response",
-        "resource",
-        "type",
-    }
-
-
 def make_update_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
@@ -216,3 +193,37 @@ def _result_to_id_resource_tuple(
         return result.id, result
     else:
         return result, None
+
+
+def _make_search_parameter(name: str, description: str, post: bool) -> Parameter:
+    """
+    Make a search parameter for the purpose of creating a function signature.
+
+    Set the defaults to Form for POST endpoints, and Query for non-POST endpoints.
+    """
+    assert _is_valid_parameter_name(name), "{} is not a valid search parameter name"
+
+    return Parameter(
+        name=name,
+        kind=Parameter.KEYWORD_ONLY,
+        default=Form(None, alias=var_name_to_qp_name(name), description=description)
+        if post
+        else Query(None, alias=var_name_to_qp_name(name), description=description),
+        annotation=str,
+    )
+
+
+def _is_valid_parameter_name(name: str) -> bool:
+    """
+    Return True or False depending on whether the parameter name is valid.
+
+    Names that are Python keywords are forbidden, in addition to other names that have additional
+    meaning in Python or this package.
+    """
+    return not keyword.iskeyword(name) and name not in {
+        "format",
+        "request",
+        "response",
+        "resource",
+        "type",
+    }
