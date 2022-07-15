@@ -1,101 +1,107 @@
 """
 Dynamic function creation for FHIR interactions.
 
-The callables passed to FastAPI by FHIRStarter are created on the fly. A callable can be created
-using the Python FunctionType type, and by passing it the following:
+The callables passed to FastAPI by FHIRStarter are created using functional programming techniques.
+The create, read, and updates use cases are fairly straightforward -- these functions simply call a
+developer-provided callable, perform some FHIR-related processing, and return the result up the
+chain.
 
-* A code object, compiled from dynamically-generated source code
-* A dictionary of globals, which define all external symbols in the function template
-* A tuple of argument defaults
-* Type annotations
-
-The four pieces of data above are necessary for FastAPI and FHIRStarter to automatically generate
-a route for a FHIR interaction.
-
-Note: How argument defaults are specified is not well-documented in the Python documentation.
-      Argument defaults are counted backwards. For example, if a function has four arguments, and
-      a tuple of three defaults are provided, then the first listed argument will not have a
-      default, and the final three listed arguments will have defaults.
+The search use case is slightly more complicated. Because each FHIR resource type has a different
+set of search parameters (i.e. query parameters), the approach used for the create, read, and update
+use cases to create the callables does not work. Instead, a function that takes arbitrary kwargs is
+created, and the function signature is modified afterward to provide the information needed by
+FastAPI for documentation purposes: variable name, annotation, and default value.
 """
 
-from collections.abc import Mapping
-from types import CodeType, FunctionType
-from typing import Any
+import keyword
+from collections.abc import Callable, Coroutine
+from inspect import Parameter, signature
+from typing import cast
 
 from fastapi import Body, Form, Path, Query, Request, Response
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
-from .provider import InteractionCallable, ResourceType, TypeInteraction
+from .provider import (
+    CreateInteractionCallable,
+    ReadInteractionCallable,
+    ResourceType,
+    SearchTypeInteractionCallable,
+    TypeInteraction,
+    UpdateInteractionCallable,
+)
 from .search_parameters import (
-    fhir_sp_name_to_var_sp_name,
-    load_search_parameters,
+    load_search_parameter_metadata,
     supported_search_parameters,
-    var_sp_name_to_fhir_sp_name,
+    var_name_to_qp_name,
 )
 
 
-def make_create_function(interaction: TypeInteraction[ResourceType]) -> FunctionType:
+def make_create_function(
+    interaction: TypeInteraction[ResourceType],
+) -> Callable[
+    [Request, Response, ResourceType], Coroutine[None, None, ResourceType | None]
+]:
     """Make a function suitable for creation of a FHIR create API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
-    source = f"""async def {resource_type_str.lower()}_create(request, response, resource):
-    \"\"\"
-    Function for {resource_type_str} {interaction.interaction_type.value} interaction.
-
-    Calls the callable, and sets the Location header based on the Id of the created resource.
-    \"\"\"
-    result = await callable_(resource, request=request)
-    id_, result_resource = _result_to_id_resource_tuple(result)
-
-    response.headers["Location"] = f"{{request.base_url}}{resource_type_str}/{{id_}}/_history/1"
-
-    return result_resource"""
-
-    return _make_function(
-        source=source,
-        annotations={
-            "resource": interaction.resource_type,
-            "return": interaction.resource_type | None,
-        },
-        argdefs=(
-            Body(
-                None,
-                media_type="application/fhir+json",
-                alias=resource_type_str,
-            ),
+    async def create(
+        request: Request,
+        response: Response,
+        resource: ResourceType = Body(
+            None,
+            media_type="application/fhir+json",
+            alias=resource_type_str,
         ),
-        callable_=interaction.callable_,
-    )
+    ) -> ResourceType | None:
+        """
+        Function for create interaction.
+
+        Calls the callable, and sets the Location header based on the Id of the created resource.
+        """
+        callable_ = cast(CreateInteractionCallable[ResourceType], interaction.callable_)
+        result = await callable_(resource, request=request, response=response)
+        id_, result_resource = _result_to_id_resource_tuple(result)
+
+        response.headers[
+            "Location"
+        ] = f"{request.base_url}{resource_type_str}/{id_}/_history/1"
+
+        return result_resource
+
+    create.__annotations__ |= {
+        "resource": interaction.resource_type,
+    }
+
+    return create
 
 
-def make_read_function(interaction: TypeInteraction[ResourceType]) -> FunctionType:
+def make_read_function(
+    interaction: TypeInteraction[ResourceType],
+) -> Callable[[Request, Response, Id], Coroutine[None, None, ResourceType]]:
     """Make a function suitable for creation of a FHIR read API route."""
-    resource_type_str = interaction.resource_type.get_resource_type()
 
-    source = f"""async def {resource_type_str.lower()}_read(request, response, id_):
-    \"\"\"Function for {resource_type_str} {interaction.interaction_type.value} interaction.\"\"\"
-    return await callable_(id_, request=request)"""
-
-    return _make_function(
-        source=source,
-        annotations={"id_": Id, "return": interaction.resource_type},
-        argdefs=(
-            Path(
-                None,
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
+    async def read(
+        request: Request,
+        response: Response,
+        id_: Id = Path(
+            None,
+            alias="id",
+            description=Resource.schema()["properties"]["id"]["title"],
         ),
-        callable_=interaction.callable_,
-    )
+    ) -> ResourceType:
+        """Function for read interaction."""
+        callable_ = cast(ReadInteractionCallable[ResourceType], interaction.callable_)
+        return await callable_(id_, request=request, response=response)
+
+    return read
 
 
 # TODO: If possible, map FHIR primitives to correct type annotations for better validation
 def make_search_type_function(
     interaction: TypeInteraction[ResourceType], post: bool
-) -> FunctionType:
+) -> Callable[[Request, Response], Coroutine[None, None, Bundle]]:
     """
     Make a function suitable for creation of a FHIR search-type API route.
 
@@ -109,132 +115,92 @@ def make_search_type_function(
     this function does is to set the "include_in_schema" value for each search parameter, based on
     the search parameters that the provided callable supports.
     """
-    resource_type_str = interaction.resource_type.get_resource_type()
-    http_method = "post" if post else "get"
 
-    search_parameters = load_search_parameters()[
+    async def search_type(
+        request: Request, response: Response, **kwargs: str
+    ) -> Bundle:
+        """Function for search-type interaction."""
+        callable_ = cast(SearchTypeInteractionCallable, interaction.callable_)
+        return await callable_(**kwargs, request=request, response=response)
+
+    search_parameter_metadata = load_search_parameter_metadata()[
         interaction.resource_type.get_resource_type()
     ]
-    arg_names = tuple(
-        fhir_sp_name_to_var_sp_name(name) for name in sorted(search_parameters.keys())
-    )
-    callable_kwargs = ", ".join((f"{name}={name}" for name in arg_names))
 
-    source = f"""async def {resource_type_str.lower()}_search_{http_method}(request, response, {", ".join(arg_names)}):
-    \"\"\"Function for {resource_type_str} {interaction.interaction_type.value} interaction.\"\"\"
-    return await callable_({callable_kwargs}, request=request)"""
-
-    supported_search_parameters_ = set(
-        supported_search_parameters(interaction.callable_)
-    )
-
-    if post:
-        argdefs = tuple(
-            Form(
-                None,
-                alias=var_sp_name_to_fhir_sp_name(name),
-                description=search_parameters[var_sp_name_to_fhir_sp_name(name)][
-                    "description"
-                ],
-            )
-            if name in supported_search_parameters_
-            else Query(
-                None,
-                alias=var_sp_name_to_fhir_sp_name(name),
-                description=search_parameters[var_sp_name_to_fhir_sp_name(name)][
-                    "description"
-                ],
-                include_in_schema=False,
-            )
-            for name in arg_names
+    search_parameters = tuple(
+        _make_search_parameter(
+            name=name,
+            description=search_parameter_metadata[var_name_to_qp_name(name)][
+                "description"
+            ],
+            post=post,
         )
-    else:
-        argdefs = tuple(
-            Query(
-                None,
-                alias=var_sp_name_to_fhir_sp_name(name),
-                description=search_parameters[var_sp_name_to_fhir_sp_name(name)][
-                    "description"
-                ],
-                include_in_schema=name in supported_search_parameters_,
-            )
-            for name in arg_names
-        )
+        for name in sorted(supported_search_parameters(interaction.callable_))
+    )
 
-    return _make_function(
-        source=source,
-        annotations={name: str for name in arg_names} | {"return": Bundle},
-        argdefs=argdefs,
-        callable_=interaction.callable_,
+    sig = signature(search_type)
+    parameters = tuple(sig.parameters.values())[:-1]
+    sig = sig.replace(parameters=parameters + search_parameters)
+    setattr(search_type, "__signature__", sig)
+
+    return search_type
+
+
+def _make_search_parameter(name: str, description: str, post: bool) -> Parameter:
+    assert _is_valid_parameter_name(name), "{} is not a valid search parameter name"
+
+    return Parameter(
+        name=name,
+        kind=Parameter.KEYWORD_ONLY,
+        default=Form(None, alias=var_name_to_qp_name(name), description=description)
+        if post
+        else Query(None, alias=var_name_to_qp_name(name), description=description),
+        annotation=str,
     )
 
 
-def make_update_function(interaction: TypeInteraction[ResourceType]) -> FunctionType:
-    """Make a function suitable for creation of a FHIR update API route."""
-    resource_type_str = interaction.resource_type.get_resource_type()
-
-    source = f"""async def {resource_type_str.lower()}_update(request, response, id_, resource):
-    \"\"\"Function for {resource_type_str} {interaction.interaction_type.value} interaction.\"\"\"
-    result = await callable_(id_, resource, request=request)
-    _, result_resource = _result_to_id_resource_tuple(result)
-
-    return result_resource"""
-
-    return _make_function(
-        source=source,
-        annotations={
-            "id_": Id,
-            "resource": interaction.resource_type,
-            "return": interaction.resource_type | None,
-        },
-        argdefs=(
-            Path(
-                None,
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
-            Body(
-                None,
-                media_type="application/fhir+json",
-                alias=resource_type_str,
-            ),
-        ),
-        callable_=interaction.callable_,
-    )
-
-
-def _make_function(
-    source: str,
-    annotations: Mapping[str, Any],
-    argdefs: tuple[Any, ...],
-    callable_: InteractionCallable[ResourceType],
-) -> FunctionType:
-    """
-    Return a dynamically-generated function.
-
-    Given a string of source code, a mapping of annotations, a tuple of argument defaults, and a
-    FHIR interaction callable that the created function will call, do the following:
-
-    1. Compile the source code.
-    2. Find the code object for the function.
-    3. Define type annotations and globals (i.e. the function context).
-    4. Create the function and annotate it.
-    5. Return the function.
-    """
-    code = compile(source, "<string>", "exec")
-    func_code = next(c for c in code.co_consts if isinstance(c, CodeType))
-
-    annotations |= {"request": Request, "response": Response}
-
-    globals_ = {
-        "_result_to_id_resource_tuple": _result_to_id_resource_tuple,
-        "callable_": callable_,
+def _is_valid_parameter_name(name: str) -> bool:
+    return not keyword.iskeyword(name) and name not in {
+        "format",
+        "request",
+        "response",
+        "resource",
+        "type",
     }
 
-    func = FunctionType(code=func_code, globals=globals_, argdefs=argdefs)
-    func.__annotations__ = annotations
 
-    return func
+def make_update_function(
+    interaction: TypeInteraction[ResourceType],
+) -> Callable[
+    [Request, Response, Id, ResourceType], Coroutine[None, None, ResourceType | None]
+]:
+    """Make a function suitable for creation of a FHIR update API route."""
+
+    async def update(
+        request: Request,
+        response: Response,
+        id_: Id = Path(
+            None,
+            alias="id",
+            description=Resource.schema()["properties"]["id"]["title"],
+        ),
+        resource: ResourceType = Body(
+            None,
+            media_type="application/fhir+json",
+            alias=interaction.resource_type.get_resource_type(),
+        ),
+    ) -> ResourceType | None:
+        callable_ = cast(UpdateInteractionCallable[ResourceType], interaction.callable_)
+        result = await callable_(id_, resource, request=request, response=response)
+        _, result_resource = _result_to_id_resource_tuple(result)
+
+        return result_resource
+
+    update.__annotations__ |= {
+        "resource": interaction.resource_type,
+    }
+
+    return update
 
 
 def _result_to_id_resource_tuple(

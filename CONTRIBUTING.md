@@ -13,29 +13,15 @@ Developers are not precluded from adding API routes in the typical way with Fast
 however this should be done only when needed.
 
 The most novel aspect of FHIRStarter is that dynamically creates the functions that implement API
-routes. It accomplishes this by using the Python type FunctionType. Creation of a FunctionType
-produces a callable that can be used like any Python callable, and these callables can be passed to
-FastAPI during API route creation.
+routes. It accomplishes this by using some simple functional programming techniques and some other
+features of Python in order to produce a callable that can be used like any Python callable. These
+callables can be passed to FastAPI during API route creation.
 
-The data required to create a FunctionType are the following:
+Particular attention should be paid to function signatures -- specifically variable names,
+annotations, and defaults. and annotations -- because FastAPI uses this information for
+documentation generation. Annotations are overridden in several cases to ensure that the correct
+types are used for documentation generation, and in the search use case, the function signature
+itself must be changed.
 
-* A code object
-* A dictionary of globals, which define all external symbols in the function template
-* A tuple of argument defaults
-* Type annotations for function arguments
-
-The code object is obtained by compiling source code from an f-string. The variables in the f-string
-provide the differentiation required for all of the different FHIR resource types. These compiled
-code objects are simple functions that just pass the request through to another callable: the
-callable that the developer decorates when registering a FHIR interaction.
-
-The globals dictionary provides the context needed for the callable to run. This dictionary defines
-the symbols referenced by the code of the callable. If globals are not defined, then the symbols the
-code object references will be undefined.
-
-The argument defaults and type annotations must be defined correctly for FastAPI API route creation
-and documentation generation to work properly.
-
-FastAPI generates API routes and API documentation based on the list of function arguments, the type
-annotations, and default arguments. If a FunctionType is properly created using the data listed
-above then it is suitable to be passed to FastAPI as a callable.
+The resultant callables have signatures that adhere to the FHIR specification, but they forward
+the requests on to the callables provided by the developer.

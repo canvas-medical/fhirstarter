@@ -58,5 +58,4 @@ app.add_providers(provider)
 if __name__ == "__main__":
     # Start the server
     uvicorn.run(app)
-
 ```

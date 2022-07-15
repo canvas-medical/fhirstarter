@@ -23,9 +23,9 @@ from .functions import (
 )
 from .provider import FHIRProvider, InteractionType, ResourceType, TypeInteraction
 from .search_parameters import (
-    load_search_parameters,
+    load_search_parameter_metadata,
     supported_search_parameters,
-    var_sp_name_to_fhir_sp_name,
+    var_name_to_qp_name,
 )
 from .utils import (
     create_route_args,
@@ -193,7 +193,7 @@ class FHIRStarter(FastAPI):
         In addition to declaring the interactions (e.g. create, read, search-type, and update), the
         supported search parameters are also declared.
         """
-        search_parameters = load_search_parameters()
+        search_parameters = load_search_parameter_metadata()
 
         resources = []
         for resource_type, interaction_types in sorted(self._capabilities.items()):
@@ -212,7 +212,7 @@ class FHIRStarter(FastAPI):
                 for search_parameter in supported_search_parameters(
                     search_type_interaction.callable_
                 ):
-                    search_parameter = var_sp_name_to_fhir_sp_name(search_parameter)
+                    search_parameter = var_name_to_qp_name(search_parameter)
                     supported_search_parameters_.append(
                         {
                             "name": search_parameters[resource_type][search_parameter][

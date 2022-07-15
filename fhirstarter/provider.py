@@ -29,7 +29,7 @@ class CreateInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR create interaction."""
 
     async def __call__(
-        self, resource: ResourceType, **kwargs: str
+        self, resource: ResourceType, **kwargs: Any
     ) -> Id | ResourceType:
         ...
 
@@ -37,7 +37,7 @@ class CreateInteractionCallable(Protocol[ResourceType]):  # type: ignore
 class ReadInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR read interaction."""
 
-    async def __call__(self, id_: Id, **kwargs: str) -> ResourceType:
+    async def __call__(self, id_: Id, **kwargs: Any) -> ResourceType:
         ...
 
 
@@ -46,7 +46,7 @@ class SearchTypeInteractionCallable(Protocol):
     Callback protocol that defines the signature of a callable for a FHIR search-type interaction.
     """
 
-    async def __call__(self, **kwargs: str) -> Bundle:
+    async def __call__(self, **kwargs: Any) -> Bundle:
         ...
 
 
@@ -54,7 +54,7 @@ class UpdateInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR update interaction."""
 
     async def __call__(
-        self, id_: Id, resource: ResourceType, **kwargs: str
+        self, id_: Id, resource: ResourceType, **kwargs: Any
     ) -> Id | ResourceType:
         ...
 

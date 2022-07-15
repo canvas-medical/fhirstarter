@@ -13,11 +13,9 @@ from functools import cache
 from inspect import Parameter
 from typing import Any
 
-_RESERVED_NAMES = {"class", "format", "global", "request", "response", "result", "type"}
-
 
 @cache
-def load_search_parameters() -> defaultdict[str, dict[str, dict[str, str]]]:
+def load_search_parameter_metadata() -> defaultdict[str, dict[str, dict[str, str]]]:
     """
     Parse and load the search parameters JSON file from the FHIR specification.
 
@@ -47,15 +45,12 @@ def load_search_parameters() -> defaultdict[str, dict[str, dict[str, str]]]:
     return search_parameters
 
 
-def fhir_sp_name_to_var_sp_name(name: str) -> str:
-    """Convert a FHIR search parameter name to a Python-friendly variable name."""
-    if name in _RESERVED_NAMES:
-        name += "_"
-    return name.replace("-", "_")
+def var_name_to_qp_name(name: str) -> str:
+    """
+    Convert a Python-friendly variable name to a query parameter name.
 
-
-def var_sp_name_to_fhir_sp_name(name: str) -> str:
-    """Convert a Python-friendly variable name to a FHIR search parameter name."""
+    Remove the underscore from the end of the name if present, and change underscores to dashes.
+    """
     if name.endswith("_"):
         name = name[:-1]
     return name.replace("_", "-")
