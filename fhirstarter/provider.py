@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Generic, Protocol, TypeVar
 
+from fastapi import Request, Response
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
@@ -29,7 +30,7 @@ class CreateInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR create interaction."""
 
     async def __call__(
-        self, resource: ResourceType, **kwargs: Any
+        self, resource: ResourceType, *, request: Request, response: Response
     ) -> Id | ResourceType:
         ...
 
@@ -37,7 +38,9 @@ class CreateInteractionCallable(Protocol[ResourceType]):  # type: ignore
 class ReadInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR read interaction."""
 
-    async def __call__(self, id_: Id, **kwargs: Any) -> ResourceType:
+    async def __call__(
+        self, id_: Id, *, request: Request, response: Response
+    ) -> ResourceType:
         ...
 
 
@@ -46,7 +49,9 @@ class SearchTypeInteractionCallable(Protocol):
     Callback protocol that defines the signature of a callable for a FHIR search-type interaction.
     """
 
-    async def __call__(self, **kwargs: Any) -> Bundle:
+    async def __call__(
+        self, *, request: Request, response: Response, **kwargs: Any
+    ) -> Bundle:
         ...
 
 
@@ -54,7 +59,7 @@ class UpdateInteractionCallable(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a callable for a FHIR update interaction."""
 
     async def __call__(
-        self, id_: Id, resource: ResourceType, **kwargs: Any
+        self, id_: Id, resource: ResourceType, *, request: Request, response: Response
     ) -> Id | ResourceType:
         ...
 

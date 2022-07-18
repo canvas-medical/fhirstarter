@@ -24,7 +24,7 @@ from .utils import make_operation_outcome
 _DATABASE: dict[str, Patient] = {}
 
 
-async def patient_create(resource: Patient, **kwargs: str) -> Id:
+async def patient_create(resource: Patient, **kwargs: Any) -> Id:
     """Patient create FHIR interaction."""
     patient = deepcopy(resource)
     patient.id = _generate_fhir_resource_id()
@@ -33,7 +33,7 @@ async def patient_create(resource: Patient, **kwargs: str) -> Id:
     return Id(patient.id)
 
 
-async def patient_read(id_: Id, **kwargs: str) -> Patient:
+async def patient_read(id_: Id, **kwargs: Any) -> Patient:
     """Patient read FHIR interaction."""
     patient = _DATABASE.get(id_)
     if not patient:
@@ -43,7 +43,7 @@ async def patient_read(id_: Id, **kwargs: str) -> Patient:
 
 
 async def patient_search_type(
-    family: str | None = None, general_practitioner: str | None = None, **kwargs: str
+    family: str | None = None, general_practitioner: str | None = None, **kwargs: Any
 ) -> Bundle:
     """Patient search-type FHIR interaction."""
     patients = []
@@ -63,7 +63,7 @@ async def patient_search_type(
     return bundle
 
 
-async def patient_update(id_: Id, resource: Patient, **kwargs: str) -> Id:
+async def patient_update(id_: Id, resource: Patient, **kwargs: Any) -> Id:
     """Patient update FHIR interaction."""
     if id_ not in _DATABASE:
         raise FHIRResourceNotFoundError

@@ -67,7 +67,8 @@ def supported_search_parameters(search_function: Callable[..., Any]) -> tuple[st
     return tuple(
         name
         for name, parameter in inspect.signature(search_function).parameters.items()
-        if parameter.kind not in {Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL}
+        if name not in {"request", "response"}
+        and parameter.kind not in {Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL}
     )
 
 

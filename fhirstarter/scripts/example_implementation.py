@@ -2,8 +2,8 @@
 An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR
 interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
 """
-
 from copy import deepcopy
+from typing import Any
 from uuid import uuid4
 
 import uvicorn
@@ -35,7 +35,7 @@ provider = FHIRProvider()
 
 # Register the patient create FHIR interaction with the provider
 @provider.register_create_interaction(Patient)
-async def patient_create(resource: Patient, **kwargs: str) -> Id:
+async def patient_create(resource: Patient, **kwargs: Any) -> Id:
     patient = deepcopy(resource)
     patient.id = Id(uuid4().hex)
     DATABASE[patient.id] = patient
@@ -45,7 +45,7 @@ async def patient_create(resource: Patient, **kwargs: str) -> Id:
 
 # Register the patient read FHIR interaction with the provider
 @provider.register_read_interaction(Patient)
-async def patient_read(id_: Id, **kwargs: str) -> Patient:
+async def patient_read(id_: Id, **kwargs: Any) -> Patient:
     patient = DATABASE.get(id_)
     if not patient:
         raise FHIRResourceNotFoundError
@@ -56,7 +56,7 @@ async def patient_read(id_: Id, **kwargs: str) -> Patient:
 # Register the patient search-type FHIR interaction with the provider
 @provider.register_search_type_interaction(Patient)
 async def patient_search_type(
-    general_practitioner: str | None = None, family: str | None = None, **kwargs: str
+    general_practitioner: str | None = None, family: str | None = None, **kwargs: Any
 ) -> Bundle:
     patients = []
     for patient in DATABASE.values():
@@ -77,7 +77,7 @@ async def patient_search_type(
 
 # Register the patient update FHIR interaction with the provider
 @provider.register_update_interaction(Patient)
-async def patient_update(id_: Id, resource: Patient, **kwargs: str) -> Id:
+async def patient_update(id_: Id, resource: Patient, **kwargs: Any) -> Id:
     if id_ not in DATABASE:
         raise FHIRResourceNotFoundError
 
