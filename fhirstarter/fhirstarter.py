@@ -94,17 +94,13 @@ class FHIRStarter(FastAPI):
             key=lambda i: cast(str, i.resource_type.get_resource_type()),
         ):
             resource_type = interaction.resource_type.get_resource_type()
-            interaction_type = interaction.label()
+            label = interaction.label()
             assert (
                 resource_type not in self._capabilities
-                or interaction_type not in self._capabilities[resource_type]
-            ), (
-                "FHIR interaction for resource type "
-                f"'{resource_type}' and interaction type "
-                f"'{interaction_type}' can only be supplied once"
-            )
+                or label not in self._capabilities[resource_type]
+            ), f"FHIR {label} interaction for {resource_type} can only be supplied once"
 
-            self._capabilities[resource_type][interaction_type] = interaction
+            self._capabilities[resource_type][label] = interaction
             self._add_route(interaction)
 
     def openapi(self) -> dict[str, Any]:
