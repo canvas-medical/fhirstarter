@@ -66,7 +66,6 @@ class TypeInteraction(Generic[ResourceType]):
 
     resource_type:    The type of FHIR resource on which this interaction operates, as defined by
                       the fhir.resources package.
-    interaction_type: The type of FHIR interaction, such as create, read, search-type, or update.
     callable_:        User-defined function that performs the FHIR interaction.
     route_options:    Dictionary of key-value pairs that are passed on to FastAPI on route creation.
     """
