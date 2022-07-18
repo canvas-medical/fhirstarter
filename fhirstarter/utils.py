@@ -8,7 +8,7 @@ from fhir.resources.bundle import Bundle
 from fhir.resources.operationoutcome import OperationOutcome
 
 from . import status
-from .provider import ResourceType, TypeInteraction
+from .interactions import ResourceType, TypeInteraction
 
 
 def make_operation_outcome(

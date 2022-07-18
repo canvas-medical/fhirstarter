@@ -21,7 +21,8 @@ from .functions import (
     make_search_type_function,
     make_update_function,
 )
-from .provider import FHIRProvider, ResourceType, TypeInteraction
+from .interactions import ResourceType, TypeInteraction
+from .providers import FHIRProvider
 from .search_parameters import (
     load_search_parameter_metadata,
     supported_search_parameters,

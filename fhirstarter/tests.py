@@ -16,7 +16,7 @@ from requests.models import Response
 from . import status
 from .exceptions import FHIRResourceNotFoundError
 from .fhirstarter import FHIRStarter
-from .provider import FHIRProvider
+from .providers import FHIRProvider
 from .testclient import TestClient
 from .utils import make_operation_outcome
 

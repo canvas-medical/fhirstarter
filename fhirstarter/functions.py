@@ -23,7 +23,7 @@ from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
-from .provider import (
+from .interactions import (
     CreateInteractionCallable,
     ReadInteractionCallable,
     ResourceType,
