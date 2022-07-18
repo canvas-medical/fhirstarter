@@ -37,7 +37,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
         "response_model": interaction.resource_type,
         "status_code": status.HTTP_201_CREATED,
         "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
-        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
+        "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} create interaction creates a new "
         f"{resource_type_str} resource in a server-assigned location.",
         "responses": _responses(
@@ -57,7 +57,7 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any
         "response_model": interaction.resource_type,
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
-        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
+        "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} read interaction accesses "
         f"the current contents of a {resource_type_str} resource.",
         "responses": _responses(interaction, _ok, _not_found),
@@ -77,7 +77,7 @@ def search_type_route_args(
         "response_model": Bundle,
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
-        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
+        "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} search-type interaction searches a set of resources "
         "based on some filter criteria.",
         "responses": _responses(interaction, partial(_ok, search=True), _bad_request),
@@ -95,7 +95,7 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
         "response_model": interaction.resource_type,
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
-        "summary": f"{resource_type_str} {interaction.interaction_type.value}",
+        "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} update interaction creates a new current version "
         f"for an existing {resource_type_str} resource.",
         "responses": _responses(interaction, _ok, _bad_request, _unprocessable_entity),
@@ -124,7 +124,7 @@ def _ok(interaction: TypeInteraction[ResourceType], search: bool = False) -> _Re
         status.HTTP_200_OK: {
             "model": interaction.resource_type if not search else Bundle,
             "description": f"Successful {interaction.resource_type.get_resource_type()} "
-            f"{interaction.interaction_type.value}",
+            f"{interaction.label()}",
         }
     }
 
@@ -145,7 +145,7 @@ def _bad_request(interaction: TypeInteraction[ResourceType]) -> _Responses:
         status.HTTP_400_BAD_REQUEST: {
             "model": OperationOutcome,
             "description": f"{interaction.resource_type.get_resource_type()} "
-            f"{interaction.interaction_type.value} request could not be parsed or "
+            f"{interaction.label()} request could not be parsed or "
             "failed basic FHIR validation rules.",
         }
     }

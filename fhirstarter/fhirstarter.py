@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import Callable, Coroutine
 from datetime import datetime
 from functools import cache
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response, status
@@ -21,7 +21,7 @@ from .functions import (
     make_search_type_function,
     make_update_function,
 )
-from .provider import FHIRProvider, InteractionType, ResourceType, TypeInteraction
+from .provider import FHIRProvider, ResourceType, TypeInteraction
 from .search_parameters import (
     load_search_parameter_metadata,
     supported_search_parameters,
@@ -62,7 +62,7 @@ class FHIRStarter(FastAPI):
         super().__init__(**kwargs)
 
         self._capabilities: dict[  # type: ignore
-            str, dict[InteractionType, TypeInteraction]
+            str, dict[str, TypeInteraction]
         ] = defaultdict(dict)
         self._created = datetime.utcnow()
 
@@ -89,9 +89,12 @@ class FHIRStarter(FastAPI):
         provider_interactions = itertools.chain.from_iterable(
             provider.interactions for provider in providers
         )
-        for interaction in sorted(provider_interactions):
+        for interaction in sorted(
+            provider_interactions,
+            key=lambda i: cast(str, i.resource_type.get_resource_type()),
+        ):
             resource_type = interaction.resource_type.get_resource_type()
-            interaction_type = interaction.interaction_type
+            interaction_type = interaction.label()
             assert (
                 resource_type not in self._capabilities
                 or interaction_type not in self._capabilities[resource_type]
@@ -164,23 +167,23 @@ class FHIRStarter(FastAPI):
         FHIR search-type routes must support both GET and POST, so two routes are added for
         search-type interactions.
         """
-        match interaction.interaction_type:
-            case InteractionType.CREATE:
+        match interaction.label():
+            case "create":
                 self.post(**create_route_args(interaction))(
                     make_create_function(interaction)
                 )
-            case InteractionType.READ:
+            case "read":
                 self.get(**read_route_args(interaction))(
                     make_read_function(interaction)
                 )
-            case InteractionType.SEARCH_TYPE:
+            case "search-type":
                 self.get(**search_type_route_args(interaction, post=False))(
                     make_search_type_function(interaction, post=False)
                 )
                 self.post(**search_type_route_args(interaction, post=True))(
                     make_search_type_function(interaction, post=True)
                 )
-            case InteractionType.UPDATE:
+            case "update":
                 self.put(**update_route_args(interaction))(
                     make_update_function(interaction)
                 )
@@ -196,17 +199,14 @@ class FHIRStarter(FastAPI):
         search_parameters = load_search_parameter_metadata()
 
         resources = []
-        for resource_type, interaction_types in sorted(self._capabilities.items()):
+        for resource_type, interactions in sorted(self._capabilities.items()):
             resource = {
                 "type": resource_type,
                 "interaction": [
-                    {"code": interaction_type.value}
-                    for interaction_type in sorted(interaction_types)
+                    {"code": label} for label in sorted(interactions.keys())
                 ],
             }
-            if search_type_interaction := interaction_types.get(
-                InteractionType.SEARCH_TYPE
-            ):
+            if search_type_interaction := interactions.get("search-type"):
                 supported_search_parameters_ = []
                 # TODO: Test this with a hyphenated search parameter
                 for search_parameter in supported_search_parameters(
