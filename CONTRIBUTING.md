@@ -6,7 +6,7 @@ the FHIR standard specifies exactly what API routes should look like, is it not 
 would potentially introduce inconsistency, if developers defined API routes.
 
 To enforce the methodology of API route creation, FHIRStarter instead asks the developer to provide
-a callable with a recognizable function signature, and then decorate it with a FHIRStarter decorator
+a handler with a recognizable function signature, and then decorate it with a FHIRStarter decorator
 to register and designate it as a FHIR interaction. FHIRStarter takes care of the rest.
 
 Developers are not precluded from adding API routes in the typical way with FastAPI decorators,
@@ -14,8 +14,8 @@ however this should be done only when needed.
 
 The most novel aspect of FHIRStarter is that dynamically creates the functions that implement API
 routes. It accomplishes this by using some simple functional programming techniques and some other
-features of Python in order to produce a callable that can be used like any Python callable. These
-callables can be passed to FastAPI during API route creation.
+features of Python in order to produce a callable that can be passed to FastAPI during API route
+creation.
 
 Particular attention should be paid to function signatures -- specifically variable names,
 annotations, and defaults. and annotations -- because FastAPI uses this information for
@@ -24,4 +24,4 @@ types are used for documentation generation, and in the search use case, the fun
 itself must be changed.
 
 The resultant callables have signatures that adhere to the FHIR specification, but they forward
-the requests on to the callables provided by the developer.
+the requests on to the handlers provided by the developer.

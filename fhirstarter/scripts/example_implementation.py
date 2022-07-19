@@ -29,8 +29,8 @@ provider = FHIRProvider()
 # - FHIR interaction type (this affects what the endpoint will look like)
 # - FHIR resource type (this affects validation of inputs and outputs, and what search parameters
 #   are valid)
-# - the actual callable (expected signature and annotations need to match the defined protocols,
-#   because these values affect route creation in FastAPI)
+# - the handler (expected signature and annotations need to match the defined protocols, because
+#   these values affect route creation in FastAPI)
 
 
 # Register the patient create FHIR interaction with the provider

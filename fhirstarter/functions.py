@@ -3,7 +3,7 @@ Dynamic function creation for FHIR interactions.
 
 The callables passed to FastAPI by FHIRStarter are created using functional programming techniques.
 The create, read, and updates use cases are fairly straightforward -- these functions simply call a
-developer-provided callable, perform some FHIR-related processing, and return the result up the
+developer-provided handler, perform some FHIR-related processing, and return the result up the
 chain.
 
 The search use case is slightly more complicated. Because each FHIR resource type has a different
@@ -24,12 +24,12 @@ from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
 from .interactions import (
-    CreateInteractionCallable,
-    ReadInteractionCallable,
+    CreateInteractionHandler,
+    ReadInteractionHandler,
     ResourceType,
-    SearchTypeInteractionCallable,
+    SearchTypeInteractionHandler,
     TypeInteraction,
-    UpdateInteractionCallable,
+    UpdateInteractionHandler,
 )
 from .search_parameters import (
     load_search_parameter_metadata,
@@ -58,10 +58,10 @@ def make_create_function(
         """
         Function for create interaction.
 
-        Calls the callable, and sets the Location header based on the Id of the created resource.
+        Calls the handler, and sets the Location header based on the Id of the created resource.
         """
-        callable_ = cast(CreateInteractionCallable[ResourceType], interaction.callable_)
-        result = await callable_(resource, request=request, response=response)
+        handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
+        result = await handler(resource, request=request, response=response)
         id_, result_resource = _result_to_id_resource_tuple(result)
 
         response.headers[
@@ -92,8 +92,8 @@ def make_read_function(
         ),
     ) -> ResourceType:
         """Function for read interaction."""
-        callable_ = cast(ReadInteractionCallable[ResourceType], interaction.callable_)
-        return await callable_(id_, request=request, response=response)
+        handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
+        return await handler(id_, request=request, response=response)
 
     return read
 
@@ -112,15 +112,15 @@ def make_search_type_function(
     Search parameter descriptions are pulled from the FHIR specification.
 
     After the function is created, the function signature is changed to account for what search
-    parameters are supported by the developer-defined callable.
+    parameters are supported by the developer-defined handler.
     """
 
     async def search_type(
         request: Request, response: Response, **kwargs: str
     ) -> Bundle:
         """Function for search-type interaction."""
-        callable_ = cast(SearchTypeInteractionCallable, interaction.callable_)
-        return await callable_(**kwargs, request=request, response=response)
+        handler = cast(SearchTypeInteractionHandler, interaction.handler)
+        return await handler(**kwargs, request=request, response=response)
 
     search_parameter_metadata = load_search_parameter_metadata()[
         interaction.resource_type.get_resource_type()
@@ -134,7 +134,7 @@ def make_search_type_function(
             ],
             post=post,
         )
-        for name in sorted(supported_search_parameters(interaction.callable_))
+        for name in sorted(supported_search_parameters(interaction.handler))
     )
 
     # TODO: Might need to add kwargs back on at the end (also potentially true for create, read,
@@ -168,8 +168,8 @@ def make_update_function(
             alias=interaction.resource_type.get_resource_type(),
         ),
     ) -> ResourceType | None:
-        callable_ = cast(UpdateInteractionCallable[ResourceType], interaction.callable_)
-        result = await callable_(id_, resource, request=request, response=response)
+        handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
+        result = await handler(id_, resource, request=request, response=response)
         _, result_resource = _result_to_id_resource_tuple(result)
 
         return result_resource
@@ -202,7 +202,9 @@ def _make_search_parameter(name: str, description: str, post: bool) -> Parameter
 
     Set the defaults to Form for POST endpoints, and Query for non-POST endpoints.
     """
-    assert _is_valid_parameter_name(name), f"{name} is not a valid search parameter name"
+    assert _is_valid_parameter_name(
+        name
+    ), f"{name} is not a valid search parameter name"
 
     return Parameter(
         name=name,

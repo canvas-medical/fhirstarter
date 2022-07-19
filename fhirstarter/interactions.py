@@ -12,8 +12,8 @@ ResourceType = TypeVar("ResourceType", bound=Resource)
 
 
 # TODO: Revisit definition of callback protocols and see if it is possible to make Mypy like them
-class CreateInteractionCallable(Protocol[ResourceType]):  # type: ignore
-    """Callback protocol that defines the signature of a callable for a FHIR create interaction."""
+class CreateInteractionHandler(Protocol[ResourceType]):  # type: ignore
+    """Callback protocol that defines the signature of a handler for a FHIR create interaction."""
 
     async def __call__(
         self, resource: ResourceType, *, request: Request, response: Response
@@ -21,8 +21,8 @@ class CreateInteractionCallable(Protocol[ResourceType]):  # type: ignore
         ...
 
 
-class ReadInteractionCallable(Protocol[ResourceType]):  # type: ignore
-    """Callback protocol that defines the signature of a callable for a FHIR read interaction."""
+class ReadInteractionHandler(Protocol[ResourceType]):  # type: ignore
+    """Callback protocol that defines the signature of a handler for a FHIR read interaction."""
 
     async def __call__(
         self, id_: Id, *, request: Request, response: Response
@@ -30,9 +30,9 @@ class ReadInteractionCallable(Protocol[ResourceType]):  # type: ignore
         ...
 
 
-class SearchTypeInteractionCallable(Protocol):
+class SearchTypeInteractionHandler(Protocol):
     """
-    Callback protocol that defines the signature of a callable for a FHIR search-type interaction.
+    Callback protocol that defines the signature of a handler for a FHIR search-type interaction.
     """
 
     async def __call__(
@@ -41,8 +41,8 @@ class SearchTypeInteractionCallable(Protocol):
         ...
 
 
-class UpdateInteractionCallable(Protocol[ResourceType]):  # type: ignore
-    """Callback protocol that defines the signature of a callable for a FHIR update interaction."""
+class UpdateInteractionHandler(Protocol[ResourceType]):  # type: ignore
+    """Callback protocol that defines the signature of a handler for a FHIR update interaction."""
 
     async def __call__(
         self, id_: Id, resource: ResourceType, *, request: Request, response: Response
@@ -50,11 +50,11 @@ class UpdateInteractionCallable(Protocol[ResourceType]):  # type: ignore
         ...
 
 
-InteractionCallable = (
-    CreateInteractionCallable[ResourceType]
-    | ReadInteractionCallable[ResourceType]
-    | SearchTypeInteractionCallable
-    | UpdateInteractionCallable[ResourceType]
+InteractionHandler = (
+    CreateInteractionHandler[ResourceType]
+    | ReadInteractionHandler[ResourceType]
+    | SearchTypeInteractionHandler
+    | UpdateInteractionHandler[ResourceType]
 )
 
 
@@ -65,18 +65,18 @@ class TypeInteraction(Generic[ResourceType]):
 
     resource_type:    The type of FHIR resource on which this interaction operates, as defined by
                       the fhir.resources package.
-    callable_:        User-defined function that performs the FHIR interaction.
+    handler:        User-defined function that performs the FHIR interaction.
     route_options:    Dictionary of key-value pairs that are passed on to FastAPI on route creation.
     """
 
     def __init__(
         self,
         resource_type: type[ResourceType],
-        callable_: InteractionCallable[ResourceType],
+        handler: InteractionHandler[ResourceType],
         route_options: dict[str, Any],
     ):
         self.resource_type = resource_type
-        self.callable_ = callable_
+        self.handler = handler
         self.route_options = route_options
 
     @staticmethod

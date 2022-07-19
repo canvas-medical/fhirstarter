@@ -13,6 +13,8 @@ from functools import cache
 from inspect import Parameter
 from typing import Any
 
+from ..interactions import SearchTypeInteractionHandler
+
 
 @cache
 def load_search_parameter_metadata() -> defaultdict[str, dict[str, dict[str, str]]]:
@@ -61,7 +63,7 @@ def supported_search_parameters(search_function: Callable[..., Any]) -> tuple[st
     Given a callable, return a list of the parameter names in the function (excluding variadic
     keyword and variadic positional arguments).
 
-    This function is used to determine what search parameters are supported by the callable supplied
+    This function is used to determine what search parameters are supported by the handler supplied
     for a registered FHIR search interaction.
     """
     return tuple(

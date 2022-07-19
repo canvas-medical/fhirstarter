@@ -207,7 +207,7 @@ class FHIRStarter(FastAPI):
                 supported_search_parameters_ = []
                 # TODO: Test this with a hyphenated search parameter
                 for search_parameter in supported_search_parameters(
-                    search_type_interaction.callable_
+                    search_type_interaction.handler
                 ):
                     search_parameter = var_name_to_qp_name(search_parameter)
                     supported_search_parameters_.append(

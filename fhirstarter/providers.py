@@ -7,16 +7,16 @@ from fhir.resources.resource import Resource
 
 from .interactions import (
     CreateInteraction,
-    CreateInteractionCallable,
-    InteractionCallable,
+    CreateInteractionHandler,
+    InteractionHandler,
     ReadInteraction,
-    ReadInteractionCallable,
+    ReadInteractionHandler,
     ResourceType,
     SearchTypeInteraction,
-    SearchTypeInteractionCallable,
+    SearchTypeInteractionHandler,
     TypeInteraction,
     UpdateInteraction,
-    UpdateInteractionCallable,
+    UpdateInteractionHandler,
 )
 
 C = TypeVar("C", bound=Callable[..., Any])
@@ -26,7 +26,7 @@ class TypeInteractionType(Protocol[ResourceType]):
     @staticmethod
     def __call__(
         resource_type: type[ResourceType],
-        callable_: InteractionCallable[ResourceType],
+        handler: InteractionHandler[ResourceType],
         route_options: dict[str, Any],
     ) -> TypeInteraction[ResourceType]:
         ...
@@ -52,8 +52,8 @@ class FHIRProvider:
     def register_create_interaction(
         self, resource_type: type[ResourceType], *, include_in_schema: bool = True
     ) -> Callable[
-        [CreateInteractionCallable[ResourceType]],
-        CreateInteractionCallable[ResourceType],
+        [CreateInteractionHandler[ResourceType]],
+        CreateInteractionHandler[ResourceType],
     ]:
         """Register a FHIR create interaction."""
         return self._register_type_interaction(
@@ -63,8 +63,8 @@ class FHIRProvider:
     def register_read_interaction(
         self, resource_type: type[ResourceType], *, include_in_schema: bool = True
     ) -> Callable[
-        [ReadInteractionCallable[ResourceType]],
-        ReadInteractionCallable[ResourceType],
+        [ReadInteractionHandler[ResourceType]],
+        ReadInteractionHandler[ResourceType],
     ]:
         """Register a FHIR read interaction."""
         return self._register_type_interaction(
@@ -73,7 +73,7 @@ class FHIRProvider:
 
     def register_search_type_interaction(
         self, resource_type: type[ResourceType], *, include_in_schema: bool = True
-    ) -> Callable[[SearchTypeInteractionCallable], SearchTypeInteractionCallable]:
+    ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
         """Register a FHIR search-type interaction."""
         return self._register_type_interaction(
             resource_type, SearchTypeInteraction[ResourceType], include_in_schema
@@ -82,8 +82,8 @@ class FHIRProvider:
     def register_update_interaction(
         self, resource_type: type[ResourceType], *, include_in_schema: bool = True
     ) -> Callable[
-        [UpdateInteractionCallable[ResourceType]],
-        UpdateInteractionCallable[ResourceType],
+        [UpdateInteractionHandler[ResourceType]],
+        UpdateInteractionHandler[ResourceType],
     ]:
         """Register a FHIR update interaction."""
         return self._register_type_interaction(
@@ -96,14 +96,14 @@ class FHIRProvider:
         type_interaction_cls: TypeInteractionType[ResourceType],
         include_in_schema: bool,
     ) -> Callable[[C], C]:
-        def decorator(callable_: C) -> C:
+        def decorator(handler: C) -> C:
             self._interactions.append(
                 type_interaction_cls(
                     resource_type=resource_type,
-                    callable_=callable_,
+                    handler=handler,
                     route_options={"include_in_schema": include_in_schema},
                 )
             )
-            return callable_
+            return handler
 
         return decorator
