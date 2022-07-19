@@ -202,7 +202,7 @@ def _make_search_parameter(name: str, description: str, post: bool) -> Parameter
 
     Set the defaults to Form for POST endpoints, and Query for non-POST endpoints.
     """
-    assert _is_valid_parameter_name(name), "{} is not a valid search parameter name"
+    assert _is_valid_parameter_name(name), f"{name} is not a valid search parameter name"
 
     return Parameter(
         name=name,
