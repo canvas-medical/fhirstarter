@@ -187,7 +187,7 @@ yaml = ["PyYAML (>=5.4.1)"]
 name = "funcy"
 version = "1.17"
 description = "A fancy and practical functional tools"
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 
@@ -480,7 +480,7 @@ standard = ["websockets (>=10.0)", "httptools (>=0.4.0)", "watchgod (>=0.6)", "p
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "65c504c9a9708eeaf08b659f153ba0e454f2d973d8da09c11d735587036a60d1"
+content-hash = "929887a8ab883bdcdb25ead58e23f159ad54c23f653d5511b111a2b777bd4913"
 
 [metadata.files]
 anyio = [
