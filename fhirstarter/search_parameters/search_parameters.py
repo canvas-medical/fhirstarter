@@ -13,8 +13,6 @@ from functools import cache
 from inspect import Parameter
 from typing import Any
 
-from ..interactions import SearchTypeInteractionHandler
-
 
 @cache
 def load_search_parameter_metadata() -> defaultdict[str, dict[str, dict[str, str]]]:
