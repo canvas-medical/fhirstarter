@@ -32,7 +32,7 @@ from .interactions import (
     UpdateInteractionHandler,
 )
 from .search_parameters import (
-    load_search_parameter_metadata,
+    get_search_parameter_metadata,
     supported_search_parameters,
     var_name_to_qp_name,
 )
@@ -122,9 +122,9 @@ def make_search_type_function(
         handler = cast(SearchTypeInteractionHandler, interaction.handler)
         return await handler(**kwargs, request=request, response=response)
 
-    search_parameter_metadata = load_search_parameter_metadata()[
+    search_parameter_metadata = get_search_parameter_metadata(
         interaction.resource_type.get_resource_type()
-    ]
+    )
 
     search_parameters: tuple[Parameter, ...] = tuple(
         _make_search_parameter(

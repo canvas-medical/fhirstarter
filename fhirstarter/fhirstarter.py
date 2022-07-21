@@ -24,7 +24,7 @@ from .functions import (
 from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
 from .search_parameters import (
-    load_search_parameter_metadata,
+    get_search_parameter_metadata,
     supported_search_parameters,
     var_name_to_qp_name,
 )
@@ -62,9 +62,7 @@ class FHIRStarter(FastAPI):
         """
         super().__init__(**kwargs)
 
-        self._capabilities: dict[
-            str, dict[str, TypeInteraction]
-        ] = defaultdict(dict)
+        self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
         self._created = datetime.utcnow()
 
         self._add_capabilities_route()
@@ -193,10 +191,10 @@ class FHIRStarter(FastAPI):
         In addition to declaring the interactions (e.g. create, read, search-type, and update), the
         supported search parameters are also declared.
         """
-        search_parameters = load_search_parameter_metadata()
-
         resources = []
         for resource_type, interactions in sorted(self._capabilities.items()):
+            search_parameter_metadata = get_search_parameter_metadata(resource_type)
+
             resource = {
                 "type": resource_type,
                 "interaction": [
@@ -212,12 +210,8 @@ class FHIRStarter(FastAPI):
                     search_parameter = var_name_to_qp_name(search_parameter)
                     supported_search_parameters_.append(
                         {
-                            "name": search_parameters[resource_type][search_parameter][
-                                "name"
-                            ],
-                            "type": search_parameters[resource_type][search_parameter][
-                                "type"
-                            ],
+                            "name": search_parameter_metadata[search_parameter]["name"],
+                            "type": search_parameter_metadata[search_parameter]["type"],
                         }
                     )
                 resource["searchParam"] = supported_search_parameters_
