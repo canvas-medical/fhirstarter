@@ -126,7 +126,7 @@ def make_search_type_function(
         interaction.resource_type.get_resource_type()
     ]
 
-    search_parameters = tuple(
+    search_parameters: tuple[Parameter, ...] = tuple(
         _make_search_parameter(
             name=name,
             description=search_parameter_metadata[var_name_to_qp_name(name)][
@@ -140,7 +140,7 @@ def make_search_type_function(
     # TODO: Might need to add kwargs back on at the end (also potentially true for create, read,
     #  and update)
     sig = signature(search_type)
-    parameters = tuple(sig.parameters.values())[:-1]
+    parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
     sig = sig.replace(parameters=parameters + search_parameters)
     setattr(search_type, "__signature__", sig)
 

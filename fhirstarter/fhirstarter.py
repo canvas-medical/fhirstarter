@@ -62,7 +62,7 @@ class FHIRStarter(FastAPI):
         """
         super().__init__(**kwargs)
 
-        self._capabilities: dict[  # type: ignore
+        self._capabilities: dict[
             str, dict[str, TypeInteraction]
         ] = defaultdict(dict)
         self._created = datetime.utcnow()
@@ -127,7 +127,7 @@ class FHIRStarter(FastAPI):
             for operation_name, operation in path.items():
                 responses = operation["responses"]
 
-                status_codes = tuple(responses.keys())
+                status_codes: tuple[str, ...] = tuple(responses.keys())
                 for status_code in status_codes:
                     if (
                         responses[status_code]["content"]
