@@ -61,6 +61,21 @@ class FHIRGeneralError(FHIRException):
         return self._operation_outcome_
 
 
+class FHIRUnauthorizedError(FHIRException):
+    def __init__(self, code: str, details_text: str, *args: Any) -> None:
+        super().__init__(*args)
+        self._code = code
+        self._details_text = details_text
+
+    def _status_code(self) -> int:
+        return status.HTTP_401_UNAUTHORIZED
+
+    def _operation_outcome(self) -> OperationOutcome:
+        return make_operation_outcome(
+            severity="error", code=self._code, details_text=self._details_text
+        )
+
+
 class FHIRInteractionError(FHIRException, ABC):
     """
     Abstract base class for exceptions that occur during FHIR interactions.

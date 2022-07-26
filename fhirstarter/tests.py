@@ -7,6 +7,8 @@ from uuid import uuid4
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
+from fastapi import Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
@@ -14,7 +16,7 @@ from funcy import omit
 from requests.models import Response
 
 from . import status
-from .exceptions import FHIRResourceNotFoundError
+from .exceptions import FHIRResourceNotFoundError, FHIRUnauthorizedError
 from .fhirstarter import FHIRStarter
 from .providers import FHIRProvider
 from .testclient import TestClient
@@ -22,6 +24,9 @@ from .utils import make_operation_outcome
 
 # In-memory "database" used to simulate persistence of created FHIR resources
 _DATABASE: dict[str, Patient] = {}
+
+_VALID_TOKEN = "valid"
+_INVALID_TOKEN = "invalid"
 
 
 async def patient_create(resource: Patient, **kwargs: Any) -> Id:
@@ -333,12 +338,70 @@ def test_validation_error(client: TestClient) -> None:
         create_response,
         status.HTTP_400_BAD_REQUEST,
         content=make_operation_outcome(
-            severity="fatal",
+            severity="error",
             code="structure",
             details_text="1 validation error for Request\nbody -> extraField\n  extra fields not "
             "permitted (type=value_error.extra)",
         ).dict(),
     )
+
+
+def validate_token(
+    authorization: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+) -> None:
+    if authorization.scheme != "Bearer" or authorization.credentials != _VALID_TOKEN:
+        raise FHIRUnauthorizedError(
+            code="unknown", details_text="Authentication failed"
+        )
+
+
+def provider_with_dependency() -> FHIRProvider:
+    provider = FHIRProvider(dependencies=[Depends(validate_token)])
+    provider.register_create_interaction(Patient)(patient_create)
+    return provider
+
+
+def provider_with_interaction_dependency() -> FHIRProvider:
+    provider = FHIRProvider()
+    provider.register_create_interaction(
+        Patient, dependencies=[Depends(validate_token)]
+    )(patient_create)
+    return provider
+
+
+@pytest.mark.parametrize(
+    "provider",
+    [provider_with_dependency(), provider_with_interaction_dependency()],
+    ids=["provider", "interaction"],
+)
+def test_dependency(provider: FHIRProvider) -> None:
+    """Test that injected token validation dependency works on the given provider."""
+    client = _app(provider)
+
+    create_response = client.post(
+        "/Patient",
+        json=_RESOURCE,
+        headers={"Authorization": f"Bearer {_INVALID_TOKEN}"},
+    )
+    _assert_expected_response(
+        create_response,
+        status.HTTP_401_UNAUTHORIZED,
+        content={
+            "resourceType": "OperationOutcome",
+            "issue": [
+                {
+                    "severity": "error",
+                    "code": "unknown",
+                    "details": {"text": "Authentication failed"},
+                }
+            ],
+        },
+    )
+
+    create_response = client.post(
+        "/Patient", json=_RESOURCE, headers={"Authorization": f"Bearer {_VALID_TOKEN}"}
+    )
+    _assert_expected_response(create_response, status.HTTP_201_CREATED)
 
 
 def _generate_fhir_resource_id() -> Id:
@@ -354,6 +417,7 @@ def _id_from_create_response(response: Response) -> str:
 def _assert_expected_response(
     response: Response, status_code: int, content: dict[str, Any] | None = None
 ) -> None:
+    """Assert the status code, content type header, and content of a response."""
     assert response.status_code == status_code
     assert response.headers["Content-Type"] == "application/fhir+json"
     if content:
