@@ -1,8 +1,9 @@
 """FHIRProvider class, for registering FHIR interactions with a FHIRStarter app."""
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from typing import Any, Protocol, TypeVar
 
+from fastapi import Depends
 from fhir.resources.resource import Resource
 
 from .interactions import (
@@ -42,7 +43,8 @@ class FHIRProvider:
     functions that perform FHIR interactions.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, dependencies: Sequence[Depends] | None = None) -> None:
+        self._dependencies = dependencies or []
         self._interactions: list[TypeInteraction[Resource]] = []
 
     @property
@@ -50,50 +52,79 @@ class FHIRProvider:
         yield from self._interactions
 
     def register_create_interaction(
-        self, resource_type: type[ResourceType], *, include_in_schema: bool = True
+        self,
+        resource_type: type[ResourceType],
+        *,
+        dependencies: Sequence[Depends] | None = None,
+        include_in_schema: bool = True
     ) -> Callable[
         [CreateInteractionHandler[ResourceType]],
         CreateInteractionHandler[ResourceType],
     ]:
         """Register a FHIR create interaction."""
         return self._register_type_interaction(
-            resource_type, CreateInteraction[ResourceType], include_in_schema
+            resource_type,
+            CreateInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
         )
 
     def register_read_interaction(
-        self, resource_type: type[ResourceType], *, include_in_schema: bool = True
+        self,
+        resource_type: type[ResourceType],
+        *,
+        dependencies: Sequence[Depends] | None = None,
+        include_in_schema: bool = True
     ) -> Callable[
         [ReadInteractionHandler[ResourceType]],
         ReadInteractionHandler[ResourceType],
     ]:
         """Register a FHIR read interaction."""
         return self._register_type_interaction(
-            resource_type, ReadInteraction[ResourceType], include_in_schema
+            resource_type,
+            ReadInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
         )
 
     def register_search_type_interaction(
-        self, resource_type: type[ResourceType], *, include_in_schema: bool = True
+        self,
+        resource_type: type[ResourceType],
+        *,
+        dependencies: Sequence[Depends] | None = None,
+        include_in_schema: bool = True
     ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
         """Register a FHIR search-type interaction."""
         return self._register_type_interaction(
-            resource_type, SearchTypeInteraction[ResourceType], include_in_schema
+            resource_type,
+            SearchTypeInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
         )
 
     def register_update_interaction(
-        self, resource_type: type[ResourceType], *, include_in_schema: bool = True
+        self,
+        resource_type: type[ResourceType],
+        *,
+        dependencies: Sequence[Depends] | None = None,
+        include_in_schema: bool = True
     ) -> Callable[
         [UpdateInteractionHandler[ResourceType]],
         UpdateInteractionHandler[ResourceType],
     ]:
         """Register a FHIR update interaction."""
         return self._register_type_interaction(
-            resource_type, UpdateInteraction[ResourceType], include_in_schema
+            resource_type,
+            UpdateInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
         )
 
     def _register_type_interaction(
         self,
         resource_type: type[ResourceType],
         type_interaction_cls: TypeInteractionType[ResourceType],
+        dependencies: Sequence[Depends] | None,
         include_in_schema: bool,
     ) -> Callable[[C], C]:
         def decorator(handler: C) -> C:
@@ -101,7 +132,10 @@ class FHIRProvider:
                 type_interaction_cls(
                     resource_type=resource_type,
                     handler=handler,
-                    route_options={"include_in_schema": include_in_schema},
+                    route_options={
+                        "dependencies": self._dependencies + list(dependencies or []),
+                        "include_in_schema": include_in_schema,
+                    },
                 )
             )
             return handler

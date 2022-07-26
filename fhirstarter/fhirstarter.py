@@ -260,7 +260,7 @@ async def _validation_exception_handler(
     Returns an OperationOutcome.
     """
     return _exception_json_response(
-        severity="fatal",
+        severity="error",
         code="structure",
         exception=exception,
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -288,7 +288,7 @@ async def _fhir_exception_handler(_: Request, exception: FHIRException) -> JSONR
 async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
     """General exception handler to catch server framework errors. Returns an OperationOutcome."""
     return _exception_json_response(
-        severity="fatal",
+        severity="error",
         code="exception",
         exception=exception,
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
