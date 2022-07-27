@@ -1,6 +1,7 @@
 """FHIRStarter test cases."""
 
-from collections.abc import Callable
+from fhir.resources.humanname import HumanName
+from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from typing import Any, cast
 from uuid import uuid4
@@ -54,7 +55,7 @@ async def patient_search_type(
     patients = []
     for patient in _DATABASE.values():
         for name in patient.name:
-            if name.family == family:
+            if cast(HumanName, name).family == family:
                 patients.append(patient)
 
     bundle = Bundle(
@@ -92,6 +93,11 @@ def _app(provider: FHIRProvider) -> TestClient:
 @pytest.fixture
 def client() -> TestClient:
     """Test fixture that creates an app that provides all FHIR interactions."""
+    return _client()
+
+
+def _client() -> TestClient:
+    """Create an app that provides all FHIR interactions."""
     provider = FHIRProvider()
     provider.register_create_interaction(Patient)(patient_create)
     provider.register_read_interaction(Patient)(patient_read)
@@ -104,6 +110,11 @@ def client() -> TestClient:
 @pytest.fixture
 def client_create_and_read() -> TestClient:
     """Test fixture that creates an app that only provides FHIR create and read interactions."""
+    return _client_create_and_read()
+
+
+def _client_create_and_read() -> TestClient:
+    """Create an app that only provides FHIR create and read interactions."""
     provider = FHIRProvider()
     provider.register_create_interaction(Patient)(patient_create)
     provider.register_read_interaction(Patient)(patient_read)
@@ -111,48 +122,49 @@ def client_create_and_read() -> TestClient:
     return _app(provider)
 
 
-def test_capability_statement(client: TestClient) -> None:
-    """Test the capability statement when all FHIR interactions are supported."""
-    app = cast(FHIRStarter, client.app)
-
-    response = client.get("/metadata")
-
-    _assert_expected_response(response, status.HTTP_200_OK)
-    assert omit(response.json(), ["id"]) == {
-        "resourceType": "CapabilityStatement",
-        "status": "active",
-        "date": app._created.isoformat(),
-        "kind": "instance",
-        "fhirVersion": "4.3.0",
-        "format": ["json"],
-        "rest": [
-            {
-                "mode": "server",
-                "resource": [
-                    {
-                        "type": "Patient",
-                        "interaction": [
-                            {"code": "create"},
-                            {"code": "read"},
-                            {"code": "search-type"},
-                            {"code": "update"},
-                        ],
-                        "searchParam": [
-                            {"name": "family", "type": "string"},
-                            {"name": "general-practitioner", "type": "reference"},
-                        ],
-                    }
-                ],
-            }
-        ],
-    }
-
-
-def test_capability_statement_create_and_read(
-    client_create_and_read: TestClient,
+@pytest.mark.parametrize(
+    argnames="test_client,resource",
+    argvalues=[
+        (
+            _client(),
+            [
+                {
+                    "type": "Patient",
+                    "interaction": [
+                        {"code": "create"},
+                        {"code": "read"},
+                        {"code": "search-type"},
+                        {"code": "update"},
+                    ],
+                    "searchParam": [
+                        {"name": "family", "type": "string"},
+                        {"name": "general-practitioner", "type": "reference"},
+                    ],
+                }
+            ],
+        ),
+        (
+            _client_create_and_read(),
+            [
+                {
+                    "type": "Patient",
+                    "interaction": [{"code": "create"}, {"code": "read"}],
+                },
+            ],
+        ),
+    ],
+    ids=["all", "create_and_read"],
+)
+def test_capability_statement(
+    test_client: TestClient, resource: Sequence[Mapping[str, Any]]
 ) -> None:
-    """Test the capability statement when only FHIR create and read interactions are supported."""
-    client = client_create_and_read
+    """
+    Test the capability statement.
+
+    Two scenarios are parameterized: a server with create, read, search, and update supported, and
+    a server with only create and read supported.
+    """
+    client = test_client
     app = cast(FHIRStarter, client.app)
 
     response = client.get("/metadata")
@@ -168,12 +180,7 @@ def test_capability_statement_create_and_read(
         "rest": [
             {
                 "mode": "server",
-                "resource": [
-                    {
-                        "type": "Patient",
-                        "interaction": [{"code": "create"}, {"code": "read"}],
-                    },
-                ],
+                "resource": resource,
             }
         ],
     }
@@ -182,35 +189,15 @@ def test_capability_statement_create_and_read(
 def test_capability_statement_publisher(
     client_create_and_read: TestClient, monkeypatch: MonkeyPatch
 ) -> None:
-    """Test the capability statement when only FHIR create and read interactions are supported."""
+    """Test the capability statement publisher value that is provided by an environment variable."""
     monkeypatch.setenv("CAPABILITY_STATEMENT_PUBLISHER", "Publisher")
 
     client = client_create_and_read
-    app = cast(FHIRStarter, client.app)
 
     response = client.get("/metadata")
 
     _assert_expected_response(response, status.HTTP_200_OK)
-    assert omit(response.json(), ["id"]) == {
-        "resourceType": "CapabilityStatement",
-        "status": "active",
-        "date": app._created.isoformat(),
-        "publisher": "Publisher",
-        "kind": "instance",
-        "fhirVersion": "4.3.0",
-        "format": ["json"],
-        "rest": [
-            {
-                "mode": "server",
-                "resource": [
-                    {
-                        "type": "Patient",
-                        "interaction": [{"code": "create"}, {"code": "read"}],
-                    },
-                ],
-            }
-        ],
-    }
+    assert response.json()["publisher"] == "Publisher"
 
 
 _RESOURCE = {
@@ -256,26 +243,21 @@ def test_read_not_found(client: TestClient) -> None:
     )
 
 
-def test_search_type(client: TestClient, create_response: Response) -> None:
-    """Test FHIR search-type interaction."""
-    _test_search_type(
-        create_response, lambda: client.get("/Patient", params={"family": "Baggins"})
-    )
-
-
-def test_search_type_post(client: TestClient, create_response: Response) -> None:
-    """Test FHIR search-type interaction using POST."""
-    _test_search_type(
-        create_response,
-        lambda: client.post("/Patient/_search", data={"family": "Baggins"}),
-    )
-
-
-def _test_search_type(
-    create_response: Response, search_type_func: Callable[..., Response]
+@pytest.mark.parametrize(
+    argnames="search_type_func",
+    argvalues=[
+        lambda client: client.get("/Patient", params={"family": "Baggins"}),
+        lambda client: client.post("/Patient/_search", data={"family": "Baggins"}),
+    ],
+    ids=["get", "post"],
+)
+def test_search_type(
+    client: TestClient,
+    create_response: Response,
+    search_type_func: Callable[[TestClient], Response],
 ) -> None:
     id_ = _id_from_create_response(create_response)
-    search_type_response = search_type_func()
+    search_type_response = search_type_func(client)
 
     _assert_expected_response(
         search_type_response,
@@ -358,6 +340,7 @@ def validate_token(
 def provider_with_dependency() -> FHIRProvider:
     provider = FHIRProvider(dependencies=[Depends(validate_token)])
     provider.register_create_interaction(Patient)(patient_create)
+
     return provider
 
 
@@ -366,12 +349,13 @@ def provider_with_interaction_dependency() -> FHIRProvider:
     provider.register_create_interaction(
         Patient, dependencies=[Depends(validate_token)]
     )(patient_create)
+
     return provider
 
 
 @pytest.mark.parametrize(
-    "provider",
-    [provider_with_dependency(), provider_with_interaction_dependency()],
+    argnames="provider",
+    argvalues=[provider_with_dependency(), provider_with_interaction_dependency()],
     ids=["provider", "interaction"],
 )
 def test_dependency(provider: FHIRProvider) -> None:
