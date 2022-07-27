@@ -62,6 +62,7 @@ class FHIRGeneralError(FHIRException):
 
 
 class FHIRUnauthorizedError(FHIRException):
+    """FHIR exception class for authentication errors."""
     def __init__(self, code: str, details_text: str, *args: Any) -> None:
         super().__init__(*args)
         self._code = code
