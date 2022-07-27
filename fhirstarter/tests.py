@@ -1,6 +1,5 @@
 """FHIRStarter test cases."""
 
-from fhir.resources.humanname import HumanName
 from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from typing import Any, cast
@@ -12,6 +11,7 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
+from fhir.resources.humanname import HumanName
 from fhir.resources.patient import Patient
 from funcy import omit
 from requests.models import Response
