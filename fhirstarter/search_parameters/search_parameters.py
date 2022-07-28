@@ -5,21 +5,19 @@ specification.
 
 import inspect
 import json
-import os.path
 import re
 from collections.abc import Callable
 from functools import cache
 from inspect import Parameter
+from pathlib import Path
 from typing import Any
 
 
 @cache
 def load_search_parameter_file() -> dict[str, Any]:
     """Load the search parameters JSON file."""
-    file_name = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "search-parameters.json"
-    )
-    with open(file_name) as file_:
+    file_path = Path(__file__).parent / "search-parameters.json"
+    with file_path.open() as file_:
         return json.load(file_)
 
 
