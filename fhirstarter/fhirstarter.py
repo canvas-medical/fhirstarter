@@ -244,8 +244,11 @@ async def _add_content_type_header(
     request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
 ) -> Response:
     """Middleware function that changes the content type header to "application/fhir+json"."""
+    # TODO: This casts too wide of a net. It precludes someone from creating an endpoint that sets
+    #  the content type to plain JSON. A future refactor of this should make it more targeted to
+    #  FHIR requests.
     response: Response = await call_next(request)
-    if request.url.components.path not in {"/docs", "/redoc"}:
+    if response.headers.get("Content-Type") == "application/json":
         response.headers["Content-Type"] = "application/fhir+json"
 
     return response
