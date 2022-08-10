@@ -137,8 +137,18 @@ def _client_create_and_read() -> TestClient:
                         {"code": "update"},
                     ],
                     "searchParam": [
-                        {"name": "family", "type": "string"},
-                        {"name": "general-practitioner", "type": "reference"},
+                        {
+                            "name": "family",
+                            "definition": "http://hl7.org/fhir/SearchParameter/individual-family",
+                            "type": "string",
+                            "documentation": "A portion of the family name of the patient",
+                        },
+                        {
+                            "name": "general-practitioner",
+                            "definition": "http://hl7.org/fhir/SearchParameter/Patient-general-practitioner",
+                            "type": "reference",
+                            "documentation": "Patient's nominated general practitioner, not the organization that manages the record",
+                        },
                     ],
                 }
             ],

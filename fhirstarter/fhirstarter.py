@@ -208,12 +208,16 @@ class FHIRStarter(FastAPI):
                     search_type_interaction.handler
                 ):
                     search_parameter = var_name_to_qp_name(search_parameter)
-                    supported_search_parameters_.append(
-                        {
-                            "name": search_parameter_metadata[search_parameter]["name"],
-                            "type": search_parameter_metadata[search_parameter]["type"],
-                        }
-                    )
+                    metadata = search_parameter_metadata[search_parameter]
+                    if metadata["include-in-capability-statement"]:
+                        supported_search_parameters_.append(
+                            {
+                                "name": search_parameter,
+                                "definition": metadata["uri"],
+                                "type": metadata["type"],
+                                "documentation": metadata["description"],
+                            }
+                        )
                 resource["searchParam"] = supported_search_parameters_
             resources.append(resource)
 
