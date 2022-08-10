@@ -80,7 +80,9 @@ def search_type_route_args(
         "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} search-type interaction searches a set of resources "
         "based on some filter criteria.",
-        "responses": _responses(interaction, partial(_ok, search=True), _bad_request),
+        "responses": _responses(
+            interaction, partial(_ok, search_type=True), _bad_request
+        ),
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -118,11 +120,13 @@ def _responses(
     return merged_responses
 
 
-def _ok(interaction: TypeInteraction[ResourceType], search: bool = False) -> _Responses:
+def _ok(
+    interaction: TypeInteraction[ResourceType], search_type: bool = False
+) -> _Responses:
     """Return documentation for an HTTP 200 OK response."""
     return {
         status.HTTP_200_OK: {
-            "model": interaction.resource_type if not search else Bundle,
+            "model": interaction.resource_type if not search_type else Bundle,
             "description": f"Successful {interaction.resource_type.get_resource_type()} "
             f"{interaction.label()}",
         }

@@ -6,9 +6,11 @@ from collections import defaultdict
 from collections.abc import Callable, Coroutine
 from datetime import datetime
 from functools import cache
+from os import PathLike
 from typing import Any, cast
 from uuid import uuid4
 
+import tomli
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -24,7 +26,7 @@ from .functions import (
 from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
 from .search_parameters import (
-    get_search_parameter_metadata,
+    SearchParameters,
     supported_search_parameters,
     var_name_to_qp_name,
 )
@@ -53,14 +55,24 @@ class FHIRStarter(FastAPI):
     and capability statement requests.
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(
+        self, config_file_name: str | PathLike[str] | None = None, **kwargs: Any
+    ) -> None:
         """
         On app creation, the following occurs:
+        * Custom search parameters are loaded
         * Static routes are created (e.g. the capability statement route)
         * Middleware is added (e.g. content-type header handling)
         * Exception handling is added
         """
         super().__init__(**kwargs)
+
+        if config_file_name:
+            with open(config_file_name, "rb") as file_:
+                config = tomli.load(file_)
+                self._search_parameters = SearchParameters(config["search-parameters"])
+        else:
+            self._search_parameters = SearchParameters()
 
         self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
         self._created = datetime.utcnow()
@@ -172,11 +184,22 @@ class FHIRStarter(FastAPI):
                     make_read_function(interaction)
                 )
             case "search-type":
+                search_parameter_metadata = self._search_parameters.get_metadata(
+                    interaction.resource_type.get_resource_type()
+                )
                 self.get(**search_type_route_args(interaction, post=False))(
-                    make_search_type_function(interaction, post=False)
+                    make_search_type_function(
+                        interaction,
+                        search_parameter_metadata=search_parameter_metadata,
+                        post=False,
+                    )
                 )
                 self.post(**search_type_route_args(interaction, post=True))(
-                    make_search_type_function(interaction, post=True)
+                    make_search_type_function(
+                        interaction,
+                        search_parameter_metadata=search_parameter_metadata,
+                        post=True,
+                    )
                 )
             case "update":
                 self.put(**update_route_args(interaction))(
@@ -193,7 +216,9 @@ class FHIRStarter(FastAPI):
         """
         resources = []
         for resource_type, interactions in sorted(self._capabilities.items()):
-            search_parameter_metadata = get_search_parameter_metadata(resource_type)
+            search_parameter_metadata = self._search_parameters.get_metadata(
+                resource_type
+            )
 
             resource = {
                 "type": resource_type,

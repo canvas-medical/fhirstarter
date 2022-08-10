@@ -60,14 +60,28 @@ _EXTRA_SEARCH_PARAMETERS = {
 }
 
 
-def get_search_parameter_metadata(resource_type: str) -> dict[str, dict[str, str]]:
-    """Return search parameter metadata for the given resource type."""
-    search_parameters = _load_search_parameter_file()
-    return (
-        search_parameters[resource_type]
-        | search_parameters["DomainResource"]
-        | search_parameters["Resource"]
-    )
+class SearchParameters:
+    def __init__(
+        self,
+        custom_search_parameters: dict[str, dict[str, dict[str, str]]] | None = None,
+    ):
+        self._custom_search_parameters = custom_search_parameters or {}
+
+    def get_metadata(self, resource_type: str) -> dict[str, dict[str, str]]:
+        """
+        Return search parameter metadata for the given resource type.
+
+        For a given resource type, the search parameter metadata is a union between the search
+        parameter metadata for the resource type itself, DomainResource, Resource, and custom search
+        parameter metadata.
+        """
+        search_parameters = _load_search_parameter_file()
+        return (
+            search_parameters[resource_type]
+            | search_parameters["DomainResource"]
+            | search_parameters["Resource"]
+            | self._custom_search_parameters.get(resource_type, {})
+        )
 
 
 def var_name_to_qp_name(name: str) -> str:

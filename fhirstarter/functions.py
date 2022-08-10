@@ -31,11 +31,7 @@ from .interactions import (
     TypeInteraction,
     UpdateInteractionHandler,
 )
-from .search_parameters import (
-    get_search_parameter_metadata,
-    supported_search_parameters,
-    var_name_to_qp_name,
-)
+from .search_parameters import supported_search_parameters, var_name_to_qp_name
 
 
 def make_create_function(
@@ -100,14 +96,16 @@ def make_read_function(
 
 # TODO: If possible, map FHIR primitives to correct type annotations for better validation
 def make_search_type_function(
-    interaction: TypeInteraction[ResourceType], post: bool
+    interaction: TypeInteraction[ResourceType],
+    search_parameter_metadata: dict[str, dict[str, str]],
+    post: bool,
 ) -> Callable[[Request, Response], Coroutine[None, None, Bundle]]:
     """
     Make a function suitable for creation of a FHIR search-type API route.
 
     Creation of a search-type function is more complex than creation of a create, read, or update
-    function due to the variability of search parameters, and due to the need to support GET and
-    POST.
+    function due to the variability of search parameters, support for custom search parameters, and
+    due to the need to support GET and POST.
 
     Search parameter descriptions are pulled from the FHIR specification.
 
@@ -121,10 +119,6 @@ def make_search_type_function(
         """Function for search-type interaction."""
         handler = cast(SearchTypeInteractionHandler, interaction.handler)
         return await handler(**kwargs, request=request, response=response)
-
-    search_parameter_metadata = get_search_parameter_metadata(
-        interaction.resource_type.get_resource_type()
-    )
 
     search_parameters: tuple[Parameter, ...] = tuple(
         _make_search_parameter(
