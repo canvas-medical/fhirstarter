@@ -56,6 +56,8 @@ def make_create_function(
 
         Calls the handler, and sets the Location header based on the Id of the created resource.
         """
+        response.headers["Content-Type"] = "application/fhir+json"
+
         handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
         result = await handler(resource, request=request, response=response)
         id_, result_resource = _result_to_id_resource_tuple(result)
@@ -88,6 +90,7 @@ def make_read_function(
         ),
     ) -> ResourceType:
         """Function for read interaction."""
+        response.headers["Content-Type"] = "application/fhir+json"
         handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
         return await handler(id_, request=request, response=response)
 
@@ -117,6 +120,7 @@ def make_search_type_function(
         request: Request, response: Response, **kwargs: str
     ) -> Bundle:
         """Function for search-type interaction."""
+        response.headers["Content-Type"] = "application/fhir+json"
         handler = cast(SearchTypeInteractionHandler, interaction.handler)
         return await handler(**kwargs, request=request, response=response)
 
@@ -162,6 +166,8 @@ def make_update_function(
             alias=interaction.resource_type.get_resource_type(),
         ),
     ) -> ResourceType | None:
+        response.headers["Content-Type"] = "application/fhir+json"
+
         handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
         result = await handler(id_, resource, request=request, response=response)
         _, result_resource = _result_to_id_resource_tuple(result)

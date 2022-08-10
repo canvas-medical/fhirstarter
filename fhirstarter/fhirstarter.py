@@ -79,7 +79,7 @@ class FHIRStarter(FastAPI):
 
         self._add_capabilities_route()
 
-        self.middleware("http")(_add_content_type_header)
+        self.middleware("http")(_set_content_type_header)
 
         self.add_exception_handler(
             RequestValidationError, _validation_exception_handler
@@ -156,6 +156,11 @@ class FHIRStarter(FastAPI):
 
     def _add_capabilities_route(self) -> None:
         """Add the /metadata route, which supplies the capability statement for the instance."""
+
+        def capability_statement(response: Response) -> CapabilityStatement:
+            response.headers["Content-Type"] = "application/fhir+json"
+            return self._capability_statement()
+
         self.get(
             "/metadata",
             response_model=CapabilityStatement,
@@ -165,7 +170,7 @@ class FHIRStarter(FastAPI):
             description="The capabilities interaction retrieves the information about a server's "
             "capabilities - which portions of the FHIR specification it supports.",
             response_model_exclude_none=True,
-        )(lambda: self._capability_statement())
+        )(capability_statement)
 
     def _add_route(self, interaction: TypeInteraction[ResourceType]) -> None:
         """
@@ -269,16 +274,25 @@ class FHIRStarter(FastAPI):
         return CapabilityStatement(**capability_statement)
 
 
-async def _add_content_type_header(
+async def _set_content_type_header(
     request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
 ) -> Response:
-    """Middleware function that changes the content type header to "application/fhir+json"."""
-    # TODO: This casts too wide of a net. It precludes someone from creating an endpoint that sets
-    #  the content type to plain JSON. A future refactor of this should make it more targeted to
-    #  FHIR requests.
+    """
+    Middleware function that changes the content type header to "application/fhir+json".
+
+    For FHIR responses, there will be two content type headers in the response. One will be
+    "application/json" (added by FastAPI), and one will be "application/fhir+json" (added by
+    FHIRStarter). This middleware removes the "application/json" header.
+    """
     response: Response = await call_next(request)
-    if response.headers.get("Content-Type") == "application/json":
-        response.headers["Content-Type"] = "application/fhir+json"
+
+    for header_name, header_value in response.headers.items():
+        if (header_name.lower(), header_value.lower()) == (
+            "content-type",
+            "application/fhir+json",
+        ):
+            response.headers["Content-Type"] = "application/fhir+json"
+            break
 
     return response
 
@@ -334,4 +348,8 @@ def _exception_json_response(
     operation_outcome = make_operation_outcome(
         severity=severity, code=code, details_text=f"{str(exception)}"
     )
-    return JSONResponse(content=operation_outcome.dict(), status_code=status_code)
+    return JSONResponse(
+        content=operation_outcome.dict(),
+        status_code=status_code,
+        media_type="application/fhir+json",
+    )

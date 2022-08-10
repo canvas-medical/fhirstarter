@@ -20,7 +20,9 @@ class FHIRException(Exception, ABC):
 
     def response(self) -> JSONResponse:
         return JSONResponse(
-            content=self._operation_outcome().dict(), status_code=self._status_code()
+            content=self._operation_outcome().dict(),
+            status_code=self._status_code(),
+            media_type="application/fhir+json",
         )
 
     @abstractmethod
