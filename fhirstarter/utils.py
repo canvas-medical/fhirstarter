@@ -2,7 +2,6 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from functools import partial
 from typing import Any, ClassVar
 
 from fastapi import Request
@@ -12,7 +11,7 @@ from fhir.resources.operationoutcome import OperationOutcome
 from fhir.resources.resource import Resource
 
 from . import status
-from .interactions import ResourceType, TypeInteraction
+from .interactions import ResourceType, SearchTypeInteraction, TypeInteraction
 
 
 def make_operation_outcome(
@@ -181,9 +180,7 @@ def search_type_route_args(
         "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} search-type interaction searches a set of "
         "resources based on some filter criteria.",
-        "responses": _responses(
-            interaction, partial(_ok, search_type=True), _bad_request, _unauthorized
-        ),
+        "responses": _responses(interaction, _ok, _bad_request, _unauthorized),
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -223,13 +220,15 @@ def _responses(
     return merged_responses
 
 
-def _ok(
-    interaction: TypeInteraction[ResourceType], search_type: bool = False
-) -> _Responses:
+def _ok(interaction: TypeInteraction[ResourceType]) -> _Responses:
     """Return documentation for an HTTP 200 OK response."""
+    from .interactions import ReadInteraction
+
     return {
         status.HTTP_200_OK: {
-            "model": interaction.resource_type if not search_type else Bundle,
+            "model": interaction.resource_type
+            if not isinstance(interaction, SearchTypeInteraction)
+            else Bundle,
             "description": f"Successful {interaction.resource_type.get_resource_type()} "
             f"{interaction.label()}",
         }
