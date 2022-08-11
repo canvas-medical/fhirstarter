@@ -68,7 +68,7 @@ async def patient_search_type(
         **{
             "type": "searchset",
             "total": len(patients),
-            "entry": [{"resource": {**patient.dict()}} for patient in patients],
+            "entry": [{"resource": patient.dict()} for patient in patients],
         }
     )
 
