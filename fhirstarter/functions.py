@@ -31,7 +31,7 @@ from .interactions import (
     UpdateInteractionHandler,
 )
 from .search_parameters import supported_search_parameters, var_name_to_qp_name
-from .utils import format_parameters_from_request, format_response
+from .utils import FormatParameters, format_response
 
 
 def make_create_function(
@@ -68,7 +68,7 @@ def make_create_function(
         return format_response(
             resource=result_resource,
             response=response,
-            format_parameters=format_parameters_from_request(request),
+            format_parameters=FormatParameters.from_request(request),
         )
 
     create.__annotations__ |= {
@@ -99,7 +99,7 @@ def make_read_function(
         return format_response(
             resource=result_resource,
             response=response,
-            format_parameters=format_parameters_from_request(request),
+            format_parameters=FormatParameters.from_request(request),
         )
 
     return read
@@ -133,7 +133,7 @@ def make_search_type_function(
         return format_response(
             resource=bundle,
             response=response,
-            format_parameters=format_parameters_from_request(request),
+            format_parameters=FormatParameters.from_request(request),
         )
 
     search_parameters: tuple[Parameter, ...] = tuple(
@@ -186,7 +186,7 @@ def make_update_function(
         return format_response(
             resource=result_resource,
             response=response,
-            format_parameters=format_parameters_from_request(request),
+            format_parameters=FormatParameters.from_request(request),
         )
 
     update.__annotations__ |= {

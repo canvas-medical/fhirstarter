@@ -30,8 +30,8 @@ from .search_parameters import (
     var_name_to_qp_name,
 )
 from .utils import (
+    FormatParameters,
     create_route_args,
-    format_parameters_from_request,
     format_response,
     make_operation_outcome,
     read_route_args,
@@ -161,7 +161,7 @@ class FHIRStarter(FastAPI):
             return format_response(
                 resource=self._capability_statement(),
                 response=response,
-                format_parameters=format_parameters_from_request(request),
+                format_parameters=FormatParameters.from_request(request),
             )
 
         self.get(
@@ -308,7 +308,7 @@ async def _validation_exception_handler(
 
     Returns an OperationOutcome.
     """
-    return _exception_json_response(
+    return _exception_response(
         request=request,
         severity="error",
         code="structure",
@@ -327,12 +327,17 @@ async def _fhir_exception_handler(
     OperationOutcome.
     """
     exception.set_request(request)
-    return exception.response()
+
+    return format_response(
+        resource=exception.operation_outcome(),
+        status_code=exception.status_code(),
+        format_parameters=FormatParameters.from_request(request, raise_exception=False),
+    )
 
 
 async def _exception_handler(request: Request, exception: Exception) -> Response:
     """General exception handler to catch server framework errors. Returns an OperationOutcome."""
-    return _exception_json_response(
+    return _exception_response(
         request=request,
         severity="error",
         code="exception",
@@ -341,15 +346,16 @@ async def _exception_handler(request: Request, exception: Exception) -> Response
     )
 
 
-def _exception_json_response(
+def _exception_response(
     request: Request, severity: str, code: str, exception: Exception, status_code: int
 ) -> Response:
     """Create a JSONResponse with an OperationOutcome and an HTTP status code."""
     operation_outcome = make_operation_outcome(
         severity=severity, code=code, details_text=f"{str(exception)}"
     )
+
     return format_response(
         resource=operation_outcome,
         status_code=status_code,
-        format_parameters=format_parameters_from_request(request),
+        format_parameters=FormatParameters.from_request(request, raise_exception=False),
     )

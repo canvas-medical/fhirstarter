@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from functools import partial
-from typing import Any
+from typing import Any, ClassVar
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
@@ -34,26 +34,45 @@ def make_operation_outcome(
 
 @dataclass
 class FormatParameters:
-    format: str = "json"
+    format: str = "application/fhir+json"
     pretty: bool = False
 
+    _CONTENT_TYPES: ClassVar = {
+        "json": "application/fhir+json",
+        "application/json": "application/fhir+json",
+        "application/fhir+json": "application/fhir+json",
+        "xml": "application/fhir+xml",
+        "text/xml": "application/fhir+xml",
+        "application/xml": "application/fhir+xml",
+        "application/fhir+xml": "application/fhir+xml",
+    }
 
-def format_parameters_from_request(request: Request) -> FormatParameters:
-    return FormatParameters(
-        format=request.query_params.get("_format", "json"),  # type: ignore
-        pretty=request.query_params.get("_pretty", "false") == "true",
-    )
+    @classmethod
+    def from_request(
+        cls, request: Request, raise_exception: bool = True
+    ) -> "FormatParameters":
+        """Parse the _format and _pretty query parameters."""
+        try:
+            format_ = FormatParameters._CONTENT_TYPES[
+                request.query_params.get("_format", "json")
+            ]
+        except KeyError:
+            if raise_exception:
+                from .exceptions import FHIRGeneralError
 
+                raise FHIRGeneralError(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    severity="error",
+                    code="structure",
+                    details_text="Invalid response format specified for '_format' parameter",
+                )
+            else:
+                format_ = "application/fhir+json"
 
-_CONTENT_TYPES = {
-    "json": "application/fhir+json",
-    "application/json": "application/fhir+json",
-    "application/fhir+json": "application/fhir+json",
-    "xml": "application/fhir+xml",
-    "text/xml": "application/fhir+xml",
-    "application/xml": "application/fhir+xml",
-    "application/fhir+xml": "application/fhir+xml",
-}
+        return FormatParameters(
+            format=format_,  # type: ignore
+            pretty=request.query_params.get("_pretty", "false") == "true",
+        )
 
 
 def format_response(
@@ -75,50 +94,38 @@ def format_response(
     4. Pretty XML
     5. Minified XML
     """
-    try:
-        content_type = _CONTENT_TYPES[format_parameters.format]
-    except KeyError:
-        from .exceptions import FHIRGeneralError
-
-        raise FHIRGeneralError(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            severity="error",
-            code="structure",
-            details_text="Invalid response format specified for '_format' parameter",
-        )
-
     if not resource:
         assert (
             response is not None
         ), "Response object must be provided for a null resource"
-        response.headers["Content-Type"] = content_type
+        response.headers["Content-Type"] = format_parameters.format
         return resource
 
-    if content_type == "application/fhir+json":
+    if format_parameters.format == "application/fhir+json":
         if format_parameters.pretty:
             return Response(
                 content=resource.json(indent=2, separators=(", ", ": ")),
                 status_code=status_code or status.HTTP_200_OK,
-                media_type=content_type,
+                media_type=format_parameters.format,
             )
         else:
             if status_code:
                 return JSONResponse(
                     content=resource.dict(),
                     status_code=status_code,
-                    media_type=content_type,
+                    media_type=format_parameters.format,
                 )
             else:
                 assert (
                     response is not None
                 ), "Response object or status code must be provided for non-pretty JSON responses"
-                response.headers["Content-Type"] = content_type
+                response.headers["Content-Type"] = format_parameters.format
                 return resource
     else:
         return Response(
             content=resource.xml(pretty_print=format_parameters.pretty),
             status_code=status_code or status.HTTP_200_OK,
-            media_type=content_type,
+            media_type=format_parameters.format,
         )
 
 

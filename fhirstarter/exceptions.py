@@ -9,14 +9,9 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from fastapi import Request, status
-from fastapi.responses import Response
 from fhir.resources.operationoutcome import OperationOutcome
 
-from .utils import (
-    format_parameters_from_request,
-    format_response,
-    make_operation_outcome,
-)
+from .utils import make_operation_outcome
 
 
 class FHIRException(Exception, ABC):
@@ -31,30 +26,15 @@ class FHIRException(Exception, ABC):
         super().__init__(*args)
         self._request: Request | None = None
 
-    def response(self) -> Response:
-        try:
-            format_parameters = format_parameters_from_request(self._request)
-        except Exception as exception:
-            raise AssertionError(
-                "Unable to get format parameters from request; request must be set before the "
-                "response is created"
-            ) from exception
-        else:
-            return format_response(
-                resource=self._operation_outcome(),
-                status_code=self._status_code(),
-                format_parameters=format_parameters,
-            )
-
     def set_request(self, request: Request) -> None:
         self._request = request
 
     @abstractmethod
-    def _status_code(self) -> int:
+    def status_code(self) -> int:
         raise NotImplementedError
 
     @abstractmethod
-    def _operation_outcome(self) -> OperationOutcome:
+    def operation_outcome(self) -> OperationOutcome:
         raise NotImplementedError
 
 
@@ -80,10 +60,10 @@ class FHIRGeneralError(FHIRException):
         error._operation_outcome_ = operation_outcome
         return error
 
-    def _status_code(self) -> int:
+    def status_code(self) -> int:
         return self._status_code_
 
-    def _operation_outcome(self) -> OperationOutcome:
+    def operation_outcome(self) -> OperationOutcome:
         return self._operation_outcome_
 
 
@@ -95,10 +75,10 @@ class FHIRUnauthorizedError(FHIRException):
         self._code = code
         self._details_text = details_text
 
-    def _status_code(self) -> int:
+    def status_code(self) -> int:
         return status.HTTP_401_UNAUTHORIZED
 
-    def _operation_outcome(self) -> OperationOutcome:
+    def operation_outcome(self) -> OperationOutcome:
         return make_operation_outcome(
             severity="error", code=self._code, details_text=self._details_text
         )
@@ -107,10 +87,10 @@ class FHIRUnauthorizedError(FHIRException):
 class FHIRResourceNotFoundError(FHIRException):
     """FHIR exception class for 404 not found errors."""
 
-    def _status_code(self) -> int:
+    def status_code(self) -> int:
         return status.HTTP_404_NOT_FOUND
 
-    def _operation_outcome(self) -> OperationOutcome:
+    def operation_outcome(self) -> OperationOutcome:
         try:
             _, resource_type_str, id_ = self._request.url.components.path.split("/")  # type: ignore
         except Exception as exception:
