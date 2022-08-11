@@ -100,7 +100,9 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
         "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} update interaction creates a new current version "
         f"for an existing {resource_type_str} resource.",
-        "responses": _responses(interaction, _ok, _bad_request, _unauthorized, _unprocessable_entity),
+        "responses": _responses(
+            interaction, _ok, _bad_request, _unauthorized, _unprocessable_entity
+        ),
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -162,7 +164,7 @@ def _unauthorized(interaction: TypeInteraction[ResourceType]) -> _Responses:
             "model": OperationOutcome,
             "description": f"{interaction.resource_type.get_resource_type()} "
             f"Authorization is required for the {interaction.label()} interaction that was "
-            "attempted."
+            "attempted.",
         }
     }
 

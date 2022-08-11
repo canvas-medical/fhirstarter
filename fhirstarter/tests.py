@@ -2,6 +2,7 @@
 
 from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
+from tempfile import NamedTemporaryFile
 from typing import Any, cast
 from uuid import uuid4
 
@@ -49,7 +50,11 @@ async def patient_read(id_: Id, **kwargs: Any) -> Patient:
 
 
 async def patient_search_type(
-    family: str | None = None, general_practitioner: str | None = None, **kwargs: Any
+    family: str | None = None,
+    general_practitioner: str | None = None,
+    custom: str | None = None,
+    _last_updated: str | None = None,
+    **kwargs: Any,
 ) -> Bundle:
     """Patient search-type FHIR interaction."""
     patients = []
@@ -82,7 +87,19 @@ async def patient_update(id_: Id, resource: Patient, **kwargs: Any) -> Id:
 
 def _app(provider: FHIRProvider) -> TestClient:
     """Create a FHIRStarter app, add the provider, reset the database, and return a TestClient."""
-    app = FHIRStarter()
+    config_file_contents = """
+[search-parameters.Patient.custom]
+type = "string"
+description = "Custom search parameter"
+uri = "uri"
+include-in-capability-statement = true
+    """
+
+    with NamedTemporaryFile("w") as config_file:
+        config_file.write(config_file_contents)
+        config_file.seek(0)
+        app = FHIRStarter(config_file_name=config_file.name)
+
     app.add_providers(provider)
 
     _DATABASE.clear()
@@ -148,6 +165,18 @@ def _client_create_and_read() -> TestClient:
                             "definition": "http://hl7.org/fhir/SearchParameter/Patient-general-practitioner",
                             "type": "reference",
                             "documentation": "Patient's nominated general practitioner, not the organization that manages the record",
+                        },
+                        {
+                            "name": "custom",
+                            "definition": "uri",
+                            "type": "string",
+                            "documentation": "Custom search parameter",
+                        },
+                        {
+                            "name": "_lastUpdated",
+                            "definition": "http://hl7.org/fhir/SearchParameter/Resource-lastUpdated",
+                            "type": "date",
+                            "documentation": "When the resource version last changed",
                         },
                     ],
                 }
@@ -266,6 +295,7 @@ def test_search_type(
     create_response: Response,
     search_type_func: Callable[[TestClient], Response],
 ) -> None:
+    """Test the FHIR search interaction."""
     id_ = _id_from_create_response(create_response)
     search_type_response = search_type_func(client)
 
