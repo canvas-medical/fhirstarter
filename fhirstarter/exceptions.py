@@ -1,7 +1,7 @@
 """
 Standard exception types for reporting errors.
 
-The exception classes defined here provide a response method which will return a JSONResponse
+The exception classes defined here provide a response method which will return a Response
 containing an OperationOutcome and an HTTP status code.
 """
 
@@ -9,21 +9,45 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from fastapi import Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response
 from fhir.resources.operationoutcome import OperationOutcome
 
-from .utils import make_operation_outcome
+from .utils import (
+    format_parameters_from_request,
+    format_response,
+    make_operation_outcome,
+)
 
 
 class FHIRException(Exception, ABC):
-    """Abstract base class for all FHIR exceptions."""
+    """
+    Abstract base class for all FHIR exceptions.
 
-    def response(self) -> JSONResponse:
-        return JSONResponse(
-            content=self._operation_outcome().dict(),
-            status_code=self._status_code(),
-            media_type="application/fhir+json",
-        )
+    This class provides a set_request method that provides concrete subclasses with the request
+    object for additional context.
+    """
+
+    def __init__(self, *args: Any) -> None:
+        super().__init__(*args)
+        self._request: Request | None = None
+
+    def response(self) -> Response:
+        try:
+            format_parameters = format_parameters_from_request(self._request)
+        except Exception as exception:
+            raise AssertionError(
+                "Unable to get format parameters from request; request must be set before the "
+                "response is created"
+            ) from exception
+        else:
+            return format_response(
+                resource=self._operation_outcome(),
+                status_code=self._status_code(),
+                format_parameters=format_parameters,
+            )
+
+    def set_request(self, request: Request) -> None:
+        self._request = request
 
     @abstractmethod
     def _status_code(self) -> int:
@@ -80,23 +104,7 @@ class FHIRUnauthorizedError(FHIRException):
         )
 
 
-class FHIRInteractionError(FHIRException, ABC):
-    """
-    Abstract base class for exceptions that occur during FHIR interactions.
-
-    This class provides a set_request method that provides concrete subclasses with the request
-    object for additional context.
-    """
-
-    def __init__(self, *args: Any) -> None:
-        super().__init__(*args)
-        self._request: Request | None = None
-
-    def set_request(self, request: Request) -> None:
-        self._request = request
-
-
-class FHIRResourceNotFoundError(FHIRInteractionError):
+class FHIRResourceNotFoundError(FHIRException):
     """FHIR exception class for 404 not found errors."""
 
     def _status_code(self) -> int:
@@ -108,7 +116,7 @@ class FHIRResourceNotFoundError(FHIRInteractionError):
         except Exception as exception:
             raise AssertionError(
                 "Unable to get resource type and resource ID from request; request must be set"
-                "before the operation outcome is constructed"
+                "before the response is created"
             ) from exception
         else:
             return make_operation_outcome(

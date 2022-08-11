@@ -13,10 +13,9 @@ from uuid import uuid4
 import tomli
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from fhir.resources.capabilitystatement import CapabilityStatement
 
-from .exceptions import FHIRException, FHIRInteractionError
+from .exceptions import FHIRException
 from .functions import (
     make_create_function,
     make_read_function,
@@ -32,6 +31,8 @@ from .search_parameters import (
 )
 from .utils import (
     create_route_args,
+    format_parameters_from_request,
+    format_response,
     make_operation_outcome,
     read_route_args,
     search_type_route_args,
@@ -83,9 +84,6 @@ class FHIRStarter(FastAPI):
 
         self.add_exception_handler(
             RequestValidationError, _validation_exception_handler
-        )
-        self.add_exception_handler(
-            FHIRInteractionError, _fhir_interaction_error_handler
         )
         self.add_exception_handler(FHIRException, _fhir_exception_handler)
         self.add_exception_handler(Exception, _exception_handler)
@@ -157,9 +155,14 @@ class FHIRStarter(FastAPI):
     def _add_capabilities_route(self) -> None:
         """Add the /metadata route, which supplies the capability statement for the instance."""
 
-        def capability_statement(response: Response) -> CapabilityStatement:
-            response.headers["Content-Type"] = "application/fhir+json"
-            return self._capability_statement()
+        def capability_statement(
+            request: Request, response: Response
+        ) -> CapabilityStatement | Response:
+            return format_response(
+                resource=self._capability_statement(),
+                response=response,
+                format_parameters=format_parameters_from_request(request),
+            )
 
         self.get(
             "/metadata",
@@ -298,14 +301,15 @@ async def _set_content_type_header(
 
 
 async def _validation_exception_handler(
-    _: Request, exception: RequestValidationError
-) -> JSONResponse:
+    request: Request, exception: RequestValidationError
+) -> Response:
     """
     Validation exception handler that overrides the default FastAPI validation exception handler.
 
     Returns an OperationOutcome.
     """
     return _exception_json_response(
+        request=request,
         severity="error",
         code="structure",
         exception=exception,
@@ -313,11 +317,11 @@ async def _validation_exception_handler(
     )
 
 
-async def _fhir_interaction_error_handler(
-    request: Request, exception: FHIRInteractionError
-) -> JSONResponse:
+async def _fhir_exception_handler(
+    request: Request, exception: FHIRException
+) -> Response:
     """
-    Exception handler that catches FHIRInteractionErrors.
+    General exception handler to catch all other FHIRExceptions. Returns an OperationOutcome.
 
     Set the request on the exception so that the exception has more context with which to form an
     OperationOutcome.
@@ -326,14 +330,10 @@ async def _fhir_interaction_error_handler(
     return exception.response()
 
 
-async def _fhir_exception_handler(_: Request, exception: FHIRException) -> JSONResponse:
-    """General exception handler to catch all other FHIRExceptions. Returns an OperationOutcome."""
-    return exception.response()
-
-
-async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
+async def _exception_handler(request: Request, exception: Exception) -> Response:
     """General exception handler to catch server framework errors. Returns an OperationOutcome."""
     return _exception_json_response(
+        request=request,
         severity="error",
         code="exception",
         exception=exception,
@@ -342,14 +342,14 @@ async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
 
 
 def _exception_json_response(
-    severity: str, code: str, exception: Exception, status_code: int
-) -> JSONResponse:
+    request: Request, severity: str, code: str, exception: Exception, status_code: int
+) -> Response:
     """Create a JSONResponse with an OperationOutcome and an HTTP status code."""
     operation_outcome = make_operation_outcome(
         severity=severity, code=code, details_text=f"{str(exception)}"
     )
-    return JSONResponse(
-        content=operation_outcome.dict(),
+    return format_response(
+        resource=operation_outcome,
         status_code=status_code,
-        media_type="application/fhir+json",
+        format_parameters=format_parameters_from_request(request),
     )

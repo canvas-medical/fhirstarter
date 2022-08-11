@@ -1,5 +1,6 @@
 """FHIRStarter test cases."""
 
+import json
 from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
@@ -11,6 +12,7 @@ from _pytest.monkeypatch import MonkeyPatch
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fhir.resources.bundle import Bundle
+from fhir.resources.capabilitystatement import CapabilityStatement
 from fhir.resources.fhirtypes import Id
 from fhir.resources.humanname import HumanName
 from fhir.resources.patient import Patient
@@ -239,16 +241,68 @@ def test_capability_statement_publisher(
     assert response.json()["publisher"] == "Publisher"
 
 
+def test_capability_statement_pretty(client_create_and_read: TestClient) -> None:
+    """Test the capability statement publisher value that is provided by an environment variable."""
+    client = client_create_and_read
+
+    response = client.get("/metadata?_pretty=true")
+
+    _assert_expected_response(
+        response,
+        status.HTTP_200_OK,
+        content=CapabilityStatement(**response.json()).json(
+            indent=2, separators=(", ", ": ")
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="pretty",
+    argvalues=["false", "true"],
+    ids=["minified", "pretty"],
+)
+def test_capability_statement_xml(
+    client_create_and_read: TestClient, pretty: str
+) -> None:
+    """Test the capability statement publisher value that is provided by an environment variable."""
+    client = client_create_and_read
+
+    response = client.get(f"/metadata?_format=xml&_pretty={pretty}")
+
+    _assert_expected_response(
+        response,
+        status.HTTP_200_OK,
+        content_type="application/fhir+xml",
+        content=CapabilityStatement.parse_raw(
+            response.content, content_type="text/xml"
+        ).xml(pretty_print=(pretty == "true")),
+    )
+
+
 _RESOURCE = {
     "resourceType": "Patient",
+    "id": "",
     "name": [{"family": "Baggins", "given": ["Bilbo"]}],
 }
+
+
+def _resource(id_: str | None = None) -> dict[str, Any]:
+    """
+    Return a test patient resource.
+
+    This will either return a resource with the provided ID inserted, or return a resource with no
+    ID.
+    """
+    if id_:
+        return _RESOURCE | {"id": id_}
+    else:
+        return omit(_RESOURCE, ["id"])
 
 
 @pytest.fixture
 def create_response(client: TestClient) -> Response:
     """Test fixture that provides a response from a FHIR create interaction."""
-    return client.post("/Patient", json=_RESOURCE)
+    return client.post("/Patient", json=_resource())
 
 
 def test_create(create_response: Response) -> None:
@@ -257,12 +311,39 @@ def test_create(create_response: Response) -> None:
 
 
 def test_read(client: TestClient, create_response: Response) -> None:
-    """Test FHIR read interaaction."""
+    """Test FHIR read interaction."""
     id_ = _id_from_create_response(create_response)
     read_response = client.get(f"/Patient/{id_}")
 
+    _assert_expected_response(read_response, status.HTTP_200_OK, content=_resource(id_))
+
+
+def test_read_pretty(client: TestClient, create_response: Response) -> None:
+    """Test FHIR read interaction with prettified output."""
+    id_ = _id_from_create_response(create_response)
+    read_response = client.get(f"/Patient/{id_}?_pretty=true")
+
     _assert_expected_response(
-        read_response, status.HTTP_200_OK, content=_RESOURCE | {"id": id_}
+        read_response, status.HTTP_200_OK, content=_json_dumps_pretty(_resource(id_))
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="pretty",
+    argvalues=["false", "true"],
+    ids=["minified", "pretty"],
+)
+def test_read_xml(client: TestClient, create_response: Response, pretty: str) -> None:
+    """Test FHIR read interaction with XML output."""
+    id_ = _id_from_create_response(create_response)
+
+    read_response = client.get(f"/Patient/{id_}?_format=xml&_pretty={pretty}")
+
+    _assert_expected_response(
+        read_response,
+        status.HTTP_200_OK,
+        content_type="application/fhir+xml",
+        content=Patient(**(_resource(id_))).xml(pretty_print=(pretty == "true")),
     )
 
 
@@ -279,6 +360,46 @@ def test_read_not_found(client: TestClient) -> None:
             code="not-found",
             details_text=f"Unknown Patient resource '{id_}'",
         ).dict(),
+    )
+
+
+def test_read_not_found_pretty(client: TestClient) -> None:
+    """Test FHIR read interaction that produces a 404 not found error with a prettified response."""
+    id_ = _generate_fhir_resource_id()
+    read_response = client.get(f"/Patient/{id_}?_pretty=true")
+
+    _assert_expected_response(
+        read_response,
+        status.HTTP_404_NOT_FOUND,
+        content=_json_dumps_pretty(
+            make_operation_outcome(
+                severity="error",
+                code="not-found",
+                details_text=f"Unknown Patient resource '{id_}'",
+            ).dict()
+        ),
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="pretty",
+    argvalues=["false", "true"],
+    ids=["minified", "pretty"],
+)
+def test_read_not_found_xml(client: TestClient, pretty: str) -> None:
+    """Test FHIR read interaction that produces a 404 not found error with an XML response."""
+    id_ = _generate_fhir_resource_id()
+    read_response = client.get(f"/Patient/{id_}?_format=xml&_pretty={pretty}")
+
+    _assert_expected_response(
+        read_response,
+        status.HTTP_404_NOT_FOUND,
+        content_type="application/fhir+xml",
+        content=make_operation_outcome(
+            severity="error",
+            code="not-found",
+            details_text=f"Unknown Patient resource '{id_}'",
+        ).xml(pretty_print=(pretty == "true")),
     )
 
 
@@ -306,7 +427,7 @@ def test_search_type(
             "resourceType": "Bundle",
             "type": "searchset",
             "total": 1,
-            "entry": [{"resource": _RESOURCE | {"id": id_}}],
+            "entry": [{"resource": _resource(id_)}],
         },
     )
 
@@ -337,7 +458,7 @@ def test_update(client: TestClient, create_response: Response) -> None:
 def test_update_not_found(client: TestClient) -> None:
     """Test FHIR update interaction that produces a 404 not found error."""
     id_ = _generate_fhir_resource_id()
-    put_response = client.put(f"/Patient/{id_}", json=_RESOURCE)
+    put_response = client.put(f"/Patient/{id_}", json=_resource())
 
     _assert_expected_response(
         put_response,
@@ -404,7 +525,7 @@ def test_dependency(provider: FHIRProvider) -> None:
 
     create_response = client.post(
         "/Patient",
-        json=_RESOURCE,
+        json=_resource(),
         headers={"Authorization": f"Bearer {_INVALID_TOKEN}"},
     )
     _assert_expected_response(
@@ -423,7 +544,9 @@ def test_dependency(provider: FHIRProvider) -> None:
     )
 
     create_response = client.post(
-        "/Patient", json=_RESOURCE, headers={"Authorization": f"Bearer {_VALID_TOKEN}"}
+        "/Patient",
+        json=_resource(),
+        headers={"Authorization": f"Bearer {_VALID_TOKEN}"},
     )
     _assert_expected_response(create_response, status.HTTP_201_CREATED)
 
@@ -438,11 +561,21 @@ def _id_from_create_response(response: Response) -> str:
     return response.headers["Location"].split("/")[4]
 
 
+def _json_dumps_pretty(json_: Any) -> str:
+    return json.dumps(json_, indent=2, separators=(", ", ": "))
+
+
 def _assert_expected_response(
-    response: Response, status_code: int, content: dict[str, Any] | None = None
+    response: Response,
+    status_code: int,
+    content_type: str = "application/fhir+json",
+    content: dict[str, Any] | str | None = None,
 ) -> None:
     """Assert the status code, content type header, and content of a response."""
     assert response.status_code == status_code
-    assert response.headers["Content-Type"] == "application/fhir+json"
+    assert response.headers["Content-Type"] == content_type
     if content:
-        assert response.json() == content
+        if isinstance(content, str):
+            assert response.content.decode() == content
+        else:
+            assert response.json() == content

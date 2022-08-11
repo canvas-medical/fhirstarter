@@ -1,11 +1,15 @@
 """Utility functions for creation of routes and responses."""
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from functools import partial
 from typing import Any
 
+from fastapi import Request
+from fastapi.responses import JSONResponse, Response
 from fhir.resources.bundle import Bundle
 from fhir.resources.operationoutcome import OperationOutcome
+from fhir.resources.resource import Resource
 
 from . import status
 from .interactions import ResourceType, TypeInteraction
@@ -26,6 +30,96 @@ def make_operation_outcome(
             ]
         }
     )
+
+
+@dataclass
+class FormatParameters:
+    format: str = "json"
+    pretty: bool = False
+
+
+def format_parameters_from_request(request: Request) -> FormatParameters:
+    return FormatParameters(
+        format=request.query_params.get("_format", "json"),  # type: ignore
+        pretty=request.query_params.get("_pretty", "false") == "true",
+    )
+
+
+_CONTENT_TYPES = {
+    "json": "application/fhir+json",
+    "application/json": "application/fhir+json",
+    "application/fhir+json": "application/fhir+json",
+    "xml": "application/fhir+xml",
+    "text/xml": "application/fhir+xml",
+    "application/xml": "application/fhir+xml",
+    "application/fhir+xml": "application/fhir+xml",
+}
+
+
+def format_response(
+    resource: Resource | None,
+    response: Response | None = None,
+    status_code: int | None = None,
+    format_parameters: FormatParameters = FormatParameters(),
+) -> Resource | Response:
+    """
+    Return a response with the proper formatting applied.
+
+    This function provides a response in JSON or XML format that has been prettified if requested.
+
+    There are six scenarios that are handled:
+    1. Null resource (when there is no body -- no handling required)
+    1. Pretty JSON
+    2. Minified JSON with a status code (mainly for errors)
+    3. Minified JSON with no specified status code (usually the default)
+    4. Pretty XML
+    5. Minified XML
+    """
+    try:
+        content_type = _CONTENT_TYPES[format_parameters.format]
+    except KeyError:
+        from .exceptions import FHIRGeneralError
+
+        raise FHIRGeneralError(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            severity="error",
+            code="structure",
+            details_text="Invalid response format specified for '_format' parameter",
+        )
+
+    if not resource:
+        assert (
+            response is not None
+        ), "Response object must be provided for a null resource"
+        response.headers["Content-Type"] = content_type
+        return resource
+
+    if content_type == "application/fhir+json":
+        if format_parameters.pretty:
+            return Response(
+                content=resource.json(indent=2, separators=(", ", ": ")),
+                status_code=status_code or status.HTTP_200_OK,
+                media_type=content_type,
+            )
+        else:
+            if status_code:
+                return JSONResponse(
+                    content=resource.dict(),
+                    status_code=status_code,
+                    media_type=content_type,
+                )
+            else:
+                assert (
+                    response is not None
+                ), "Response object or status code must be provided for non-pretty JSON responses"
+                response.headers["Content-Type"] = content_type
+                return resource
+    else:
+        return Response(
+            content=resource.xml(pretty_print=format_parameters.pretty),
+            status_code=status_code or status.HTTP_200_OK,
+            media_type=content_type,
+        )
 
 
 def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
@@ -78,8 +172,8 @@ def search_type_route_args(
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
         "summary": f"{resource_type_str} {interaction.label()}",
-        "description": f"The {resource_type_str} search-type interaction searches a set of resources "
-        "based on some filter criteria.",
+        "description": f"The {resource_type_str} search-type interaction searches a set of "
+        "resources based on some filter criteria.",
         "responses": _responses(
             interaction, partial(_ok, search_type=True), _bad_request, _unauthorized
         ),
