@@ -1,8 +1,8 @@
 [capability-statement]
 publisher = "Publisher"
 
-[search-parameters.Patient.custom]
+[search-parameters.Patient.nickname]
 type = "string"
-description = "Custom search parameter"
-uri = "https://hostname/path"
+description = "Nickname"
+uri = "https://hostname/nickname"
 include-in-capability-statement = true

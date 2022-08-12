@@ -62,7 +62,7 @@ async def patient_read(id_: Id, **kwargs: Any) -> Patient:
 async def patient_search_type(
     general_practitioner: str | None = None,
     family: str | None = None,
-    custom: str | None = None,
+    nickname: str | None = None,
     _last_updated: str | None = None,
     **kwargs: Any
 ) -> Bundle:
