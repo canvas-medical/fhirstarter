@@ -293,13 +293,8 @@ async def _set_content_type_header(
     """
     response: Response = await call_next(request)
 
-    for header_name, header_value in response.headers.items():
-        if (header_name.lower(), header_value.lower()) == (
-            "content-type",
-            "application/fhir+json",
-        ):
-            response.headers["Content-Type"] = "application/fhir+json"
-            break
+    if "application/fhir+json" in response.headers.getlist("Content-Type"):
+        response.headers["Content-Type"] = "application/fhir+json"
 
     return response
 

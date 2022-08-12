@@ -50,11 +50,24 @@ class FormatParameters:
     def from_request(
         cls, request: Request, raise_exception: bool = True
     ) -> "FormatParameters":
-        """Parse the _format and _pretty query parameters."""
+        """
+        Parse the _format and _pretty query parameters.
+
+        The value for format is first obtained from the Accept header, and if not specified there is
+        obtained from the _format query parameter.
+        """
+        format_ = None
+        if request.method == "POST":
+            for content_type in request.headers.getlist("Accept"):
+                if content_type_normalized := cls._CONTENT_TYPES.get(content_type):
+                    format_ = content_type_normalized
+                    break
+
         try:
-            format_ = FormatParameters._CONTENT_TYPES[
-                request.query_params.get("_format", "json")
-            ]
+            if not format_:
+                format_ = cls._CONTENT_TYPES[
+                    request.query_params.get("_format", "json")
+                ]
         except KeyError:
             if raise_exception:
                 from .exceptions import FHIRGeneralError
@@ -68,7 +81,7 @@ class FormatParameters:
             else:
                 format_ = "application/fhir+json"
 
-        return FormatParameters(
+        return cls(
             format=format_,  # type: ignore
             pretty=request.query_params.get("_pretty", "false") == "true",
         )
