@@ -45,7 +45,6 @@ from .utils import (
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters and path/query/body parameters
 # TODO: Expose responses FastAPI argument so that developer can specify additional responses
-# TODO: Look into allowing for the capability statement to be amended
 
 
 class FHIRStarter(FastAPI):
@@ -71,8 +70,14 @@ class FHIRStarter(FastAPI):
         if config_file_name:
             with open(config_file_name, "rb") as file_:
                 config = tomli.load(file_)
-                self._search_parameters = SearchParameters(config["search-parameters"])
+                self._publisher = config.get("capability-statement", {}).get(
+                    "publisher"
+                )
+                self._search_parameters = SearchParameters(
+                    config.get("search-parameters")
+                )
         else:
+            self._publisher = None
             self._search_parameters = SearchParameters()
 
         self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
@@ -236,7 +241,6 @@ class FHIRStarter(FastAPI):
             }
             if search_type_interaction := interactions.get("search-type"):
                 supported_search_parameters_ = []
-                # TODO: Test this with a hyphenated search parameter
                 for search_parameter in supported_search_parameters(
                     search_type_interaction.handler
                 ):
@@ -271,8 +275,8 @@ class FHIRStarter(FastAPI):
                 }
             ],
         }
-        if publisher := os.getenv("CAPABILITY_STATEMENT_PUBLISHER"):
-            capability_statement["publisher"] = publisher
+        if self._publisher:
+            capability_statement["publisher"] = self._publisher
 
         return CapabilityStatement(**capability_statement)
 

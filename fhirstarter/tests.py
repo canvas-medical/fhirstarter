@@ -8,7 +8,6 @@ from typing import Any, cast
 from uuid import uuid4
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fhir.resources.bundle import Bundle
@@ -90,6 +89,9 @@ async def patient_update(id_: Id, resource: Patient, **kwargs: Any) -> Id:
 def _app(provider: FHIRProvider) -> TestClient:
     """Create a FHIRStarter app, add the provider, reset the database, and return a TestClient."""
     config_file_contents = """
+[capability-statement]
+publisher = "Publisher"
+
 [search-parameters.Patient.custom]
 type = "string"
 description = "Custom search parameter"
@@ -216,6 +218,7 @@ def test_capability_statement(
         "status": "active",
         "date": app._created.isoformat(),
         "kind": "instance",
+        "publisher": "Publisher",
         "fhirVersion": "4.3.0",
         "format": ["json"],
         "rest": [
@@ -227,12 +230,8 @@ def test_capability_statement(
     }
 
 
-def test_capability_statement_publisher(
-    client_create_and_read: TestClient, monkeypatch: MonkeyPatch
-) -> None:
-    """Test the capability statement publisher value that is provided by an environment variable."""
-    monkeypatch.setenv("CAPABILITY_STATEMENT_PUBLISHER", "Publisher")
-
+def test_capability_statement_publisher(client_create_and_read: TestClient) -> None:
+    """Test the capability statement publisher value that is provided by a config file."""
     client = client_create_and_read
 
     response = client.get("/metadata")
@@ -241,8 +240,18 @@ def test_capability_statement_publisher(
     assert response.json()["publisher"] == "Publisher"
 
 
+def test_capability_statement_no_publisher() -> None:
+    """Test the capability statement with no publisher."""
+    client = TestClient(FHIRStarter())
+
+    response = client.get("/metadata")
+
+    _assert_expected_response(response, status.HTTP_200_OK)
+    assert "publisher" not in response.json()
+
+
 def test_capability_statement_pretty(client_create_and_read: TestClient) -> None:
-    """Test the capability statement publisher value that is provided by an environment variable."""
+    """Test the capability statement with a pretty response."""
     client = client_create_and_read
 
     response = client.get("/metadata?_pretty=true")
@@ -264,7 +273,7 @@ def test_capability_statement_pretty(client_create_and_read: TestClient) -> None
 def test_capability_statement_xml(
     client_create_and_read: TestClient, pretty: str
 ) -> None:
-    """Test the capability statement publisher value that is provided by an environment variable."""
+    """Test the capability statement with an XML response."""
     client = client_create_and_read
 
     response = client.get(f"/metadata?_format=xml&_pretty={pretty}")
@@ -319,7 +328,7 @@ def test_read(client: TestClient, create_response: Response) -> None:
 
 
 def test_read_pretty(client: TestClient, create_response: Response) -> None:
-    """Test FHIR read interaction with prettified output."""
+    """Test FHIR read interaction with a pretty response."""
     id_ = _id_from_create_response(create_response)
     read_response = client.get(f"/Patient/{id_}?_pretty=true")
 
@@ -334,7 +343,7 @@ def test_read_pretty(client: TestClient, create_response: Response) -> None:
     ids=["minified", "pretty"],
 )
 def test_read_xml(client: TestClient, create_response: Response, pretty: str) -> None:
-    """Test FHIR read interaction with XML output."""
+    """Test FHIR read interaction with an XML response."""
     id_ = _id_from_create_response(create_response)
 
     read_response = client.get(f"/Patient/{id_}?_format=xml&_pretty={pretty}")
@@ -364,7 +373,7 @@ def test_read_not_found(client: TestClient) -> None:
 
 
 def test_read_not_found_pretty(client: TestClient) -> None:
-    """Test FHIR read interaction that produces a 404 not found error with a prettified response."""
+    """Test FHIR read interaction that produces a 404 not found error with a pretty response."""
     id_ = _generate_fhir_resource_id()
     read_response = client.get(f"/Patient/{id_}?_pretty=true")
 
@@ -492,6 +501,9 @@ def test_validation_error(client: TestClient) -> None:
 def validate_token(
     authorization: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
 ) -> None:
+    """
+    Ensure that the authorization credentials are bearer credentials with a valid access token.
+    """
     if authorization.scheme != "Bearer" or authorization.credentials != _VALID_TOKEN:
         raise FHIRUnauthorizedError(
             code="unknown", details_text="Authentication failed"
@@ -499,6 +511,7 @@ def validate_token(
 
 
 def provider_with_dependency() -> FHIRProvider:
+    """Create a provider with a provider-level dependency."""
     provider = FHIRProvider(dependencies=[Depends(validate_token)])
     provider.register_create_interaction(Patient)(patient_create)
 
@@ -506,6 +519,7 @@ def provider_with_dependency() -> FHIRProvider:
 
 
 def provider_with_interaction_dependency() -> FHIRProvider:
+    """Create a provider with an interaction-level dependency."""
     provider = FHIRProvider()
     provider.register_create_interaction(
         Patient, dependencies=[Depends(validate_token)]
@@ -561,8 +575,9 @@ def _id_from_create_response(response: Response) -> str:
     return response.headers["Location"].split("/")[4]
 
 
-def _json_dumps_pretty(json_: Any) -> str:
-    return json.dumps(json_, indent=2, separators=(", ", ": "))
+def _json_dumps_pretty(value: Any) -> str:
+    """Dump the value to JSON in pretty format."""
+    return json.dumps(value, indent=2, separators=(", ", ": "))
 
 
 def _assert_expected_response(

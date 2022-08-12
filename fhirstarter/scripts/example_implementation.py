@@ -3,6 +3,7 @@ An example FHIR server implementation using FHIRStarter, with examples showing h
 interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
 """
 from copy import deepcopy
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -15,8 +16,11 @@ from starlette.responses import RedirectResponse
 from fhirstarter import FHIRProvider, FHIRStarter
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 
-# Create the app
-app = FHIRStarter(title="FHIRStarter Example Implementation")
+# Create the app with the provided config file
+app = FHIRStarter(
+    title="FHIRStarter Example Implementation",
+    config_file_name=Path(__file__).parent / "config.toml",
+)
 
 # Create a "database"
 DATABASE: dict[str, Patient] = {}
@@ -56,7 +60,11 @@ async def patient_read(id_: Id, **kwargs: Any) -> Patient:
 # Register the patient search-type FHIR interaction with the provider
 @provider.register_search_type_interaction(Patient)
 async def patient_search_type(
-    general_practitioner: str | None = None, family: str | None = None, **kwargs: Any
+    general_practitioner: str | None = None,
+    family: str | None = None,
+    custom: str | None = None,
+    _last_updated: str | None = None,
+    **kwargs: Any
 ) -> Bundle:
     patients = []
     for patient in DATABASE.values():
