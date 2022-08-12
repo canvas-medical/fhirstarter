@@ -6,43 +6,83 @@ specification.
 import inspect
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from copy import deepcopy
 from functools import cache
 from inspect import Parameter
 from pathlib import Path
 from typing import Any
 
+_EXTRA_SEARCH_PARAMETERS = {
+    "Resource": {
+        "_list": {
+            "type": "string",
+            "description": "All resources in nominated list (by id, Type/id, url or one of the magic List types)",
+            "uri": "http://hl7.org/fhir/SearchParameter/Resource-list",
+            "include-in-capability-statement": True,
+        },
+        "_sort": {
+            "type": "string",
+            "description": "Order to sort results in (can repeat for inner sort orders)\r\n\r\nAllowable Content: Name of a valid search parameter",
+            "include-in-capability-statement": False,
+        },
+        "_count": {
+            "type": "number",
+            "description": "Number of results per page\r\n\r\nAllowable Content: Whole number",
+            "include-in-capability-statement": False,
+        },
+        "_include": {
+            "type": "string",
+            "description": "Other resources to include in the search results that search matches point to\r\n\r\nAllowable Content: SourceType:searchParam(:targetType)",
+            "include-in-capability-statement": False,
+        },
+        "_revinclude": {
+            "type": "string",
+            "description": "Other resources to include in the search results when they refer to search matches\r\n\r\nAllowable Content: SourceType:searchParam(:targetType)",
+            "include-in-capability-statement": False,
+        },
+        "_summary": {
+            "type": "string",
+            "description": "Just return the summary elements (for resources where this is defined)\r\n\r\nAllowable Content: true | false (false is default)",
+            "include-in-capability-statement": False,
+        },
+        "_contained": {
+            "type": "string",
+            "description": "Whether to return resources contained in other resources in the search matches\r\n\r\nAllowable Content: true | false | both (false is default)",
+            "include-in-capability-statement": False,
+        },
+        "_containedType": {
+            "type": "string",
+            "description": "If returning contained resources, whether to return the contained or container resources\r\n\r\nAllowable Content: container | contained",
+            "include-in-capability-statement": False,
+        },
+    }
+}
 
-@cache
-def load_search_parameter_file() -> dict[str, Any]:
-    """Load the search parameters JSON file."""
-    file_path = Path(__file__).parent / "search-parameters.json"
-    with file_path.open() as file_:
-        return json.load(file_)
 
+class SearchParameters:
+    def __init__(
+        self,
+        custom_search_parameters: Mapping[str, Mapping[str, Mapping[str, str]]]
+        | None = None,
+    ):
+        self._custom_search_parameters = custom_search_parameters or {}
 
-@cache
-def get_search_parameter_metadata(resource_type: str) -> dict[str, dict[str, str]]:
-    """Return search parameter metadata for the given resource type."""
-    search_parameter_metadata = {}
+    def get_metadata(self, resource_type: str) -> dict[str, dict[str, str]]:
+        """
+        Return search parameter metadata for the given resource type.
 
-    bundle = load_search_parameter_file()
-
-    for entry in bundle["entry"]:
-        resource = entry["resource"]
-
-        if set(resource["base"]).intersection(
-            {resource_type, "DomainResource", "Resource"}
-        ):
-            search_parameter_metadata[resource["name"]] = {
-                "name": resource["name"],
-                "type": resource["type"],
-                "description": _remove_hyperlinks_from_markdown(
-                    resource["description"]
-                ),
-            }
-
-    return search_parameter_metadata
+        For a given resource type, the search parameter metadata is a union between the search
+        parameter metadata for the resource type itself, DomainResource, Resource, and custom search
+        parameter metadata.
+        """
+        search_parameters = _load_search_parameter_file()
+        return (
+            search_parameters[resource_type]
+            | search_parameters["DomainResource"]
+            | search_parameters["Resource"]
+            | self._custom_search_parameters.get(resource_type, {})
+        )
 
 
 def var_name_to_qp_name(name: str) -> str:
@@ -81,6 +121,48 @@ def supported_search_parameters(search_function: Callable[..., Any]) -> tuple[st
     )
 
 
-def _remove_hyperlinks_from_markdown(markdown: str) -> str:
-    """Remove hyperlinks from markdown text, most likely from search parameter descriptions."""
-    return re.sub(r"\[(.*?)\]\(.*?\)", r"\1", markdown)
+@cache
+def _load_search_parameter_file() -> dict[str, dict[str, dict[str, str]]]:
+    """
+    Load the search parameters JSON file.
+
+    Organize the search parameter file by resource type and return a dict with the data. Initialize
+    the search parameters dict with values that aren't present in the JSON file.
+    """
+    search_parameters: dict = deepcopy(_EXTRA_SEARCH_PARAMETERS)
+
+    file_path = Path(__file__).parent / "search-parameters.json"
+    with file_path.open() as file_:
+        bundle = json.load(file_)
+
+    for entry in bundle["entry"]:
+        resource = entry["resource"]
+
+        for resource_type in resource["base"]:
+            search_parameters.setdefault(resource_type, {})
+            search_parameters[resource_type][resource["name"]] = {
+                "type": resource["type"],
+                "description": _transform_description(
+                    resource["description"], resource_type
+                ),
+                "uri": entry["fullUrl"],
+                "include-in-capability-statement": True,
+            }
+
+    return search_parameters
+
+
+def _transform_description(description: str, resource_type: str) -> str:
+    """
+    Remove other descriptions in the case where the text contains descriptions for multiple resource
+    types, and return only the description for the specified resource type.
+    """
+    if description.startswith("Multiple Resources:"):
+        for description_for_resource_type in description.split("\n"):
+            if description_for_resource_type.startswith(f"* [{resource_type}]"):
+                _, description = description_for_resource_type.split(": ")
+                return description.removesuffix("\r")
+        else:
+            raise AssertionError("Resource type must exist in the description")
+
+    return description

@@ -6,15 +6,16 @@ from collections import defaultdict
 from collections.abc import Callable, Coroutine
 from datetime import datetime
 from functools import cache
+from os import PathLike
 from typing import Any, cast
 from uuid import uuid4
 
+import tomli
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from fhir.resources.capabilitystatement import CapabilityStatement
 
-from .exceptions import FHIRException, FHIRInteractionError
+from .exceptions import FHIRException
 from .functions import (
     make_create_function,
     make_read_function,
@@ -24,12 +25,14 @@ from .functions import (
 from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
 from .search_parameters import (
-    get_search_parameter_metadata,
+    SearchParameters,
     supported_search_parameters,
     var_name_to_qp_name,
 )
 from .utils import (
+    FormatParameters,
     create_route_args,
+    format_response,
     make_operation_outcome,
     read_route_args,
     search_type_route_args,
@@ -42,7 +45,6 @@ from .utils import (
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters and path/query/body parameters
 # TODO: Expose responses FastAPI argument so that developer can specify additional responses
-# TODO: Look into allowing for the capability statement to be amended
 
 
 class FHIRStarter(FastAPI):
@@ -53,27 +55,40 @@ class FHIRStarter(FastAPI):
     and capability statement requests.
     """
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(
+        self, config_file_name: str | PathLike[str] | None = None, **kwargs: Any
+    ) -> None:
         """
         On app creation, the following occurs:
+        * Custom search parameters are loaded
         * Static routes are created (e.g. the capability statement route)
         * Middleware is added (e.g. content-type header handling)
         * Exception handling is added
         """
         super().__init__(**kwargs)
 
+        if config_file_name:
+            with open(config_file_name, "rb") as file_:
+                config = tomli.load(file_)
+                self._publisher = config.get("capability-statement", {}).get(
+                    "publisher"
+                )
+                self._search_parameters = SearchParameters(
+                    config.get("search-parameters")
+                )
+        else:
+            self._publisher = None
+            self._search_parameters = SearchParameters()
+
         self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
         self._created = datetime.utcnow()
 
         self._add_capabilities_route()
 
-        self.middleware("http")(_add_content_type_header)
+        self.middleware("http")(_set_content_type_header)
 
         self.add_exception_handler(
             RequestValidationError, _validation_exception_handler
-        )
-        self.add_exception_handler(
-            FHIRInteractionError, _fhir_interaction_error_handler
         )
         self.add_exception_handler(FHIRException, _fhir_exception_handler)
         self.add_exception_handler(Exception, _exception_handler)
@@ -144,6 +159,16 @@ class FHIRStarter(FastAPI):
 
     def _add_capabilities_route(self) -> None:
         """Add the /metadata route, which supplies the capability statement for the instance."""
+
+        def capability_statement(
+            request: Request, response: Response
+        ) -> CapabilityStatement | Response:
+            return format_response(
+                resource=self._capability_statement(),
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
         self.get(
             "/metadata",
             response_model=CapabilityStatement,
@@ -153,7 +178,7 @@ class FHIRStarter(FastAPI):
             description="The capabilities interaction retrieves the information about a server's "
             "capabilities - which portions of the FHIR specification it supports.",
             response_model_exclude_none=True,
-        )(lambda: self._capability_statement())
+        )(capability_statement)
 
     def _add_route(self, interaction: TypeInteraction[ResourceType]) -> None:
         """
@@ -172,11 +197,22 @@ class FHIRStarter(FastAPI):
                     make_read_function(interaction)
                 )
             case "search-type":
+                search_parameter_metadata = self._search_parameters.get_metadata(
+                    interaction.resource_type.get_resource_type()
+                )
                 self.get(**search_type_route_args(interaction, post=False))(
-                    make_search_type_function(interaction, post=False)
+                    make_search_type_function(
+                        interaction,
+                        search_parameter_metadata=search_parameter_metadata,
+                        post=False,
+                    )
                 )
                 self.post(**search_type_route_args(interaction, post=True))(
-                    make_search_type_function(interaction, post=True)
+                    make_search_type_function(
+                        interaction,
+                        search_parameter_metadata=search_parameter_metadata,
+                        post=True,
+                    )
                 )
             case "update":
                 self.put(**update_route_args(interaction))(
@@ -193,7 +229,9 @@ class FHIRStarter(FastAPI):
         """
         resources = []
         for resource_type, interactions in sorted(self._capabilities.items()):
-            search_parameter_metadata = get_search_parameter_metadata(resource_type)
+            search_parameter_metadata = self._search_parameters.get_metadata(
+                resource_type
+            )
 
             resource = {
                 "type": resource_type,
@@ -203,17 +241,20 @@ class FHIRStarter(FastAPI):
             }
             if search_type_interaction := interactions.get("search-type"):
                 supported_search_parameters_ = []
-                # TODO: Test this with a hyphenated search parameter
                 for search_parameter in supported_search_parameters(
                     search_type_interaction.handler
                 ):
                     search_parameter = var_name_to_qp_name(search_parameter)
-                    supported_search_parameters_.append(
-                        {
-                            "name": search_parameter_metadata[search_parameter]["name"],
-                            "type": search_parameter_metadata[search_parameter]["type"],
-                        }
-                    )
+                    metadata = search_parameter_metadata[search_parameter]
+                    if metadata["include-in-capability-statement"]:
+                        supported_search_parameters_.append(
+                            {
+                                "name": search_parameter,
+                                "definition": metadata["uri"],
+                                "type": metadata["type"],
+                                "documentation": metadata["description"],
+                            }
+                        )
                 resource["searchParam"] = supported_search_parameters_
             resources.append(resource)
 
@@ -234,35 +275,40 @@ class FHIRStarter(FastAPI):
                 }
             ],
         }
-        if publisher := os.getenv("CAPABILITY_STATEMENT_PUBLISHER"):
-            capability_statement["publisher"] = publisher
+        if self._publisher:
+            capability_statement["publisher"] = self._publisher
 
         return CapabilityStatement(**capability_statement)
 
 
-async def _add_content_type_header(
+async def _set_content_type_header(
     request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
 ) -> Response:
-    """Middleware function that changes the content type header to "application/fhir+json"."""
-    # TODO: This casts too wide of a net. It precludes someone from creating an endpoint that sets
-    #  the content type to plain JSON. A future refactor of this should make it more targeted to
-    #  FHIR requests.
+    """
+    Middleware function that changes the content type header to "application/fhir+json".
+
+    For FHIR responses, there will be two content type headers in the response. One will be
+    "application/json" (added by FastAPI), and one will be "application/fhir+json" (added by
+    FHIRStarter). This middleware removes the "application/json" header.
+    """
     response: Response = await call_next(request)
-    if response.headers.get("Content-Type") == "application/json":
+
+    if "application/fhir+json" in response.headers.getlist("Content-Type"):
         response.headers["Content-Type"] = "application/fhir+json"
 
     return response
 
 
 async def _validation_exception_handler(
-    _: Request, exception: RequestValidationError
-) -> JSONResponse:
+    request: Request, exception: RequestValidationError
+) -> Response:
     """
     Validation exception handler that overrides the default FastAPI validation exception handler.
 
     Returns an OperationOutcome.
     """
-    return _exception_json_response(
+    return _exception_response(
+        request=request,
         severity="error",
         code="structure",
         exception=exception,
@@ -270,27 +316,28 @@ async def _validation_exception_handler(
     )
 
 
-async def _fhir_interaction_error_handler(
-    request: Request, exception: FHIRInteractionError
-) -> JSONResponse:
+async def _fhir_exception_handler(
+    request: Request, exception: FHIRException
+) -> Response:
     """
-    Exception handler that catches FHIRInteractionErrors.
+    General exception handler to catch all other FHIRExceptions. Returns an OperationOutcome.
 
     Set the request on the exception so that the exception has more context with which to form an
     OperationOutcome.
     """
     exception.set_request(request)
-    return exception.response()
+
+    return format_response(
+        resource=exception.operation_outcome(),
+        status_code=exception.status_code(),
+        format_parameters=FormatParameters.from_request(request, raise_exception=False),
+    )
 
 
-async def _fhir_exception_handler(_: Request, exception: FHIRException) -> JSONResponse:
-    """General exception handler to catch all other FHIRExceptions. Returns an OperationOutcome."""
-    return exception.response()
-
-
-async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
+async def _exception_handler(request: Request, exception: Exception) -> Response:
     """General exception handler to catch server framework errors. Returns an OperationOutcome."""
-    return _exception_json_response(
+    return _exception_response(
+        request=request,
         severity="error",
         code="exception",
         exception=exception,
@@ -298,11 +345,16 @@ async def _exception_handler(_: Request, exception: Exception) -> JSONResponse:
     )
 
 
-def _exception_json_response(
-    severity: str, code: str, exception: Exception, status_code: int
-) -> JSONResponse:
+def _exception_response(
+    request: Request, severity: str, code: str, exception: Exception, status_code: int
+) -> Response:
     """Create a JSONResponse with an OperationOutcome and an HTTP status code."""
     operation_outcome = make_operation_outcome(
         severity=severity, code=code, details_text=f"{str(exception)}"
     )
-    return JSONResponse(content=operation_outcome.dict(), status_code=status_code)
+
+    return format_response(
+        resource=operation_outcome,
+        status_code=status_code,
+        format_parameters=FormatParameters.from_request(request, raise_exception=False),
+    )

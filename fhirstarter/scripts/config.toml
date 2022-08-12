@@ -1,0 +1,8 @@
+[capability-statement]
+publisher = "Publisher"
+
+[search-parameters.Patient.nickname]
+type = "string"
+description = "Nickname"
+uri = "https://hostname/nickname"
+include-in-capability-statement = true

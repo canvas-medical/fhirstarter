@@ -19,7 +19,6 @@ from inspect import Parameter, signature
 from typing import cast
 
 from fastapi import Body, Form, Path, Query, Request, Response
-from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
@@ -31,17 +30,15 @@ from .interactions import (
     TypeInteraction,
     UpdateInteractionHandler,
 )
-from .search_parameters import (
-    get_search_parameter_metadata,
-    supported_search_parameters,
-    var_name_to_qp_name,
-)
+from .search_parameters import supported_search_parameters, var_name_to_qp_name
+from .utils import FormatParameters, format_response
 
 
 def make_create_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, ResourceType], Coroutine[None, None, ResourceType | None]
+    [Request, Response, ResourceType],
+    Coroutine[None, None, ResourceType | Response | None],
 ]:
     """Make a function suitable for creation of a FHIR create API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
@@ -54,7 +51,7 @@ def make_create_function(
             media_type="application/fhir+json",
             alias=resource_type_str,
         ),
-    ) -> ResourceType | None:
+    ) -> ResourceType | Response | None:
         """
         Function for create interaction.
 
@@ -68,7 +65,11 @@ def make_create_function(
             "Location"
         ] = f"{request.base_url}{resource_type_str}/{id_}/_history/1"
 
-        return result_resource
+        return format_response(
+            resource=result_resource,
+            response=response,
+            format_parameters=FormatParameters.from_request(request),
+        )
 
     create.__annotations__ |= {
         "resource": interaction.resource_type,
@@ -79,7 +80,7 @@ def make_create_function(
 
 def make_read_function(
     interaction: TypeInteraction[ResourceType],
-) -> Callable[[Request, Response, Id], Coroutine[None, None, ResourceType]]:
+) -> Callable[[Request, Response, Id], Coroutine[None, None, ResourceType | Response]]:
     """Make a function suitable for creation of a FHIR read API route."""
 
     async def read(
@@ -90,24 +91,32 @@ def make_read_function(
             alias="id",
             description=Resource.schema()["properties"]["id"]["title"],
         ),
-    ) -> ResourceType:
+    ) -> ResourceType | Response:
         """Function for read interaction."""
         handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
-        return await handler(id_, request=request, response=response)
+        result_resource = await handler(id_, request=request, response=response)
+
+        return format_response(
+            resource=result_resource,
+            response=response,
+            format_parameters=FormatParameters.from_request(request),
+        )
 
     return read
 
 
 # TODO: If possible, map FHIR primitives to correct type annotations for better validation
 def make_search_type_function(
-    interaction: TypeInteraction[ResourceType], post: bool
-) -> Callable[[Request, Response], Coroutine[None, None, Bundle]]:
+    interaction: TypeInteraction[ResourceType],
+    search_parameter_metadata: dict[str, dict[str, str]],
+    post: bool,
+) -> Callable[[Request, Response], Coroutine[None, None, Resource | Response]]:
     """
     Make a function suitable for creation of a FHIR search-type API route.
 
     Creation of a search-type function is more complex than creation of a create, read, or update
-    function due to the variability of search parameters, and due to the need to support GET and
-    POST.
+    function due to the variability of search parameters, support for custom search parameters, and
+    due to the need to support GET and POST.
 
     Search parameter descriptions are pulled from the FHIR specification.
 
@@ -117,14 +126,15 @@ def make_search_type_function(
 
     async def search_type(
         request: Request, response: Response, **kwargs: str
-    ) -> Bundle:
+    ) -> Resource | Response:
         """Function for search-type interaction."""
         handler = cast(SearchTypeInteractionHandler, interaction.handler)
-        return await handler(**kwargs, request=request, response=response)
-
-    search_parameter_metadata = get_search_parameter_metadata(
-        interaction.resource_type.get_resource_type()
-    )
+        bundle = await handler(**kwargs, request=request, response=response)
+        return format_response(
+            resource=bundle,
+            response=response,
+            format_parameters=FormatParameters.from_request(request),
+        )
 
     search_parameters: tuple[Parameter, ...] = tuple(
         _make_search_parameter(
@@ -150,7 +160,8 @@ def make_search_type_function(
 def make_update_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, Id, ResourceType], Coroutine[None, None, ResourceType | None]
+    [Request, Response, Id, ResourceType],
+    Coroutine[None, None, ResourceType | Response | None],
 ]:
     """Make a function suitable for creation of a FHIR update API route."""
 
@@ -167,12 +178,16 @@ def make_update_function(
             media_type="application/fhir+json",
             alias=interaction.resource_type.get_resource_type(),
         ),
-    ) -> ResourceType | None:
+    ) -> ResourceType | Response | None:
         handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
         result = await handler(id_, resource, request=request, response=response)
         _, result_resource = _result_to_id_resource_tuple(result)
 
-        return result_resource
+        return format_response(
+            resource=result_resource,
+            response=response,
+            format_parameters=FormatParameters.from_request(request),
+        )
 
     update.__annotations__ |= {
         "resource": interaction.resource_type,

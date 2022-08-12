@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fhirstarter"
-version = "0.2.3"
+version = "0.3.0"
 description = "A FHIR API framework built on top of FastAPI and FHIR Resources"
 authors = ["Christopher Sande <christopher.sande@canvasmedical.com>"]
 
@@ -8,7 +8,9 @@ authors = ["Christopher Sande <christopher.sande@canvasmedical.com>"]
 python = "^3.10"
 fastapi = "^0.77.1"
 "fhir.resources" = "^6.4.0"
+lxml = "^4.9.1"
 python-multipart = "^0.0.5"
+tomli = "^2.0.1"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"

@@ -1,6 +1,6 @@
 """FHIRProvider class, for registering FHIR interactions with a FHIRStarter app."""
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, Protocol, TypeVar
 
 from fastapi import params
@@ -28,7 +28,7 @@ class TypeInteractionType(Protocol[ResourceType]):
     def __call__(
         resource_type: type[ResourceType],
         handler: InteractionHandler[ResourceType],
-        route_options: dict[str, Any],
+        route_options: Mapping[str, Any],
     ) -> TypeInteraction[ResourceType]:
         ...
 
