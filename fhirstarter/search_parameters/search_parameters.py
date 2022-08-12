@@ -6,7 +6,7 @@ specification.
 import inspect
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from copy import deepcopy
 from functools import cache
 from inspect import Parameter
@@ -63,7 +63,8 @@ _EXTRA_SEARCH_PARAMETERS = {
 class SearchParameters:
     def __init__(
         self,
-        custom_search_parameters: dict[str, dict[str, dict[str, str]]] | None = None,
+        custom_search_parameters: Mapping[str, Mapping[str, Mapping[str, str]]]
+        | None = None,
     ):
         self._custom_search_parameters = custom_search_parameters or {}
 
