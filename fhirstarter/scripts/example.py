@@ -62,7 +62,7 @@ async def patient_search_type(
     context: InteractionContext,
     general_practitioner: str | None,
     family: str | None,
-    nickname: str | None,
+    nickname: list[str] | None,
     _last_updated: str | None,
 ) -> Bundle:
     patients = []

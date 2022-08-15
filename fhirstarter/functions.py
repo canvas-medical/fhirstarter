@@ -167,13 +167,14 @@ def make_search_type_function(
 
     search_parameters: tuple[Parameter, ...] = tuple(
         _make_search_parameter(
-            name=name,
-            description=search_parameter_metadata[var_name_to_qp_name(name)][
-                "description"
-            ],
+            name=search_parameter.name,
+            description=search_parameter_metadata[
+                var_name_to_qp_name(search_parameter.name)
+            ]["description"],
             post=post,
+            multiple=search_parameter.multiple,
         )
-        for name in supported_search_parameters(interaction.handler)
+        for search_parameter in supported_search_parameters(interaction.handler)
     )
 
     sig = signature(search_type)
@@ -255,7 +256,9 @@ def _result_to_id_resource_tuple(
         return result, None
 
 
-def _make_search_parameter(name: str, description: str, post: bool) -> Parameter:
+def _make_search_parameter(
+    name: str, description: str, post: bool, multiple: bool
+) -> Parameter:
     """
     Make a search parameter for the purpose of creating a function signature.
 
@@ -271,7 +274,7 @@ def _make_search_parameter(name: str, description: str, post: bool) -> Parameter
         default=Form(None, alias=var_name_to_qp_name(name), description=description)
         if post
         else Query(None, alias=var_name_to_qp_name(name), description=description),
-        annotation=str,
+        annotation=list[str] if multiple else str,
     )
 
 

@@ -1,7 +1,6 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
 import asyncio
-import uvloop
 import itertools
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
@@ -11,6 +10,7 @@ from os import PathLike
 from typing import Any, cast
 
 import tomli
+import uvloop
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fhir.resources.capabilitystatement import CapabilityStatement
@@ -251,12 +251,12 @@ class FHIRStarter(FastAPI):
                 for search_parameter in supported_search_parameters(
                     search_type_interaction.handler
                 ):
-                    search_parameter = var_name_to_qp_name(search_parameter)
-                    metadata = search_parameter_metadata[search_parameter]
+                    search_parameter_name = var_name_to_qp_name(search_parameter.name)
+                    metadata = search_parameter_metadata[search_parameter_name]
                     if metadata["include-in-capability-statement"]:
                         supported_search_parameters_.append(
                             {
-                                "name": search_parameter,
+                                "name": search_parameter_name,
                                 "definition": metadata["uri"],
                                 "type": metadata["type"],
                                 "documentation": metadata["description"],
