@@ -11,6 +11,7 @@ fastapi = "^0.77.1"
 lxml = "^4.9.1"
 python-multipart = "^0.0.5"
 tomli = "^2.0.1"
+uvloop = "^0.16.0"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"

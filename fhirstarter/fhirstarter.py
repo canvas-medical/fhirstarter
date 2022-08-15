@@ -1,5 +1,7 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
+import asyncio
+import uvloop
 import itertools
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
@@ -45,6 +47,8 @@ from .utils import (
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters and path/query/body parameters
 # TODO: Expose responses FastAPI argument so that developer can specify additional responses
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class FHIRStarter(FastAPI):
