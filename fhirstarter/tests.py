@@ -21,6 +21,7 @@ from requests.models import Response
 from . import status
 from .exceptions import FHIRResourceNotFoundError, FHIRUnauthorizedError
 from .fhirstarter import FHIRStarter
+from .interactions import InteractionContext
 from .providers import FHIRProvider
 from .testclient import TestClient
 from .utils import make_operation_outcome
@@ -32,7 +33,7 @@ _VALID_TOKEN = "valid"
 _INVALID_TOKEN = "invalid"
 
 
-async def patient_create(resource: Patient, **kwargs: Any) -> Id:
+async def patient_create(_: InteractionContext, resource: Patient) -> Id:
     """Patient create FHIR interaction."""
     patient = deepcopy(resource)
     patient.id = _generate_fhir_resource_id()
@@ -41,7 +42,7 @@ async def patient_create(resource: Patient, **kwargs: Any) -> Id:
     return Id(patient.id)
 
 
-async def patient_read(id_: Id, **kwargs: Any) -> Patient:
+async def patient_read(_: InteractionContext, id_: Id) -> Patient:
     """Patient read FHIR interaction."""
     patient = _DATABASE.get(id_)
     if not patient:
@@ -51,11 +52,11 @@ async def patient_read(id_: Id, **kwargs: Any) -> Patient:
 
 
 async def patient_search_type(
-    family: str | None = None,
-    general_practitioner: str | None = None,
-    custom: str | None = None,
-    _last_updated: str | None = None,
-    **kwargs: Any,
+    _: InteractionContext,
+    family: str | None,
+    general_practitioner: str | None,
+    custom: str | None,
+    _last_updated: str | None,
 ) -> Bundle:
     """Patient search-type FHIR interaction."""
     patients = []
@@ -75,7 +76,7 @@ async def patient_search_type(
     return bundle
 
 
-async def patient_update(id_: Id, resource: Patient, **kwargs: Any) -> Id:
+async def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> Id:
     """Patient update FHIR interaction."""
     if id_ not in _DATABASE:
         raise FHIRResourceNotFoundError

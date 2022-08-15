@@ -13,6 +13,8 @@ from inspect import Parameter
 from pathlib import Path
 from typing import Any
 
+from ..interactions import InteractionContext
+
 _EXTRA_SEARCH_PARAMETERS = {
     "Resource": {
         "_list": {
@@ -116,7 +118,7 @@ def supported_search_parameters(search_function: Callable[..., Any]) -> tuple[st
     return tuple(
         name
         for name, parameter in inspect.signature(search_function).parameters.items()
-        if name not in {"request", "response"}
+        if parameter.annotation != InteractionContext
         and parameter.kind not in {Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL}
     )
 

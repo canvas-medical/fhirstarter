@@ -2,6 +2,7 @@
 
 from abc import abstractmethod
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any, Generic, Literal, Protocol, TypeVar
 
 from fastapi import Request, Response
@@ -12,12 +13,20 @@ from fhir.resources.resource import Resource
 ResourceType = TypeVar("ResourceType", bound=Resource)
 
 
+@dataclass
+class InteractionContext:
+    request: Request
+    response: Response
+
+
 # TODO: Revisit definition of callback protocols and see if it is possible to make Mypy like them
 class CreateInteractionHandler(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a handler for a FHIR create interaction."""
 
     async def __call__(
-        self, resource: ResourceType, *, request: Request, response: Response
+        self,
+        context: InteractionContext,
+        resource: ResourceType,
     ) -> Id | ResourceType:
         ...
 
@@ -25,9 +34,7 @@ class CreateInteractionHandler(Protocol[ResourceType]):  # type: ignore
 class ReadInteractionHandler(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a handler for a FHIR read interaction."""
 
-    async def __call__(
-        self, id_: Id, *, request: Request, response: Response
-    ) -> ResourceType:
+    async def __call__(self, context: InteractionContext, id_: Id) -> ResourceType:
         ...
 
 
@@ -36,9 +43,7 @@ class SearchTypeInteractionHandler(Protocol):
     Callback protocol that defines the signature of a handler for a FHIR search-type interaction.
     """
 
-    async def __call__(
-        self, *, request: Request, response: Response, **kwargs: Any
-    ) -> Bundle:
+    async def __call__(self, context: InteractionContext, **kwargs: Any) -> Bundle:
         ...
 
 
@@ -46,7 +51,7 @@ class UpdateInteractionHandler(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a handler for a FHIR update interaction."""
 
     async def __call__(
-        self, id_: Id, resource: ResourceType, *, request: Request, response: Response
+        self, context: InteractionContext, id_: Id, resource: ResourceType
     ) -> Id | ResourceType:
         ...
 

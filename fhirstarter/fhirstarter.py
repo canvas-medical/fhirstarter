@@ -1,14 +1,12 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
 import itertools
-import os
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
 from datetime import datetime
 from functools import cache
 from os import PathLike
 from typing import Any, cast
-from uuid import uuid4
 
 import tomli
 from fastapi import FastAPI, Request, Response, status
@@ -17,6 +15,8 @@ from fhir.resources.capabilitystatement import CapabilityStatement
 
 from .exceptions import FHIRException
 from .functions import (
+    FORMAT_QP,
+    PRETTY_QP,
     make_create_function,
     make_read_function,
     make_search_type_function,
@@ -161,7 +161,10 @@ class FHIRStarter(FastAPI):
         """Add the /metadata route, which supplies the capability statement for the instance."""
 
         def capability_statement(
-            request: Request, response: Response
+            request: Request,
+            response: Response,
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
         ) -> CapabilityStatement | Response:
             return format_response(
                 resource=self._capability_statement(),
@@ -262,7 +265,6 @@ class FHIRStarter(FastAPI):
         # TODO: Date could be the release date (from an environment variable)
         # TODO: Add XML format
         capability_statement = {
-            "id": str(uuid4()),
             "status": "active",
             "date": self._created,
             "kind": "instance",
