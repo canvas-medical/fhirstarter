@@ -144,6 +144,7 @@ def make_search_type_function(
     async def search_type(
         request: Request,
         response: Response,
+        *,
         _format: str = FORMAT_QP,
         _pretty: str = PRETTY_QP,
         **kwargs: str,
@@ -172,12 +173,27 @@ def make_search_type_function(
             ],
             post=post,
         )
-        for name in sorted(supported_search_parameters(interaction.handler))
+        for name in supported_search_parameters(interaction.handler)
     )
 
     sig = signature(search_type)
     parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
-    sig = sig.replace(parameters=parameters + search_parameters)
+
+    sorted_search_parameters: list[Parameter] = sorted(
+        sorted(
+            sorted(
+                sorted(
+                    parameters + search_parameters,
+                    key=lambda p: var_name_to_qp_name(p.name),
+                ),
+                key=lambda p: p.name.startswith("_"),
+            ),
+            key=lambda p: p.annotation != Response,
+        ),
+        key=lambda p: p.annotation != Request,
+    )
+
+    sig = sig.replace(parameters=sorted_search_parameters)
     setattr(search_type, "__signature__", sig)
 
     return search_type
