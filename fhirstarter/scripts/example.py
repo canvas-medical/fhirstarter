@@ -37,7 +37,7 @@ provider = FHIRProvider()
 
 
 # Register the patient create FHIR interaction with the provider
-@provider.register_create_interaction(Patient)
+@provider.create(Patient)
 async def patient_create(context: InteractionContext, resource: Patient) -> Id:
     patient = deepcopy(resource)
     patient.id = Id(uuid4().hex)
@@ -47,7 +47,7 @@ async def patient_create(context: InteractionContext, resource: Patient) -> Id:
 
 
 # Register the patient read FHIR interaction with the provider
-@provider.register_read_interaction(Patient)
+@provider.read(Patient)
 async def patient_read(context: InteractionContext, id_: Id) -> Patient:
     patient = DATABASE.get(id_)
     if not patient:
@@ -57,7 +57,7 @@ async def patient_read(context: InteractionContext, id_: Id) -> Patient:
 
 
 # Register the patient search-type FHIR interaction with the provider
-@provider.register_search_type_interaction(Patient)
+@provider.search_type(Patient)
 async def patient_search_type(
     context: InteractionContext,
     general_practitioner: str | None,
@@ -83,7 +83,7 @@ async def patient_search_type(
 
 
 # Register the patient update FHIR interaction with the provider
-@provider.register_update_interaction(Patient)
+@provider.update(Patient)
 async def patient_update(context: InteractionContext, id_: Id, resource: Patient) -> Id:
     if id_ not in DATABASE:
         raise FHIRResourceNotFoundError

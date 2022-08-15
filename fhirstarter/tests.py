@@ -121,10 +121,10 @@ def client() -> TestClient:
 def _client() -> TestClient:
     """Create an app that provides all FHIR interactions."""
     provider = FHIRProvider()
-    provider.register_create_interaction(Patient)(patient_create)
-    provider.register_read_interaction(Patient)(patient_read)
-    provider.register_search_type_interaction(Patient)(patient_search_type)
-    provider.register_update_interaction(Patient)(patient_update)
+    provider.create(Patient)(patient_create)
+    provider.read(Patient)(patient_read)
+    provider.search_type(Patient)(patient_search_type)
+    provider.update(Patient)(patient_update)
 
     return _app(provider)
 
@@ -138,8 +138,8 @@ def client_create_and_read() -> TestClient:
 def _client_create_and_read() -> TestClient:
     """Create an app that only provides FHIR create and read interactions."""
     provider = FHIRProvider()
-    provider.register_create_interaction(Patient)(patient_create)
-    provider.register_read_interaction(Patient)(patient_read)
+    provider.create(Patient)(patient_create)
+    provider.read(Patient)(patient_read)
 
     return _app(provider)
 
@@ -514,7 +514,7 @@ def validate_token(
 def provider_with_dependency() -> FHIRProvider:
     """Create a provider with a provider-level dependency."""
     provider = FHIRProvider(dependencies=[Depends(validate_token)])
-    provider.register_create_interaction(Patient)(patient_create)
+    provider.create(Patient)(patient_create)
 
     return provider
 
@@ -522,9 +522,7 @@ def provider_with_dependency() -> FHIRProvider:
 def provider_with_interaction_dependency() -> FHIRProvider:
     """Create a provider with an interaction-level dependency."""
     provider = FHIRProvider()
-    provider.register_create_interaction(
-        Patient, dependencies=[Depends(validate_token)]
-    )(patient_create)
+    provider.create(Patient, dependencies=[Depends(validate_token)])(patient_create)
 
     return provider
 
