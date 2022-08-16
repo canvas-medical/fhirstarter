@@ -8,10 +8,12 @@ import json
 import re
 from collections.abc import Callable, Mapping
 from copy import deepcopy
+from dataclasses import dataclass
 from functools import cache
-from inspect import Parameter
 from pathlib import Path
 from typing import Any
+
+from ..interactions import InteractionContext
 
 _EXTRA_SEARCH_PARAMETERS = {
     "Resource": {
@@ -105,7 +107,15 @@ def var_name_to_qp_name(name: str) -> str:
     return name.replace("_", "-")
 
 
-def supported_search_parameters(search_function: Callable[..., Any]) -> tuple[str, ...]:
+@dataclass
+class SupportedSearchParameter:
+    name: str
+    multiple: bool
+
+
+def supported_search_parameters(
+    search_function: Callable[..., Any]
+) -> tuple[SupportedSearchParameter, ...]:
     """
     Given a callable, return a list of the parameter names in the function (excluding variadic
     keyword and variadic positional arguments).
@@ -113,11 +123,14 @@ def supported_search_parameters(search_function: Callable[..., Any]) -> tuple[st
     This function is used to determine what search parameters are supported by the handler supplied
     for a registered FHIR search interaction.
     """
+    # TODO: There is probably a more sophisticated way of figuring out if list[str] is part of an
+    #  annotation, but this is sufficient for now.
     return tuple(
-        name
+        SupportedSearchParameter(
+            name=name, multiple="list[str]" in str(parameter.annotation)  # type: ignore
+        )
         for name, parameter in inspect.signature(search_function).parameters.items()
-        if name not in {"request", "response"}
-        and parameter.kind not in {Parameter.VAR_KEYWORD, Parameter.VAR_POSITIONAL}
+        if parameter.annotation != InteractionContext
     )
 
 

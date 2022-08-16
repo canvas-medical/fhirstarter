@@ -24,6 +24,7 @@ from fhir.resources.resource import Resource
 
 from .interactions import (
     CreateInteractionHandler,
+    InteractionContext,
     ReadInteractionHandler,
     ResourceType,
     SearchTypeInteractionHandler,
@@ -33,11 +34,21 @@ from .interactions import (
 from .search_parameters import supported_search_parameters, var_name_to_qp_name
 from .utils import FormatParameters, format_response
 
+_FORMAT_PARAMETER_DESCRIPTION = (
+    "Override the HTTP content negotiation to specify JSON or XML response format"
+)
+_PRETTY_PARAMETER_DESCRIPTION = (
+    "Ask for a pretty printed response for human convenience"
+)
+
+FORMAT_QP = Query(None, description=_FORMAT_PARAMETER_DESCRIPTION)
+PRETTY_QP = Query(None, description=_PRETTY_PARAMETER_DESCRIPTION)
+
 
 def make_create_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, ResourceType],
+    [Request, Response, str, str, ResourceType],
     Coroutine[None, None, ResourceType | Response | None],
 ]:
     """Make a function suitable for creation of a FHIR create API route."""
@@ -46,6 +57,8 @@ def make_create_function(
     async def create(
         request: Request,
         response: Response,
+        _format: str = FORMAT_QP,
+        _pretty: str = PRETTY_QP,
         resource: ResourceType = Body(
             None,
             media_type="application/fhir+json",
@@ -58,7 +71,7 @@ def make_create_function(
         Calls the handler, and sets the Location header based on the Id of the created resource.
         """
         handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
-        result = await handler(resource, request=request, response=response)
+        result = await handler(InteractionContext(request, response), resource)  # type: ignore
         id_, result_resource = _result_to_id_resource_tuple(result)
 
         response.headers[
@@ -80,7 +93,9 @@ def make_create_function(
 
 def make_read_function(
     interaction: TypeInteraction[ResourceType],
-) -> Callable[[Request, Response, Id], Coroutine[None, None, ResourceType | Response]]:
+) -> Callable[
+    [Request, Response, Id, str, str], Coroutine[None, None, ResourceType | Response]
+]:
     """Make a function suitable for creation of a FHIR read API route."""
 
     async def read(
@@ -91,10 +106,12 @@ def make_read_function(
             alias="id",
             description=Resource.schema()["properties"]["id"]["title"],
         ),
+        _format: str = FORMAT_QP,
+        _pretty: str = PRETTY_QP,
     ) -> ResourceType | Response:
         """Function for read interaction."""
         handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
-        result_resource = await handler(id_, request=request, response=response)
+        result_resource = await handler(InteractionContext(request, response), id_)  # type: ignore
 
         return format_response(
             resource=result_resource,
@@ -110,7 +127,9 @@ def make_search_type_function(
     interaction: TypeInteraction[ResourceType],
     search_parameter_metadata: dict[str, dict[str, str]],
     post: bool,
-) -> Callable[[Request, Response], Coroutine[None, None, Resource | Response]]:
+) -> Callable[
+    [Request, Response, str, str], Coroutine[None, None, Resource | Response]
+]:
     """
     Make a function suitable for creation of a FHIR search-type API route.
 
@@ -124,12 +143,31 @@ def make_search_type_function(
     parameters are supported by the developer-defined handler.
     """
 
+    if post:
+        format_annotation = Form(None, description=_FORMAT_PARAMETER_DESCRIPTION)
+        pretty_annotation = Form(None, description=_PRETTY_PARAMETER_DESCRIPTION)
+    else:
+        format_annotation = FORMAT_QP
+        pretty_annotation = PRETTY_QP
+
     async def search_type(
-        request: Request, response: Response, **kwargs: str
+        request: Request,
+        response: Response,
+        *,
+        _format: str = format_annotation,
+        _pretty: str = pretty_annotation,
+        **kwargs: str,
     ) -> Resource | Response:
         """Function for search-type interaction."""
         handler = cast(SearchTypeInteractionHandler, interaction.handler)
-        bundle = await handler(**kwargs, request=request, response=response)
+
+        # TODO: The FHIR spec technically states that for search by POST, the union of query and
+        #  form parameters should be used as the search parameter set. Example: a query parameter
+        #  and form parameter with the same name is passed by the user to an endpoint that accepts
+        #  multiple values for the search parameter in question. In this scenario, the two values
+        #  should be combined into a list. If we ever seek to do this, the union would be created
+        #  here, and passed in as kwargs.
+        bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore
         return format_response(
             resource=bundle,
             response=response,
@@ -138,20 +176,31 @@ def make_search_type_function(
 
     search_parameters: tuple[Parameter, ...] = tuple(
         _make_search_parameter(
-            name=name,
-            description=search_parameter_metadata[var_name_to_qp_name(name)][
-                "description"
-            ],
+            name=search_parameter.name,
+            description=search_parameter_metadata[
+                var_name_to_qp_name(search_parameter.name)
+            ]["description"],
             post=post,
+            multiple=search_parameter.multiple,
         )
-        for name in sorted(supported_search_parameters(interaction.handler))
+        for search_parameter in supported_search_parameters(interaction.handler)
     )
 
-    # TODO: Might need to add kwargs back on at the end (also potentially true for create, read,
-    #  and update)
     sig = signature(search_type)
     parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
-    sig = sig.replace(parameters=parameters + search_parameters)
+
+    sorted_search_parameters: list[Parameter] = sorted(
+        parameters + search_parameters,
+        key=lambda p: (
+            p.annotation != Request,
+            p.annotation != Response,
+            p.name.startswith("_"),
+            var_name_to_qp_name(p.name) not in search_parameter_metadata,
+            var_name_to_qp_name(p.name),
+        ),
+    )
+
+    sig = sig.replace(parameters=sorted_search_parameters)
     setattr(search_type, "__signature__", sig)
 
     return search_type
@@ -160,7 +209,7 @@ def make_search_type_function(
 def make_update_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, Id, ResourceType],
+    [Request, Response, Id, str, str, ResourceType],
     Coroutine[None, None, ResourceType | Response | None],
 ]:
     """Make a function suitable for creation of a FHIR update API route."""
@@ -173,6 +222,8 @@ def make_update_function(
             alias="id",
             description=Resource.schema()["properties"]["id"]["title"],
         ),
+        _format: str = FORMAT_QP,
+        _pretty: str = PRETTY_QP,
         resource: ResourceType = Body(
             None,
             media_type="application/fhir+json",
@@ -180,7 +231,7 @@ def make_update_function(
         ),
     ) -> ResourceType | Response | None:
         handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
-        result = await handler(id_, resource, request=request, response=response)
+        result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore
         _, result_resource = _result_to_id_resource_tuple(result)
 
         return format_response(
@@ -211,7 +262,9 @@ def _result_to_id_resource_tuple(
         return result, None
 
 
-def _make_search_parameter(name: str, description: str, post: bool) -> Parameter:
+def _make_search_parameter(
+    name: str, description: str, post: bool, multiple: bool
+) -> Parameter:
     """
     Make a search parameter for the purpose of creating a function signature.
 
@@ -227,7 +280,7 @@ def _make_search_parameter(name: str, description: str, post: bool) -> Parameter
         default=Form(None, alias=var_name_to_qp_name(name), description=description)
         if post
         else Query(None, alias=var_name_to_qp_name(name), description=description),
-        annotation=str,
+        annotation=list[str] if multiple else str,
     )
 
 
@@ -239,9 +292,8 @@ def _is_valid_parameter_name(name: str) -> bool:
     meaning in Python or this package.
     """
     return not keyword.iskeyword(name) and name not in {
+        "context",
         "format",
-        "request",
-        "response",
         "resource",
         "type",
     }

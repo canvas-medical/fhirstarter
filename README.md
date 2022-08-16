@@ -28,7 +28,8 @@ In order to stand up a FHIR server, all that is required is to create a FHIRStar
 import uvicorn
 from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
-from fhirstarter import FHIRProvider, FHIRStarter
+
+from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 
 # Create the app
@@ -37,9 +38,10 @@ app = FHIRStarter()
 # Create a provider
 provider = FHIRProvider()
 
+
 # Register the patient read FHIR interaction with the provider
-@provider.register_read_interaction(Patient)
-async def patient_read(id_: Id, **kwargs: str) -> Patient:
+@provider.read(Patient)
+async def patient_read(context: InteractionContext, id_: Id) -> Patient:
     # Get the patient from the database
     patient = ...
 
@@ -48,9 +50,10 @@ async def patient_read(id_: Id, **kwargs: str) -> Patient:
 
     return Patient(
         **{
-            ... # Map patient from database to FHIR Patient structure
+            ...  # Map patient from database to FHIR Patient structure
         }
     )
+
 
 # Add the provider to the app
 app.add_providers(provider)

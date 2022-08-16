@@ -3,6 +3,7 @@
 import json
 from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
+from functools import partial
 from tempfile import NamedTemporaryFile
 from typing import Any, cast
 from uuid import uuid4
@@ -21,6 +22,7 @@ from requests.models import Response
 from . import status
 from .exceptions import FHIRResourceNotFoundError, FHIRUnauthorizedError
 from .fhirstarter import FHIRStarter
+from .interactions import InteractionContext
 from .providers import FHIRProvider
 from .testclient import TestClient
 from .utils import make_operation_outcome
@@ -32,7 +34,7 @@ _VALID_TOKEN = "valid"
 _INVALID_TOKEN = "invalid"
 
 
-async def patient_create(resource: Patient, **kwargs: Any) -> Id:
+async def patient_create(_: InteractionContext, resource: Patient) -> Id:
     """Patient create FHIR interaction."""
     patient = deepcopy(resource)
     patient.id = _generate_fhir_resource_id()
@@ -41,7 +43,7 @@ async def patient_create(resource: Patient, **kwargs: Any) -> Id:
     return Id(patient.id)
 
 
-async def patient_read(id_: Id, **kwargs: Any) -> Patient:
+async def patient_read(_: InteractionContext, id_: Id) -> Patient:
     """Patient read FHIR interaction."""
     patient = _DATABASE.get(id_)
     if not patient:
@@ -51,11 +53,11 @@ async def patient_read(id_: Id, **kwargs: Any) -> Patient:
 
 
 async def patient_search_type(
-    family: str | None = None,
-    general_practitioner: str | None = None,
-    custom: str | None = None,
-    _last_updated: str | None = None,
-    **kwargs: Any,
+    _: InteractionContext,
+    family: str | None,
+    general_practitioner: str | None,
+    nickname: str | None,
+    _last_updated: str | None,
 ) -> Bundle:
     """Patient search-type FHIR interaction."""
     patients = []
@@ -68,14 +70,14 @@ async def patient_search_type(
         **{
             "type": "searchset",
             "total": len(patients),
-            "entry": [{"resource": {**patient.dict()}} for patient in patients],
+            "entry": [{"resource": patient.dict()} for patient in patients],
         }
     )
 
     return bundle
 
 
-async def patient_update(id_: Id, resource: Patient, **kwargs: Any) -> Id:
+async def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> Id:
     """Patient update FHIR interaction."""
     if id_ not in _DATABASE:
         raise FHIRResourceNotFoundError
@@ -92,10 +94,10 @@ def _app(provider: FHIRProvider) -> TestClient:
 [capability-statement]
 publisher = "Publisher"
 
-[search-parameters.Patient.custom]
+[search-parameters.Patient.nickname]
 type = "string"
-description = "Custom search parameter"
-uri = "uri"
+description = "Nickname"
+uri = "https://hostname/nickname"
 include-in-capability-statement = true
     """
 
@@ -120,10 +122,10 @@ def client() -> TestClient:
 def _client() -> TestClient:
     """Create an app that provides all FHIR interactions."""
     provider = FHIRProvider()
-    provider.register_create_interaction(Patient)(patient_create)
-    provider.register_read_interaction(Patient)(patient_read)
-    provider.register_search_type_interaction(Patient)(patient_search_type)
-    provider.register_update_interaction(Patient)(patient_update)
+    provider.create(Patient)(patient_create)
+    provider.read(Patient)(patient_read)
+    provider.search_type(Patient)(patient_search_type)
+    provider.update(Patient)(patient_update)
 
     return _app(provider)
 
@@ -137,8 +139,8 @@ def client_create_and_read() -> TestClient:
 def _client_create_and_read() -> TestClient:
     """Create an app that only provides FHIR create and read interactions."""
     provider = FHIRProvider()
-    provider.register_create_interaction(Patient)(patient_create)
-    provider.register_read_interaction(Patient)(patient_read)
+    provider.create(Patient)(patient_create)
+    provider.read(Patient)(patient_read)
 
     return _app(provider)
 
@@ -171,10 +173,10 @@ def _client_create_and_read() -> TestClient:
                             "documentation": "Patient's nominated general practitioner, not the organization that manages the record",
                         },
                         {
-                            "name": "custom",
-                            "definition": "uri",
+                            "name": "nickname",
+                            "definition": "https://hostname/nickname",
                             "type": "string",
-                            "documentation": "Custom search parameter",
+                            "documentation": "Nickname",
                         },
                         {
                             "name": "_lastUpdated",
@@ -413,21 +415,28 @@ def test_read_not_found_xml(client: TestClient, pretty: str) -> None:
 
 
 @pytest.mark.parametrize(
-    argnames="search_type_func",
+    argnames="search_type_func,search_type_func_kwargs",
     argvalues=[
-        lambda client: client.get("/Patient", params={"family": "Baggins"}),
-        lambda client: client.post("/Patient/_search", data={"family": "Baggins"}),
+        (
+            lambda client: partial(client.get, "/Patient"),
+            {"params": {"family": "Baggins"}},
+        ),
+        (
+            lambda client: partial(client.post, "/Patient/_search"),
+            {"data": {"family": "Baggins"}},
+        ),
     ],
     ids=["get", "post"],
 )
 def test_search_type(
     client: TestClient,
     create_response: Response,
-    search_type_func: Callable[[TestClient], Response],
+    search_type_func: Callable[[TestClient], Callable[..., Response]],
+    search_type_func_kwargs: dict[str, str],
 ) -> None:
     """Test the FHIR search interaction."""
     id_ = _id_from_create_response(create_response)
-    search_type_response = search_type_func(client)
+    search_type_response = search_type_func(client)(**search_type_func_kwargs)
 
     _assert_expected_response(
         search_type_response,
@@ -437,6 +446,97 @@ def test_search_type(
             "type": "searchset",
             "total": 1,
             "entry": [{"resource": _resource(id_)}],
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="search_type_func,search_type_func_kwargs,search_type_func_kwargs_zero_results",
+    argvalues=[
+        (
+            lambda client: partial(client.get, "/Patient"),
+            {"params": {"given": ["Samwise", "Sam"]}},
+            {"params": {"given": ["Samwise", "Frodo"]}},
+        ),
+        (
+            lambda client: partial(client.post, "/Patient/_search"),
+            {"data": {"given": ["Samwise", "Sam"]}},
+            {"data": {"given": ["Samwise", "Frodo"]}},
+        ),
+    ],
+    ids=["get", "post"],
+)
+def test_search_type_parameter_multiple_values(
+    search_type_func: Callable[[TestClient], Callable[..., Response]],
+    search_type_func_kwargs: dict[str, str],
+    search_type_func_kwargs_zero_results: dict[str, str],
+) -> None:
+    """Test the FHIR search interaction with a parameter that has multiple values."""
+
+    async def patient_search_type(
+        _: InteractionContext, given: list[str] | None
+    ) -> Bundle:
+        patients = []
+        for patient in _DATABASE.values():
+            for name in patient.name:
+                if set(given).issubset(name.given):
+                    patients.append(patient)
+
+        bundle = Bundle(
+            **{
+                "type": "searchset",
+                "total": len(patients),
+                "entry": [{"resource": patient.dict()} for patient in patients],
+            }
+        )
+
+        return bundle
+
+    provider = FHIRProvider()
+    provider.create(Patient)(patient_create)
+    provider.search_type(Patient)(patient_search_type)
+
+    client = _app(provider)
+
+    create_response = client.post(
+        "/Patient",
+        json={
+            "resourceType": "Patient",
+            "name": [{"family": "Gangee", "given": ["Samwise", "Sam"]}],
+        },
+    )
+    id_ = _id_from_create_response(create_response)
+
+    search_type_response = search_type_func(client)(**search_type_func_kwargs)
+    _assert_expected_response(
+        search_type_response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "Bundle",
+            "type": "searchset",
+            "total": 1,
+            "entry": [
+                {
+                    "resource": {
+                        "resourceType": "Patient",
+                        "id": id_,
+                        "name": [{"family": "Gangee", "given": ["Samwise", "Sam"]}],
+                    }
+                }
+            ],
+        },
+    )
+
+    search_type_response = search_type_func(client)(
+        **search_type_func_kwargs_zero_results
+    )
+    _assert_expected_response(
+        search_type_response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "Bundle",
+            "type": "searchset",
+            "total": 0,
         },
     )
 
@@ -513,7 +613,7 @@ def validate_token(
 def provider_with_dependency() -> FHIRProvider:
     """Create a provider with a provider-level dependency."""
     provider = FHIRProvider(dependencies=[Depends(validate_token)])
-    provider.register_create_interaction(Patient)(patient_create)
+    provider.create(Patient)(patient_create)
 
     return provider
 
@@ -521,9 +621,7 @@ def provider_with_dependency() -> FHIRProvider:
 def provider_with_interaction_dependency() -> FHIRProvider:
     """Create a provider with an interaction-level dependency."""
     provider = FHIRProvider()
-    provider.register_create_interaction(
-        Patient, dependencies=[Depends(validate_token)]
-    )(patient_create)
+    provider.create(Patient, dependencies=[Depends(validate_token)])(patient_create)
 
     return provider
 

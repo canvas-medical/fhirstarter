@@ -1,22 +1,25 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
+import asyncio
 import itertools
-import os
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
 from datetime import datetime
 from functools import cache
 from os import PathLike
 from typing import Any, cast
-from uuid import uuid4
+from urllib.parse import parse_qs, urlencode
 
 import tomli
+import uvloop
 from fastapi import FastAPI, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fhir.resources.capabilitystatement import CapabilityStatement
 
 from .exceptions import FHIRException
 from .functions import (
+    FORMAT_QP,
+    PRETTY_QP,
     make_create_function,
     make_read_function,
     make_search_type_function,
@@ -45,6 +48,8 @@ from .utils import (
 # TODO: Research auto-filling path definition parameters with data from the FHIR specification
 # TODO: Review all of the path definition parameters and path/query/body parameters
 # TODO: Expose responses FastAPI argument so that developer can specify additional responses
+
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class FHIRStarter(FastAPI):
@@ -85,6 +90,7 @@ class FHIRStarter(FastAPI):
 
         self._add_capabilities_route()
 
+        self.middleware("http")(_transform_search_type_post_request)
         self.middleware("http")(_set_content_type_header)
 
         self.add_exception_handler(
@@ -161,7 +167,10 @@ class FHIRStarter(FastAPI):
         """Add the /metadata route, which supplies the capability statement for the instance."""
 
         def capability_statement(
-            request: Request, response: Response
+            request: Request,
+            response: Response,
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
         ) -> CapabilityStatement | Response:
             return format_response(
                 resource=self._capability_statement(),
@@ -244,12 +253,12 @@ class FHIRStarter(FastAPI):
                 for search_parameter in supported_search_parameters(
                     search_type_interaction.handler
                 ):
-                    search_parameter = var_name_to_qp_name(search_parameter)
-                    metadata = search_parameter_metadata[search_parameter]
+                    search_parameter_name = var_name_to_qp_name(search_parameter.name)
+                    metadata = search_parameter_metadata[search_parameter_name]
                     if metadata["include-in-capability-statement"]:
                         supported_search_parameters_.append(
                             {
-                                "name": search_parameter,
+                                "name": search_parameter_name,
                                 "definition": metadata["uri"],
                                 "type": metadata["type"],
                                 "documentation": metadata["description"],
@@ -262,7 +271,6 @@ class FHIRStarter(FastAPI):
         # TODO: Date could be the release date (from an environment variable)
         # TODO: Add XML format
         capability_statement = {
-            "id": str(uuid4()),
             "status": "active",
             "date": self._created,
             "kind": "instance",
@@ -281,11 +289,70 @@ class FHIRStarter(FastAPI):
         return CapabilityStatement(**capability_statement)
 
 
+async def _transform_search_type_post_request(
+    request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
+) -> Response:
+    """
+    Middleware to transform a search POST request into a search GET request.
+
+    This is needed for a few reasons, and mainly to simplify how searches are handled later down the
+    line. Due to this middleware, all search requests will arrive in the handlers as GET requests
+    with query strings that have been merged with the URL-encoded parameter string in the body.
+
+    There is an obscure requirement in the FHIR specification stipulating that for search POST
+    requests, both query string parameters and parameters in the body are to be considered when
+    calculating search results. This is difficult to achieve in FastAPI due to how the body stream
+    is consumed when it parses the body to pass the values down to the handlers. Catching the
+    request here allows for the body parameters to be merged with the query string parameters.
+    """
+    if (
+        request.url.path.endswith("/_search")
+        and request.method == "POST"
+        and request.headers.get("Content-Type") == "application/x-www-form-urlencoded"
+    ):
+        scope = request.scope
+        scope["method"] = "GET"
+        scope["path"] = scope["path"].removesuffix("/_search")
+        scope["raw_path"] = scope["raw_path"].removesuffix(b"/_search")
+        scope["query_string"] = await _merge_parameter_strings(request)
+        scope["headers"] = [
+            (name, value)
+            for name, value in scope["headers"]
+            if name.lower() not in {b"content-length", b"content-type"}
+        ]
+
+        return await call_next(Request(scope, request.receive))
+
+    return await call_next(request)
+
+
+async def _merge_parameter_strings(request: Request) -> bytes:
+    """
+    Merge the query string and the parameter string in the body into a single parameter string.
+
+    If there is a header that specifies the requested format, then ignore the _format parameter(s)
+    in the parameter strings.
+    """
+    merged: defaultdict[bytes, list[bytes]] = defaultdict(list)
+
+    format_ = FormatParameters.format_from_accept_header(request)
+    if format_:
+        merged[b"_format"] = [format_.encode()]
+
+    for query_string in (await request.body(), request.scope["query_string"]):
+        for name, values in parse_qs(query_string).items():
+            if format_ and name == "_format":
+                continue
+            merged[name].extend(values)
+
+    return urlencode(merged, doseq=True).encode()
+
+
 async def _set_content_type_header(
     request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
 ) -> Response:
     """
-    Middleware function that changes the content type header to "application/fhir+json".
+    Middleware that changes the content type header to "application/fhir+json".
 
     For FHIR responses, there will be two content type headers in the response. One will be
     "application/json" (added by FastAPI), and one will be "application/fhir+json" (added by

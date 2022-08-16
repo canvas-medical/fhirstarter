@@ -56,12 +56,7 @@ class FormatParameters:
         The value for format is first obtained from the Accept header, and if not specified there is
         obtained from the _format query parameter.
         """
-        format_ = None
-        if request.method == "POST":
-            for content_type in request.headers.getlist("Accept"):
-                if content_type_normalized := cls._CONTENT_TYPES.get(content_type):
-                    format_ = content_type_normalized
-                    break
+        format_ = cls.format_from_accept_header(request)
 
         try:
             if not format_:
@@ -85,6 +80,15 @@ class FormatParameters:
             format=format_,  # type: ignore
             pretty=request.query_params.get("_pretty", "false") == "true",
         )
+
+    @classmethod
+    def format_from_accept_header(cls, request: Request) -> str | None:
+        if request.method == "POST":
+            for content_type in request.headers.getlist("Accept"):
+                if content_type_normalized := cls._CONTENT_TYPES.get(content_type):
+                    return content_type_normalized
+
+        return None
 
 
 def format_response(

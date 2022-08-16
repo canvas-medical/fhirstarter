@@ -51,7 +51,7 @@ class FHIRProvider:
     def interactions(self) -> Iterable[TypeInteraction[Resource]]:
         yield from self._interactions
 
-    def register_create_interaction(
+    def create(
         self,
         resource_type: type[ResourceType],
         *,
@@ -69,7 +69,7 @@ class FHIRProvider:
             include_in_schema,
         )
 
-    def register_read_interaction(
+    def read(
         self,
         resource_type: type[ResourceType],
         *,
@@ -87,7 +87,7 @@ class FHIRProvider:
             include_in_schema,
         )
 
-    def register_search_type_interaction(
+    def search_type(
         self,
         resource_type: type[ResourceType],
         *,
@@ -102,7 +102,7 @@ class FHIRProvider:
             include_in_schema,
         )
 
-    def register_update_interaction(
+    def update(
         self,
         resource_type: type[ResourceType],
         *,

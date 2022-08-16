@@ -4,7 +4,6 @@ interactions (i.e. endpoints) that perform create, read, search-type, and update
 """
 from copy import deepcopy
 from pathlib import Path
-from typing import Any
 from uuid import uuid4
 
 import uvicorn
@@ -13,7 +12,7 @@ from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
 
-from fhirstarter import FHIRProvider, FHIRStarter
+from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 
 # Create the app with the provided config file
@@ -38,8 +37,8 @@ provider = FHIRProvider()
 
 
 # Register the patient create FHIR interaction with the provider
-@provider.register_create_interaction(Patient)
-async def patient_create(resource: Patient, **kwargs: Any) -> Id:
+@provider.create(Patient)
+async def patient_create(context: InteractionContext, resource: Patient) -> Id:
     patient = deepcopy(resource)
     patient.id = Id(uuid4().hex)
     DATABASE[patient.id] = patient
@@ -48,8 +47,8 @@ async def patient_create(resource: Patient, **kwargs: Any) -> Id:
 
 
 # Register the patient read FHIR interaction with the provider
-@provider.register_read_interaction(Patient)
-async def patient_read(id_: Id, **kwargs: Any) -> Patient:
+@provider.read(Patient)
+async def patient_read(context: InteractionContext, id_: Id) -> Patient:
     patient = DATABASE.get(id_)
     if not patient:
         raise FHIRResourceNotFoundError
@@ -58,13 +57,13 @@ async def patient_read(id_: Id, **kwargs: Any) -> Patient:
 
 
 # Register the patient search-type FHIR interaction with the provider
-@provider.register_search_type_interaction(Patient)
+@provider.search_type(Patient)
 async def patient_search_type(
-    general_practitioner: str | None = None,
-    family: str | None = None,
-    nickname: str | None = None,
-    _last_updated: str | None = None,
-    **kwargs: Any
+    context: InteractionContext,
+    general_practitioner: str | None,
+    family: str | None,
+    nickname: list[str] | None,
+    _last_updated: str | None,
 ) -> Bundle:
     patients = []
     for patient in DATABASE.values():
@@ -84,8 +83,8 @@ async def patient_search_type(
 
 
 # Register the patient update FHIR interaction with the provider
-@provider.register_update_interaction(Patient)
-async def patient_update(id_: Id, resource: Patient, **kwargs: Any) -> Id:
+@provider.update(Patient)
+async def patient_update(context: InteractionContext, id_: Id, resource: Patient) -> Id:
     if id_ not in DATABASE:
         raise FHIRResourceNotFoundError
 
@@ -108,4 +107,4 @@ async def index() -> RedirectResponse:
 
 if __name__ == "__main__":
     # Start the server
-    uvicorn.run("example:app", reload=True)
+    uvicorn.run("example:app", reload=True, reload_dirs=[Path(__file__).parent.parent])
