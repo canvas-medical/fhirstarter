@@ -34,13 +34,15 @@ from .interactions import (
 from .search_parameters import supported_search_parameters, var_name_to_qp_name
 from .utils import FormatParameters, format_response
 
-FORMAT_QP = Query(
-    None,
-    description="Override the HTTP content negotiation to specify JSON or XML response format",
+_FORMAT_PARAMETER_DESCRIPTION = (
+    "Override the HTTP content negotiation to specify JSON or XML response format"
 )
-PRETTY_QP = Query(
-    None, description="Ask for a pretty printed response for human convenience"
+_PRETTY_PARAMETER_DESCRIPTION = (
+    "Ask for a pretty printed response for human convenience"
 )
+
+FORMAT_QP = Query(None, description=_FORMAT_PARAMETER_DESCRIPTION)
+PRETTY_QP = Query(None, description=_PRETTY_PARAMETER_DESCRIPTION)
 
 
 def make_create_function(
@@ -141,12 +143,19 @@ def make_search_type_function(
     parameters are supported by the developer-defined handler.
     """
 
+    if post:
+        format_annotation = Form(None, description=_FORMAT_PARAMETER_DESCRIPTION)
+        pretty_annotation = Form(None, description=_PRETTY_PARAMETER_DESCRIPTION)
+    else:
+        format_annotation = FORMAT_QP
+        pretty_annotation = PRETTY_QP
+
     async def search_type(
         request: Request,
         response: Response,
         *,
-        _format: str = FORMAT_QP,
-        _pretty: str = PRETTY_QP,
+        _format: str = format_annotation,
+        _pretty: str = pretty_annotation,
         **kwargs: str,
     ) -> Resource | Response:
         """Function for search-type interaction."""
@@ -181,17 +190,14 @@ def make_search_type_function(
     parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
 
     sorted_search_parameters: list[Parameter] = sorted(
-        sorted(
-            sorted(
-                sorted(
-                    parameters + search_parameters,
-                    key=lambda p: var_name_to_qp_name(p.name),
-                ),
-                key=lambda p: p.name.startswith("_"),
-            ),
-            key=lambda p: p.annotation != Response,
+        parameters + search_parameters,
+        key=lambda p: (
+            p.annotation != Request,
+            p.annotation != Response,
+            p.name.startswith("_"),
+            var_name_to_qp_name(p.name) not in search_parameter_metadata,
+            var_name_to_qp_name(p.name),
         ),
-        key=lambda p: p.annotation != Request,
     )
 
     sig = sig.replace(parameters=sorted_search_parameters)

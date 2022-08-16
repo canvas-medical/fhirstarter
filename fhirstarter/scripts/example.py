@@ -107,4 +107,4 @@ async def index() -> RedirectResponse:
 
 if __name__ == "__main__":
     # Start the server
-    uvicorn.run("example:app", reload=True)
+    uvicorn.run("example:app", reload=True, reload_dirs=[Path(__file__).parent.parent])
