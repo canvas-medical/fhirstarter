@@ -90,7 +90,7 @@ class FHIRStarter(FastAPI):
 
         self._add_capabilities_route()
 
-        self.middleware("http")(_convert_search_type_post_request)
+        self.middleware("http")(_transform_search_type_post_request)
         self.middleware("http")(_set_content_type_header)
 
         self.add_exception_handler(
@@ -289,15 +289,15 @@ class FHIRStarter(FastAPI):
         return CapabilityStatement(**capability_statement)
 
 
-async def _convert_search_type_post_request(
+async def _transform_search_type_post_request(
     request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
 ) -> Response:
     """
-    Middleware to convert a search POST request into a search GET request.
+    Middleware to transform a search POST request into a search GET request.
 
     This is needed for a few reasons, and mainly to simplify how searches are handled later down the
-    line. Due to this middleware, all searches will come in as GET requests with query strings that
-    have been merged with the URL-encoded parameter string in the body.
+    line. Due to this middleware, all search requests will arrive in the handlers as GET requests
+    with query strings that have been merged with the URL-encoded parameter string in the body.
 
     There is an obscure requirement in the FHIR specification stipulating that for search POST
     requests, both query string parameters and parameters in the body are to be considered when
