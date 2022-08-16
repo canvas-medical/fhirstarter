@@ -160,14 +160,8 @@ def make_search_type_function(
     ) -> Resource | Response:
         """Function for search-type interaction."""
         handler = cast(SearchTypeInteractionHandler, interaction.handler)
-
-        # TODO: The FHIR spec technically states that for search by POST, the union of query and
-        #  form parameters should be used as the search parameter set. Example: a query parameter
-        #  and form parameter with the same name is passed by the user to an endpoint that accepts
-        #  multiple values for the search parameter in question. In this scenario, the two values
-        #  should be combined into a list. If we ever seek to do this, the union would be created
-        #  here, and passed in as kwargs.
         bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore
+
         return format_response(
             resource=bundle,
             response=response,
@@ -189,6 +183,14 @@ def make_search_type_function(
     sig = signature(search_type)
     parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
 
+    # Sort order is:
+    # 1. Request and response
+    # 2. Parameters that do not start with underscore
+    # 3. Parameters that are search or search result parameters (i.e. _format and _pretty go to the
+    #    bottom)
+    # 4. Parameters that are part of the capability statement (this favors search parameters like
+    #    _has over search result parameters like _sort)
+    # 5. Alphabetical by name
     sorted_search_parameters: list[Parameter] = sorted(
         parameters + search_parameters,
         key=lambda p: (
@@ -196,6 +198,9 @@ def make_search_type_function(
             p.annotation != Response,
             p.name.startswith("_"),
             var_name_to_qp_name(p.name) not in search_parameter_metadata,
+            not search_parameter_metadata.get(var_name_to_qp_name(p.name), {}).get(
+                "include-in-capability-statement", False
+            ),
             var_name_to_qp_name(p.name),
         ),
     )

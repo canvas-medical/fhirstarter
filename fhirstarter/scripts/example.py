@@ -29,10 +29,10 @@ provider = FHIRProvider()
 
 # To register FHIR interactions with  a provider, the pieces of information the developer has to
 # provider are:
-# - FHIR interaction type (this affects what the endpoint will look like)
-# - FHIR resource type (this affects validation of inputs and outputs, and what search parameters
+# * FHIR interaction type (this affects what the endpoint will look like)
+# * FHIR resource type (this affects validation of inputs and outputs, and what search parameters
 #   are valid)
-# - the handler (expected signature and annotations need to match the defined protocols, because
+# * the handler (expected signature and annotations need to match the defined protocols, because
 #   these values affect route creation in FastAPI)
 
 
@@ -107,4 +107,9 @@ async def index() -> RedirectResponse:
 
 if __name__ == "__main__":
     # Start the server
-    uvicorn.run("example:app", reload=True, reload_dirs=[Path(__file__).parent.parent])
+    uvicorn.run(
+        "example:app",
+        use_colors=True,
+        reload=True,
+        reload_dirs=[Path(__file__).parent.parent],
+    )
