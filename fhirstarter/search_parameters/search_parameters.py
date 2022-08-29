@@ -13,6 +13,8 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
+from fastapi import Request, Response
+
 from ..interactions import InteractionContext
 
 _EXTRA_SEARCH_PARAMETERS = {
@@ -131,6 +133,38 @@ def supported_search_parameters(
         )
         for name, parameter in inspect.signature(search_function).parameters.items()
         if parameter.annotation != InteractionContext
+    )
+
+
+def search_parameter_sort_key(
+    name: str,
+    search_parameter_metadata: dict[str, dict[str, str]],
+    parameter_annotation: type | None = None,
+) -> tuple[bool, bool, bool, bool, bool, str]:
+    """
+    Return a sort key for a search paramter.
+
+    This function allows for consistent sorting of search parameters throughout the package.
+
+    Sort order is:
+    1. Request and response annotations
+    2. Parameters that do not start with underscore
+    3. Parameters that are search or search result parameters (i.e. _format and _pretty go to the
+       bottom)
+    4. Parameters that are part of the capability statement (this favors search parameters like
+       _has over search result parameters like _sort)
+    5. Alphabetical by name
+
+    """
+    return (
+        parameter_annotation != Request,
+        parameter_annotation != Response,
+        name.startswith("_"),
+        var_name_to_qp_name(name) not in search_parameter_metadata,
+        not search_parameter_metadata.get(var_name_to_qp_name(name), {}).get(
+            "include-in-capability-statement", False
+        ),
+        var_name_to_qp_name(name),
     )
 
 

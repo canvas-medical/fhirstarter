@@ -29,6 +29,7 @@ from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
 from .search_parameters import (
     SearchParameters,
+    search_parameter_sort_key,
     supported_search_parameters,
     var_name_to_qp_name,
 )
@@ -265,7 +266,12 @@ class FHIRStarter(FastAPI):
                                 "documentation": metadata["description"],
                             }
                         )
-                resource["searchParam"] = supported_search_parameters_
+                resource["searchParam"] = sorted(
+                    supported_search_parameters_,
+                    key=lambda p: search_parameter_sort_key(
+                        p["name"], search_parameter_metadata
+                    ),
+                )
             resources.append(resource)
 
         # TODO: Status can be filled in based on environment

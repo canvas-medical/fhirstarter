@@ -31,7 +31,11 @@ from .interactions import (
     TypeInteraction,
     UpdateInteractionHandler,
 )
-from .search_parameters import supported_search_parameters, var_name_to_qp_name
+from .search_parameters import (
+    search_parameter_sort_key,
+    supported_search_parameters,
+    var_name_to_qp_name,
+)
 from .utils import FormatParameters, format_response
 
 _FORMAT_PARAMETER_DESCRIPTION = (
@@ -183,25 +187,10 @@ def make_search_type_function(
     sig = signature(search_type)
     parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
 
-    # Sort order is:
-    # 1. Request and response
-    # 2. Parameters that do not start with underscore
-    # 3. Parameters that are search or search result parameters (i.e. _format and _pretty go to the
-    #    bottom)
-    # 4. Parameters that are part of the capability statement (this favors search parameters like
-    #    _has over search result parameters like _sort)
-    # 5. Alphabetical by name
     sorted_search_parameters: list[Parameter] = sorted(
         parameters + search_parameters,
-        key=lambda p: (
-            p.annotation != Request,
-            p.annotation != Response,
-            p.name.startswith("_"),
-            var_name_to_qp_name(p.name) not in search_parameter_metadata,
-            not search_parameter_metadata.get(var_name_to_qp_name(p.name), {}).get(
-                "include-in-capability-statement", False
-            ),
-            var_name_to_qp_name(p.name),
+        key=lambda p: search_parameter_sort_key(
+            p.name, search_parameter_metadata, p.annotation
         ),
     )
 
