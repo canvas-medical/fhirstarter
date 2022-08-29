@@ -1,5 +1,6 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
+from fastapi import HTTPException
 import asyncio
 import itertools
 from collections import defaultdict
@@ -93,9 +94,8 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_transform_search_type_post_request)
         self.middleware("http")(_set_content_type_header)
 
-        self.add_exception_handler(
-            RequestValidationError, _validation_exception_handler
-        )
+        self.add_exception_handler(RequestValidationError, _validation_exception_handler)
+        self.add_exception_handler(HTTPException, _http_exception_handler)
         self.add_exception_handler(FHIRException, _fhir_exception_handler)
         self.add_exception_handler(Exception, _exception_handler)
 
@@ -378,8 +378,23 @@ async def _validation_exception_handler(
         request=request,
         severity="error",
         code="structure",
-        exception=exception,
+        details_text=str(exception),
         status_code=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+async def _http_exception_handler(request: Request, exception: HTTPException) -> Response:
+    """
+    HTTP exception handler that overrides the default FastAPI HTTP exception handler.
+
+    This exception handler exists primarily to convert an HTTP exception into an OperationOutcome.
+    """
+    return _exception_response(
+        request=request,
+        severity="error",
+        code="processing",
+        details_text=exception.detail,
+        status_code=exception.status_code,
     )
 
 
@@ -407,17 +422,17 @@ async def _exception_handler(request: Request, exception: Exception) -> Response
         request=request,
         severity="error",
         code="exception",
-        exception=exception,
+        details_text=str(exception),
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
 
 
 def _exception_response(
-    request: Request, severity: str, code: str, exception: Exception, status_code: int
+    request: Request, severity: str, code: str, details_text: str, status_code: int
 ) -> Response:
     """Create a JSONResponse with an OperationOutcome and an HTTP status code."""
     operation_outcome = make_operation_outcome(
-        severity=severity, code=code, details_text=f"{str(exception)}"
+        severity=severity, code=code, details_text=details_text
     )
 
     return format_response(
