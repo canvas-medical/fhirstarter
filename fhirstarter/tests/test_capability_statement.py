@@ -90,7 +90,7 @@ def test_capability_statement(
         "date": app._created.isoformat(),
         "kind": "instance",
         "publisher": "Publisher",
-        "fhirVersion": "4.3.0",
+        "fhirVersion": "4.0.1",
         "format": ["json"],
         "rest": [
             {
