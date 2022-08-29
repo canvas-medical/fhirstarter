@@ -4,18 +4,17 @@ specification.
 """
 
 import inspect
-import json
 import re
 from collections.abc import Callable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import cache
-from pathlib import Path
 from typing import Any
 
 from fastapi import Request, Response
 
-from ..interactions import InteractionContext
+from .fhir_specification.utils import load_search_parameters
+from .interactions import InteractionContext
 
 _EXTRA_SEARCH_PARAMETERS = {
     "Resource": {
@@ -80,7 +79,7 @@ class SearchParameters:
         parameter metadata for the resource type itself, DomainResource, Resource, and custom search
         parameter metadata.
         """
-        search_parameters = _load_search_parameter_file()
+        search_parameters = _load_search_parameters_file()
         return (
             search_parameters[resource_type]
             | search_parameters["DomainResource"]
@@ -169,7 +168,7 @@ def search_parameter_sort_key(
 
 
 @cache
-def _load_search_parameter_file() -> dict[str, dict[str, dict[str, str]]]:
+def _load_search_parameters_file() -> dict[str, dict[str, dict[str, str]]]:
     """
     Load the search parameters JSON file.
 
@@ -178,9 +177,7 @@ def _load_search_parameter_file() -> dict[str, dict[str, dict[str, str]]]:
     """
     search_parameters: dict = deepcopy(_EXTRA_SEARCH_PARAMETERS)
 
-    file_path = Path(__file__).parent / "search-parameters.json"
-    with file_path.open() as file_:
-        bundle = json.load(file_)
+    bundle = load_search_parameters()
 
     for entry in bundle["entry"]:
         resource = entry["resource"]

@@ -17,6 +17,7 @@ from fastapi.exceptions import RequestValidationError
 from fhir.resources.capabilitystatement import CapabilityStatement
 
 from .exceptions import FHIRException
+from .fhir_specification.utils import load_example
 from .functions import (
     FORMAT_QP,
     PRETTY_QP,
@@ -162,6 +163,13 @@ class FHIRStarter(FastAPI):
                 for response in responses.values():
                     if schema := response["content"].pop("application/json", None):
                         response["content"]["application/fhir+json"] = schema
+
+        for schema_name, schema in openapi_schema["components"]["schemas"].items():
+            if schema["properties"].get("resource_type") and schema_name not in {
+                "Bundle",
+                "OperationOutcome",
+            }:
+                schema["example"] = load_example(schema_name)
 
         return openapi_schema
 
