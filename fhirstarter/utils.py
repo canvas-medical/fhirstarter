@@ -239,8 +239,6 @@ def _responses(
 
 def _ok(interaction: TypeInteraction[ResourceType]) -> _Responses:
     """Return documentation for an HTTP 200 OK response."""
-    from .interactions import ReadInteraction
-
     return {
         status.HTTP_200_OK: {
             "model": interaction.resource_type
