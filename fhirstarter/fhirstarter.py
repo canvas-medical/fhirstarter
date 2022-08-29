@@ -275,7 +275,7 @@ class FHIRStarter(FastAPI):
             "status": "active",
             "date": self._created,
             "kind": "instance",
-            "fhirVersion": "4.3.0",
+            "fhirVersion": "4.0.1",
             "format": ["json"],
             "rest": [
                 {
