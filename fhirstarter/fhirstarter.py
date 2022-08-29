@@ -1,6 +1,5 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
-from fastapi import HTTPException
 import asyncio
 import itertools
 from collections import defaultdict
@@ -13,7 +12,7 @@ from urllib.parse import parse_qs, urlencode
 
 import tomli
 import uvloop
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fhir.resources.capabilitystatement import CapabilityStatement
 
@@ -94,7 +93,9 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_transform_search_type_post_request)
         self.middleware("http")(_set_content_type_header)
 
-        self.add_exception_handler(RequestValidationError, _validation_exception_handler)
+        self.add_exception_handler(
+            RequestValidationError, _validation_exception_handler
+        )
         self.add_exception_handler(HTTPException, _http_exception_handler)
         self.add_exception_handler(FHIRException, _fhir_exception_handler)
         self.add_exception_handler(Exception, _exception_handler)
@@ -383,7 +384,9 @@ async def _validation_exception_handler(
     )
 
 
-async def _http_exception_handler(request: Request, exception: HTTPException) -> Response:
+async def _http_exception_handler(
+    request: Request, exception: HTTPException
+) -> Response:
     """
     HTTP exception handler that overrides the default FastAPI HTTP exception handler.
 
