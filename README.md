@@ -2,6 +2,8 @@
 
 A FHIR API framework built on top of [FastAPI](https://fastapi.tiangolo.com) and [FHIR Resources](https://pypi.org/project/fhir.resources/).
 
+The only version of FHIR that is currently supported is 4.0.1.
+
 ## Installation
 
 ```bash
@@ -57,6 +59,7 @@ async def patient_read(context: InteractionContext, id_: Id) -> Patient:
 
 # Add the provider to the app
 app.add_providers(provider)
+
 
 if __name__ == "__main__":
     # Start the server

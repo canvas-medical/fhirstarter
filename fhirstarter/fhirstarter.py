@@ -12,11 +12,12 @@ from urllib.parse import parse_qs, urlencode
 
 import tomli
 import uvloop
-from fastapi import FastAPI, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fhir.resources.capabilitystatement import CapabilityStatement
 
 from .exceptions import FHIRException
+from .fhir_specification.utils import load_example
 from .functions import (
     FORMAT_QP,
     PRETTY_QP,
@@ -29,6 +30,7 @@ from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
 from .search_parameters import (
     SearchParameters,
+    search_parameter_sort_key,
     supported_search_parameters,
     var_name_to_qp_name,
 )
@@ -96,6 +98,7 @@ class FHIRStarter(FastAPI):
         self.add_exception_handler(
             RequestValidationError, _validation_exception_handler
         )
+        self.add_exception_handler(HTTPException, _http_exception_handler)
         self.add_exception_handler(FHIRException, _fhir_exception_handler)
         self.add_exception_handler(Exception, _exception_handler)
 
@@ -160,6 +163,13 @@ class FHIRStarter(FastAPI):
                 for response in responses.values():
                     if schema := response["content"].pop("application/json", None):
                         response["content"]["application/fhir+json"] = schema
+
+        for schema_name, schema in openapi_schema["components"]["schemas"].items():
+            if schema["properties"].get("resource_type") and schema_name not in {
+                "Bundle",
+                "OperationOutcome",
+            }:
+                schema["example"] = load_example(schema_name)
 
         return openapi_schema
 
@@ -264,7 +274,12 @@ class FHIRStarter(FastAPI):
                                 "documentation": metadata["description"],
                             }
                         )
-                resource["searchParam"] = supported_search_parameters_
+                resource["searchParam"] = sorted(
+                    supported_search_parameters_,
+                    key=lambda p: search_parameter_sort_key(
+                        p["name"], search_parameter_metadata
+                    ),
+                )
             resources.append(resource)
 
         # TODO: Status can be filled in based on environment
@@ -274,7 +289,7 @@ class FHIRStarter(FastAPI):
             "status": "active",
             "date": self._created,
             "kind": "instance",
-            "fhirVersion": "4.3.0",
+            "fhirVersion": "4.0.1",
             "format": ["json"],
             "rest": [
                 {
@@ -378,8 +393,25 @@ async def _validation_exception_handler(
         request=request,
         severity="error",
         code="structure",
-        exception=exception,
+        details_text=str(exception),
         status_code=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+async def _http_exception_handler(
+    request: Request, exception: HTTPException
+) -> Response:
+    """
+    HTTP exception handler that overrides the default FastAPI HTTP exception handler.
+
+    This exception handler exists primarily to convert an HTTP exception into an OperationOutcome.
+    """
+    return _exception_response(
+        request=request,
+        severity="error",
+        code="processing",
+        details_text=exception.detail,
+        status_code=exception.status_code,
     )
 
 
@@ -407,17 +439,17 @@ async def _exception_handler(request: Request, exception: Exception) -> Response
         request=request,
         severity="error",
         code="exception",
-        exception=exception,
+        details_text=str(exception),
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
     )
 
 
 def _exception_response(
-    request: Request, severity: str, code: str, exception: Exception, status_code: int
+    request: Request, severity: str, code: str, details_text: str, status_code: int
 ) -> Response:
     """Create a JSONResponse with an OperationOutcome and an HTTP status code."""
     operation_outcome = make_operation_outcome(
-        severity=severity, code=code, details_text=f"{str(exception)}"
+        severity=severity, code=code, details_text=details_text
     )
 
     return format_response(
