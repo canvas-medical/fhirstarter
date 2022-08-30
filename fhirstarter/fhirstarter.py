@@ -2,6 +2,7 @@
 
 import asyncio
 import itertools
+import re
 from collections import defaultdict
 from collections.abc import Callable, Coroutine
 from datetime import datetime
@@ -131,7 +132,8 @@ class FHIRStarter(FastAPI):
         Adjust the OpenAPI schema to make it more FHIR-friendly.
 
         Remove some default schemas that are not needed nor used, and change all content types that
-        are set to "application/json" to instead be "application/fhir+json".
+        are set to "application/json" to instead be "application/fhir+json". Make a few additional
+        aesthetic changes to clean up the auto-generated documentation.
 
         This method is slightly hacky because it directly modifies the OpenAPI schema, however it
         does make the generated documentation look nicer.
@@ -140,15 +142,36 @@ class FHIRStarter(FastAPI):
         to FastAPI. This is not a significant vulnerability because the core server functionality
         will still work (i.e. this is just documentation).
         """
+        # TODO: It may be necessary to rethink some of the things that this function removes. For
+        #  example, if someone wants to add non-FHIR endpoints to their API, then maybe some of
+        #  these schemas shouldn't be removed. Also, for cases where paths or schemas are modified,
+        #  there should be a way to more precisely target items that are FHIR-related.
+
         openapi_schema = super().openapi()
 
+        # Remove default FAstAPI validation errors, since FHIRStarter will always return operation
+        # outcomes
         openapi_schema["components"]["schemas"].pop("HTTPValidationError", None)
         openapi_schema["components"]["schemas"].pop("ValidationError", None)
 
-        for path in openapi_schema["paths"].values():
+        # Iterate over the documentation for all paths
+        for path_name, path in openapi_schema["paths"].items():
+            # Inline the schemas generated for search by POST. These schemas are only used in one
+            # place, so they don't need to exist in the schemas section.
+            if match := re.fullmatch("/(.*)/_search", path_name):
+                resource_type = match.group(1)
+                path["post"]["requestBody"]["content"][
+                    "application/x-www-form-urlencoded"
+                ]["schema"] = openapi_schema["components"]["schemas"].pop(
+                    f"Body_search_type_{resource_type}__search_post"
+                )
+
+            # Iterate over all operations for a given path
             for operation_name, operation in path.items():
                 responses = operation["responses"]
 
+                # For each possible response (i.e. status code), remove the default FastAPI response
+                # schema
                 status_codes: tuple[str, ...] = tuple(responses.keys())
                 for status_code in status_codes:
                     if (
@@ -160,10 +183,14 @@ class FHIRStarter(FastAPI):
                     ):
                         responses.pop(status_code)
 
+                # For each response, change all instances of application/json to
+                # application/fhir+json
                 for response in responses.values():
                     if schema := response["content"].pop("application/json", None):
                         response["content"]["application/fhir+json"] = schema
 
+        # For each schema (except for Bundle and OperationOutcome), replace the auto-generated
+        # schema with an actual FHIR example
         for schema_name, schema in openapi_schema["components"]["schemas"].items():
             if schema["properties"].get("resource_type") and schema_name not in {
                 "Bundle",
