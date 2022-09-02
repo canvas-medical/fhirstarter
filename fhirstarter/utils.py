@@ -11,7 +11,52 @@ from fhir.resources.operationoutcome import OperationOutcome
 from fhir.resources.resource import Resource
 
 from . import status
+from .fhir_specification.utils import is_resource_type
 from .interactions import ResourceType, SearchTypeInteraction, TypeInteraction
+
+
+@dataclass
+class InteractionInfo:
+    resource_type: str | None
+    interaction_type: str | None
+
+
+def categorize_fhir_request(request: Request) -> InteractionInfo:
+    """
+    Return the resource type and interaction type for a request.
+
+    Note: This function is currently oriented around specific use cases for this framework.
+    Specifically, it will correctly categorize create, read, search-type, update, and capabilities
+    interactions. Further enhancement is needed to support more cases.
+    """
+    _, first_part, *rest = request.url.path.split("/")
+
+    if request.method == "GET" and first_part == "metadata":
+        return InteractionInfo(resource_type=None, interaction_type="capabilities")  # type: ignore
+
+    if not is_resource_type(first_part):
+        return InteractionInfo(resource_type=None, interaction_type=None)  # type: ignore
+
+    resource_type = first_part
+    second_part = rest[0] if rest else None
+    id_ = second_part if request.method != "POST" else None
+
+    interaction_type = None
+    match request.method, second_part == "_search", not id_:
+        case "POST", False, True:
+            interaction_type = "create"
+        case "GET", _, False:
+            interaction_type = "read"
+        case "GET", False, True:
+            interaction_type = "search-type"
+        case "POST", True, True:
+            interaction_type = "search-type"
+        case "PUT", _, False:
+            interaction_type = "update"
+        case _:
+            assert "Unexpected request format"
+
+    return InteractionInfo(resource_type, interaction_type)  # type: ignore
 
 
 def make_operation_outcome(
