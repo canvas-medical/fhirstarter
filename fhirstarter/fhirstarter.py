@@ -203,14 +203,14 @@ class FHIRStarter(FastAPI):
     def _add_capabilities_route(self) -> None:
         """Add the /metadata route, which supplies the capability statement for the instance."""
 
-        def capability_statement(
+        def capability_statement_handler(
             request: Request,
             response: Response,
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
         ) -> CapabilityStatement | Response:
             return format_response(
-                resource=self._capability_statement(),
+                resource=self.capability_statement(),
                 response=response,
                 format_parameters=FormatParameters.from_request(request),
             )
@@ -224,7 +224,7 @@ class FHIRStarter(FastAPI):
             description="The capabilities interaction retrieves the information about a server's "
             "capabilities - which portions of the FHIR specification it supports.",
             response_model_exclude_none=True,
-        )(capability_statement)
+        )(capability_statement_handler)
 
     def _add_route(self, interaction: TypeInteraction[ResourceType]) -> None:
         """
@@ -266,7 +266,7 @@ class FHIRStarter(FastAPI):
                 )
 
     @cache
-    def _capability_statement(self) -> CapabilityStatement:
+    def capability_statement(self) -> CapabilityStatement:
         """
         Generate the capability statement for the instance based on the FHIR interactions provided.
 
@@ -311,7 +311,6 @@ class FHIRStarter(FastAPI):
 
         # TODO: Status can be filled in based on environment
         # TODO: Date could be the release date (from an environment variable)
-        # TODO: Add XML format
         capability_statement = {
             "status": "active",
             "date": self._created,
