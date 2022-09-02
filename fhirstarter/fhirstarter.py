@@ -311,7 +311,6 @@ class FHIRStarter(FastAPI):
 
         # TODO: Status can be filled in based on environment
         # TODO: Date could be the release date (from an environment variable)
-        # TODO: Add XML format
         capability_statement = {
             "status": "active",
             "date": self._created,
