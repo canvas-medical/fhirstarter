@@ -146,6 +146,8 @@ class FHIRStarter(FastAPI):
         #  example, if someone wants to add non-FHIR endpoints to their API, then maybe some of
         #  these schemas shouldn't be removed. Also, for cases where paths or schemas are modified,
         #  there should be a way to more precisely target items that are FHIR-related.
+        if self.openapi_schema:
+            return self.openapi_schema
 
         openapi_schema = super().openapi()
 
