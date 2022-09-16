@@ -191,15 +191,19 @@ class FHIRStarter(FastAPI):
                     if schema := response["content"].pop("application/json", None):
                         response["content"]["application/fhir+json"] = schema
 
-        # For each schema (except for Bundle and OperationOutcome), replace the auto-generated
-        # schema with an actual FHIR example
+        # For each schema (except for Bundle and OperationOutcome), provide an actual FHIR example
+        # response unless an example exists on the actual model
         for schema_name, schema in openapi_schema["components"]["schemas"].items():
             resource_type = schema["properties"].get("resource_type", {}).get("const")
-            if resource_type and resource_type not in {
-                "Bundle",
-                "OperationOutcome",
-            }:
-                schema["example"] = load_example(resource_type)
+
+            if (
+                not resource_type
+                or resource_type in {"Bundle", "OperationOutcome"}
+                or "example" in schema
+            ):
+                continue
+
+            schema["example"] = load_example(resource_type)
 
         return openapi_schema
 
