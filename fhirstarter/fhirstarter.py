@@ -16,6 +16,8 @@ import uvloop
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fhir.resources.capabilitystatement import CapabilityStatement
+from fhir.resources.operationoutcome import OperationOutcome
+from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
 from .fhir_specification.utils import load_example
@@ -414,20 +416,48 @@ async def _set_content_type_header(
     return response
 
 
+def _pydantic_error_to_fhir_issue_type(error: str) -> str:
+    """Return a FHIR issue type code mapped from a Pydantic error code."""
+    error_type, *rest = error.split(".")
+    error_code = rest[0] if rest else None
+
+    match error_type, error_code:
+        case ("value_error", "jsondecode") | ("value_error", "extra"):
+            return "structure"
+        case ("value_error", "missing"):
+            return "required"
+        case ("value_error", _) | ("type_error", _):
+            return "value"
+        case _:
+            return "invalid"
+
+
 async def _validation_exception_handler(
     request: Request, exception: RequestValidationError
 ) -> Response:
     """
     Validation exception handler that overrides the default FastAPI validation exception handler.
 
-    Returns an OperationOutcome.
+    Creates an operation outcome by destructuring the RequestValidationError and mapping the values
+    to the correct places in the OperationOutcome.
     """
-    return _exception_response(
-        request=request,
-        severity="error",
-        code="structure",
-        details_text=str(exception),
+    operation_outcome = OperationOutcome(
+        **{
+            "issue": [
+                {
+                    "severity": "error",
+                    "code": _pydantic_error_to_fhir_issue_type(error["type"]),
+                    "details": {"text": display_errors([error]).replace("\n ", ":")},
+                }
+                for error in exception.errors()
+            ]
+        }
+    )
+
+    return format_response(
+        resource=operation_outcome,
         status_code=status.HTTP_400_BAD_REQUEST,
+        format_parameters=FormatParameters.from_request(request, raise_exception=False),
     )
 
 

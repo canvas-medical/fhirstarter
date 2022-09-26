@@ -1,6 +1,7 @@
 """Test utilities"""
 
 import json
+from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
 
@@ -47,7 +48,7 @@ def assert_expected_response(
     response: Response,
     status_code: int,
     content_type: str = "application/fhir+json",
-    content: dict[str, Any] | str | None = None,
+    content: Mapping[str, Any] | str | None = None,
 ) -> None:
     """Assert the status code, content type header, and content of a response."""
     assert response.status_code == status_code
