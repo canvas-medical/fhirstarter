@@ -21,9 +21,7 @@ def validate_token(
     Ensure that the authorization credentials are bearer credentials with a valid access token.
     """
     if authorization.scheme != "Bearer" or authorization.credentials != _VALID_TOKEN:
-        raise FHIRUnauthorizedError(
-            code="unknown", details_text="Authentication failed"
-        )
+        raise FHIRUnauthorizedError(details_text="Authentication failed")
 
 
 def provider_with_dependency() -> FHIRProvider:

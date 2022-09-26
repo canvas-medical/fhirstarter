@@ -67,8 +67,8 @@ class FHIRGeneralError(FHIRException):
         return self._operation_outcome_
 
 
-class FHIRUnauthorizedError(FHIRException):
-    """FHIR exception class for authentication errors."""
+class FHIRBadRequestError(FHIRException):
+    """FHIR exception class for 400 bad request errors."""
 
     def __init__(self, code: str, details_text: str, *args: Any) -> None:
         super().__init__(*args)
@@ -81,6 +81,38 @@ class FHIRUnauthorizedError(FHIRException):
     def operation_outcome(self) -> OperationOutcome:
         return make_operation_outcome(
             severity="error", code=self._code, details_text=self._details_text
+        )
+
+
+class FHIRUnauthorizedError(FHIRException):
+    """FHIR exception class for authentication errors."""
+
+    def __init__(self, details_text: str, *args: Any) -> None:
+        super().__init__(*args)
+        self._details_text = details_text
+
+    def status_code(self) -> int:
+        return status.HTTP_401_UNAUTHORIZED
+
+    def operation_outcome(self) -> OperationOutcome:
+        return make_operation_outcome(
+            severity="error", code="unknown", details_text=self._details_text
+        )
+
+
+class FHIRForbiddenError(FHIRException):
+    """FHIR exception class for 403 forbidden errors."""
+
+    def __init__(self, details_text: str, *args: Any) -> None:
+        super().__init__(*args)
+        self._details_text = details_text
+
+    def status_code(self) -> int:
+        return status.HTTP_403_FORBIDDEN
+
+    def operation_outcome(self) -> OperationOutcome:
+        return make_operation_outcome(
+            severity="error", code="forbidden", details_text=self._details_text
         )
 
 
