@@ -76,7 +76,7 @@ class FHIRBadRequestError(FHIRException):
         self._details_text = details_text
 
     def status_code(self) -> int:
-        return status.HTTP_401_UNAUTHORIZED
+        return status.HTTP_400_BAD_REQUEST
 
     def operation_outcome(self) -> OperationOutcome:
         return make_operation_outcome(
