@@ -447,7 +447,7 @@ async def _validation_exception_handler(
                 {
                     "severity": "error",
                     "code": _pydantic_error_to_fhir_issue_type(error["type"]),
-                    "details": {"text": display_errors([error]).replace("\n ", ":")},
+                    "details": {"text": display_errors([error]).replace("\n ", " —")},
                 }
                 for error in exception.errors()
             ]
