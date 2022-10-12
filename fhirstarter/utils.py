@@ -203,7 +203,12 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
         "description": f"The {resource_type_str} create interaction creates a new "
         f"{resource_type_str} resource in a server-assigned location.",
         "responses": _responses(
-            interaction, _created, _bad_request, _unauthorized, _unprocessable_entity
+            interaction,
+            _created,
+            _bad_request,
+            _unauthorized,
+            _forbidden,
+            _unprocessable_entity,
         ),
         "response_model_exclude_none": True,
         **interaction.route_options,
@@ -222,7 +227,9 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any
         "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} read interaction accesses "
         f"the current contents of a {resource_type_str} resource.",
-        "responses": _responses(interaction, _ok, _unauthorized, _not_found),
+        "responses": _responses(
+            interaction, _ok, _unauthorized, _forbidden, _not_found
+        ),
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -242,7 +249,9 @@ def search_type_route_args(
         "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} search-type interaction searches a set of "
         "resources based on some filter criteria.",
-        "responses": _responses(interaction, _ok, _bad_request, _unauthorized),
+        "responses": _responses(
+            interaction, _ok, _bad_request, _unauthorized, _forbidden
+        ),
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -261,7 +270,12 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
         "description": f"The {resource_type_str} update interaction creates a new current version "
         f"for an existing {resource_type_str} resource.",
         "responses": _responses(
-            interaction, _ok, _bad_request, _unauthorized, _unprocessable_entity
+            interaction,
+            _ok,
+            _bad_request,
+            _unauthorized,
+            _forbidden,
+            _unprocessable_entity,
         ),
         "response_model_exclude_none": True,
         **interaction.route_options,
@@ -322,9 +336,21 @@ def _unauthorized(interaction: TypeInteraction[ResourceType]) -> _Responses:
     return {
         status.HTTP_401_UNAUTHORIZED: {
             "model": OperationOutcome,
-            "description": f"{interaction.resource_type.get_resource_type()} "
-            f"Authorization is required for the {interaction.label()} interaction that was "
-            "attempted.",
+            "description": "Authentication is required for the "
+            f"{interaction.resource_type.get_resource_type()} {interaction.label()} interaction "
+            "that was attempted.",
+        }
+    }
+
+
+def _forbidden(interaction: TypeInteraction[ResourceType]) -> _Responses:
+    """Documentation for an HTTP 403 Forbidden response."""
+    return {
+        status.HTTP_403_FORBIDDEN: {
+            "model": OperationOutcome,
+            "description": "Authorization is required for the "
+            f"{interaction.resource_type.get_resource_type()} {interaction.label()} interaction "
+            "that was attempted.",
         }
     }
 
