@@ -491,7 +491,7 @@ async def _fhir_exception_handler(
 
     return format_response(
         resource=exception.operation_outcome(),
-        status_code=exception.status_code(),
+        status_code=exception.status_code,
         format_parameters=FormatParameters.from_request(request, raise_exception=False),
     )
 
