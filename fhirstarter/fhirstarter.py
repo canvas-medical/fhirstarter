@@ -147,6 +147,73 @@ class FHIRStarter(FastAPI):
         """
         self._capability_statement_modifier = modifier
 
+    @cache
+    def capability_statement(self) -> CapabilityStatement:
+        """
+        Generate the capability statement for the instance based on the FHIR interactions provided.
+
+        In addition to declaring the interactions (e.g. create, read, search-type, and update), the
+        supported search parameters are also declared.
+        """
+        resources = []
+        for resource_type, interactions in sorted(self._capabilities.items()):
+            search_parameter_metadata = self._search_parameters.get_metadata(
+                resource_type
+            )
+
+            resource = {
+                "type": resource_type,
+                "interaction": [
+                    {"code": label} for label in sorted(interactions.keys())
+                ],
+            }
+            if search_type_interaction := interactions.get("search-type"):
+                supported_search_parameters_ = []
+                for search_parameter in supported_search_parameters(
+                    search_type_interaction.handler
+                ):
+                    search_parameter_name = var_name_to_qp_name(search_parameter.name)
+                    metadata = search_parameter_metadata[search_parameter_name]
+                    if metadata["include-in-capability-statement"]:
+                        supported_search_parameters_.append(
+                            {
+                                "name": search_parameter_name,
+                                "definition": metadata["uri"],
+                                "type": metadata["type"],
+                                "documentation": metadata["description"],
+                            }
+                        )
+                resource["searchParam"] = sorted(
+                    supported_search_parameters_,
+                    key=lambda p: search_parameter_sort_key(
+                        p["name"], search_parameter_metadata
+                    ),
+                )
+            resources.append(resource)
+
+        # TODO: Status can be filled in based on environment
+        # TODO: Date could be the release date (from an environment variable)
+        capability_statement = {
+            "status": "active",
+            "date": self._created,
+            "kind": "instance",
+            "fhirVersion": "4.0.1",
+            "format": ["json"],
+            "rest": [
+                {
+                    "mode": "server",
+                    "resource": resources,
+                }
+            ],
+        }
+
+        if self._capability_statement_modifier:
+            capability_statement = self._capability_statement_modifier(
+                capability_statement
+            )
+
+        return CapabilityStatement(**capability_statement)
+
     def openapi(self) -> dict[str, Any]:
         """
         Adjust the OpenAPI schema to make it more FHIR-friendly.
@@ -291,73 +358,6 @@ class FHIRStarter(FastAPI):
                 self.put(**update_route_args(interaction))(
                     make_update_function(interaction)
                 )
-
-    @cache
-    def capability_statement(self) -> CapabilityStatement:
-        """
-        Generate the capability statement for the instance based on the FHIR interactions provided.
-
-        In addition to declaring the interactions (e.g. create, read, search-type, and update), the
-        supported search parameters are also declared.
-        """
-        resources = []
-        for resource_type, interactions in sorted(self._capabilities.items()):
-            search_parameter_metadata = self._search_parameters.get_metadata(
-                resource_type
-            )
-
-            resource = {
-                "type": resource_type,
-                "interaction": [
-                    {"code": label} for label in sorted(interactions.keys())
-                ],
-            }
-            if search_type_interaction := interactions.get("search-type"):
-                supported_search_parameters_ = []
-                for search_parameter in supported_search_parameters(
-                    search_type_interaction.handler
-                ):
-                    search_parameter_name = var_name_to_qp_name(search_parameter.name)
-                    metadata = search_parameter_metadata[search_parameter_name]
-                    if metadata["include-in-capability-statement"]:
-                        supported_search_parameters_.append(
-                            {
-                                "name": search_parameter_name,
-                                "definition": metadata["uri"],
-                                "type": metadata["type"],
-                                "documentation": metadata["description"],
-                            }
-                        )
-                resource["searchParam"] = sorted(
-                    supported_search_parameters_,
-                    key=lambda p: search_parameter_sort_key(
-                        p["name"], search_parameter_metadata
-                    ),
-                )
-            resources.append(resource)
-
-        # TODO: Status can be filled in based on environment
-        # TODO: Date could be the release date (from an environment variable)
-        capability_statement = {
-            "status": "active",
-            "date": self._created,
-            "kind": "instance",
-            "fhirVersion": "4.0.1",
-            "format": ["json"],
-            "rest": [
-                {
-                    "mode": "server",
-                    "resource": resources,
-                }
-            ],
-        }
-
-        if self._capability_statement_modifier:
-            capability_statement = self._capability_statement_modifier(
-                capability_statement
-            )
-
-        return CapabilityStatement(**capability_statement)
 
 
 async def _transform_search_type_post_request(
