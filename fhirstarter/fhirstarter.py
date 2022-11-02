@@ -99,11 +99,11 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_set_content_type_header)
 
         self.add_exception_handler(
-            RequestValidationError, _validation_exception_handler
+            RequestValidationError, self.validation_exception_handler
         )
-        self.add_exception_handler(HTTPException, _http_exception_handler)
-        self.add_exception_handler(FHIRException, _fhir_exception_handler)
-        self.add_exception_handler(Exception, _exception_handler)
+        self.add_exception_handler(HTTPException, self.http_exception_handler)
+        self.add_exception_handler(FHIRException, self.fhir_exception_handler)
+        self.add_exception_handler(Exception, self.general_exception_handler)
 
     def add_providers(self, *providers: FHIRProvider) -> None:
         """
@@ -146,6 +146,93 @@ class FHIRStarter(FastAPI):
         FHIR CapabilityStatement resource, or server startup will fail.
         """
         self._capability_statement_modifier = modifier
+
+    @staticmethod
+    async def validation_exception_handler(
+        request: Request, exception: RequestValidationError
+    ) -> Response:
+        """
+        Validation exception handler that overrides the default FastAPI validation exception
+        handler.
+
+        Creates an operation outcome by destructuring the RequestValidationError and mapping the
+        values to the correct places in the OperationOutcome.
+        """
+        operation_outcome = OperationOutcome(
+            **{
+                "issue": [
+                    {
+                        "severity": "error",
+                        "code": _pydantic_error_to_fhir_issue_type(error["type"]),
+                        "details": {
+                            "text": display_errors([error]).replace("\n ", " —")
+                        },
+                    }
+                    for error in exception.errors()
+                ]
+            }
+        )
+
+        return format_response(
+            resource=operation_outcome,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            format_parameters=FormatParameters.from_request(
+                request, raise_exception=False
+            ),
+        )
+
+    @staticmethod
+    async def http_exception_handler(
+        request: Request, exception: HTTPException
+    ) -> Response:
+        """
+        HTTP exception handler that overrides the default FastAPI HTTP exception handler.
+
+        This exception handler exists primarily to convert an HTTP exception into an
+        OperationOutcome.
+        """
+        return _exception_response(
+            request=request,
+            severity="error",
+            code="processing",
+            details_text=exception.detail,
+            status_code=exception.status_code,
+        )
+
+    @staticmethod
+    async def fhir_exception_handler(
+        request: Request, exception: FHIRException
+    ) -> Response:
+        """
+        General exception handler to catch all other FHIRExceptions. Returns an OperationOutcome.
+
+        Set the request on the exception so that the exception has more context with which to form
+        an OperationOutcome.
+        """
+        exception.set_request(request)
+
+        return format_response(
+            resource=exception.operation_outcome(),
+            status_code=exception.status_code,
+            format_parameters=FormatParameters.from_request(
+                request, raise_exception=False
+            ),
+        )
+
+    @staticmethod
+    async def general_exception_handler(
+        request: Request, exception: Exception
+    ) -> Response:
+        """
+        General exception handler to catch server framework errors. Returns an OperationOutcome.
+        """
+        return _exception_response(
+            request=request,
+            severity="error",
+            code="exception",
+            details_text=str(exception),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
     @cache
     def capability_statement(self) -> CapabilityStatement:
@@ -451,81 +538,6 @@ def _pydantic_error_to_fhir_issue_type(error: str) -> str:
             return "value"
         case _:
             return "invalid"
-
-
-async def _validation_exception_handler(
-    request: Request, exception: RequestValidationError
-) -> Response:
-    """
-    Validation exception handler that overrides the default FastAPI validation exception handler.
-
-    Creates an operation outcome by destructuring the RequestValidationError and mapping the values
-    to the correct places in the OperationOutcome.
-    """
-    operation_outcome = OperationOutcome(
-        **{
-            "issue": [
-                {
-                    "severity": "error",
-                    "code": _pydantic_error_to_fhir_issue_type(error["type"]),
-                    "details": {"text": display_errors([error]).replace("\n ", " —")},
-                }
-                for error in exception.errors()
-            ]
-        }
-    )
-
-    return format_response(
-        resource=operation_outcome,
-        status_code=status.HTTP_400_BAD_REQUEST,
-        format_parameters=FormatParameters.from_request(request, raise_exception=False),
-    )
-
-
-async def _http_exception_handler(
-    request: Request, exception: HTTPException
-) -> Response:
-    """
-    HTTP exception handler that overrides the default FastAPI HTTP exception handler.
-
-    This exception handler exists primarily to convert an HTTP exception into an OperationOutcome.
-    """
-    return _exception_response(
-        request=request,
-        severity="error",
-        code="processing",
-        details_text=exception.detail,
-        status_code=exception.status_code,
-    )
-
-
-async def _fhir_exception_handler(
-    request: Request, exception: FHIRException
-) -> Response:
-    """
-    General exception handler to catch all other FHIRExceptions. Returns an OperationOutcome.
-
-    Set the request on the exception so that the exception has more context with which to form an
-    OperationOutcome.
-    """
-    exception.set_request(request)
-
-    return format_response(
-        resource=exception.operation_outcome(),
-        status_code=exception.status_code,
-        format_parameters=FormatParameters.from_request(request, raise_exception=False),
-    )
-
-
-async def _exception_handler(request: Request, exception: Exception) -> Response:
-    """General exception handler to catch server framework errors. Returns an OperationOutcome."""
-    return _exception_response(
-        request=request,
-        severity="error",
-        code="exception",
-        details_text=str(exception),
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    )
 
 
 def _exception_response(
