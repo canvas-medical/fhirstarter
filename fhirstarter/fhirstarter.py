@@ -4,7 +4,7 @@ import asyncio
 import itertools
 import re
 from collections import defaultdict
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, MutableMapping
 from datetime import datetime
 from functools import cache
 from os import PathLike
@@ -80,18 +80,18 @@ class FHIRStarter(FastAPI):
         if config_file_name:
             with open(config_file_name, "rb") as file_:
                 config = tomli.load(file_)
-                self._publisher = config.get("capability-statement", {}).get(
-                    "publisher"
-                )
                 self._search_parameters = SearchParameters(
                     config.get("search-parameters")
                 )
         else:
-            self._publisher = None
             self._search_parameters = SearchParameters()
 
         self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
         self._created = datetime.utcnow()
+
+        self._capability_statement_modifier: Callable[
+            [MutableMapping[str, Any]], MutableMapping[str, Any]
+        ] | None = None
 
         self._add_capabilities_route()
 
@@ -128,6 +128,24 @@ class FHIRStarter(FastAPI):
 
             self._capabilities[resource_type][label] = interaction
             self._add_route(interaction)
+
+    def set_capability_statement_modifier(
+        self, modifier: Callable[[MutableMapping[str, Any]], MutableMapping[str, Any]]
+    ) -> None:
+        """
+        Set a user-provided callable that will make manual adjustments to the
+        automatically-generated capability statement.
+
+        The user-provided callable must take a dictionary, which will be the capability statement,
+        and return a dictionary, which will be the modified version of the capability statement.
+
+        This method enables any desired change to be made to the capability statement, such as
+        filling in fields that are not automatically generated, or adding extensions.
+
+        All modifications made to the capability statement must conform to the specification of the
+        FHIR CapabilityStatement resource, or server startup will fail.
+        """
+        self._capability_statement_modifier = modifier
 
     def openapi(self) -> dict[str, Any]:
         """
@@ -333,8 +351,11 @@ class FHIRStarter(FastAPI):
                 }
             ],
         }
-        if self._publisher:
-            capability_statement["publisher"] = self._publisher
+
+        if self._capability_statement_modifier:
+            capability_statement = self._capability_statement_modifier(
+                capability_statement
+            )
 
         return CapabilityStatement(**capability_statement)
 
