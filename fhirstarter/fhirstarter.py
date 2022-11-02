@@ -137,11 +137,12 @@ class FHIRStarter(FastAPI):
         self, modifier: Callable[[MutableMapping[str, Any]], MutableMapping[str, Any]]
     ) -> None:
         """
-        Set a user-provided callable that will make manual adjustments to the
-        automatically-generated capability statement.
+        Set a user-provided callable that will make adjustments to the automatically-generated
+        capability statement.
 
-        The user-provided callable must take a dictionary, which will be the capability statement,
-        and return a dictionary, which will be the modified version of the capability statement.
+        The user-provided callable must take a mutable mapping, which will be the capability
+        statement, and return a mutable mapping, which will be the modified version of the
+        capability statement.
 
         This method enables any desired change to be made to the capability statement, such as
         filling in fields that are not automatically generated, or adding extensions.
