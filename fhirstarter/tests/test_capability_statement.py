@@ -82,21 +82,24 @@ def test_capability_statement(
 
     response = client.get("/metadata")
 
-    assert_expected_response(response, status.HTTP_200_OK)
-    assert response.json() == {
-        "resourceType": "CapabilityStatement",
-        "status": "active",
-        "date": app._created.isoformat(),
-        "kind": "instance",
-        "fhirVersion": "4.0.1",
-        "format": ["json"],
-        "rest": [
-            {
-                "mode": "server",
-                "resource": resource,
-            }
-        ],
-    }
+    assert_expected_response(
+        response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "CapabilityStatement",
+            "status": "active",
+            "date": app._created.isoformat(),
+            "kind": "instance",
+            "fhirVersion": "4.0.1",
+            "format": ["json"],
+            "rest": [
+                {
+                    "mode": "server",
+                    "resource": resource,
+                }
+            ],
+        },
+    )
 
 
 def test_capability_statement_pretty(
@@ -156,24 +159,27 @@ def test_set_capability_statement_modifier(
 
     response = client.get("/metadata")
 
-    assert_expected_response(response, status.HTTP_200_OK)
-    assert response.json() == {
-        "resourceType": "CapabilityStatement",
-        "status": "active",
-        "date": app._created.isoformat(),
-        "publisher": "Publisher",
-        "kind": "instance",
-        "fhirVersion": "4.0.1",
-        "format": ["json"],
-        "rest": [
-            {
-                "mode": "server",
-                "resource": [
-                    {
-                        "type": "Patient",
-                        "interaction": [{"code": "create"}, {"code": "read"}],
-                    }
-                ],
-            }
-        ],
-    }
+    assert_expected_response(
+        response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "CapabilityStatement",
+            "status": "active",
+            "date": app._created.isoformat(),
+            "publisher": "Publisher",
+            "kind": "instance",
+            "fhirVersion": "4.0.1",
+            "format": ["json"],
+            "rest": [
+                {
+                    "mode": "server",
+                    "resource": [
+                        {
+                            "type": "Patient",
+                            "interaction": [{"code": "create"}, {"code": "read"}],
+                        }
+                    ],
+                }
+            ],
+        },
+    )
