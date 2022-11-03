@@ -1,11 +1,10 @@
 """Test the capability statement"""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any, cast
 
 import pytest
 from fhir.resources.capabilitystatement import CapabilityStatement
-from funcy import omit
 
 from .. import status
 from ..fhirstarter import FHIRStarter
@@ -83,44 +82,24 @@ def test_capability_statement(
 
     response = client.get("/metadata")
 
-    assert_expected_response(response, status.HTTP_200_OK)
-    assert omit(response.json(), ["id"]) == {
-        "resourceType": "CapabilityStatement",
-        "status": "active",
-        "date": app._created.isoformat(),
-        "kind": "instance",
-        "publisher": "Publisher",
-        "fhirVersion": "4.0.1",
-        "format": ["json"],
-        "rest": [
-            {
-                "mode": "server",
-                "resource": resource,
-            }
-        ],
-    }
-
-
-def test_capability_statement_publisher(
-    client_create_and_read_fixture: TestClient,
-) -> None:
-    """Test the capability statement publisher value that is provided by a config file."""
-    client = client_create_and_read_fixture
-
-    response = client.get("/metadata")
-
-    assert_expected_response(response, status.HTTP_200_OK)
-    assert response.json()["publisher"] == "Publisher"
-
-
-def test_capability_statement_no_publisher() -> None:
-    """Test the capability statement with no publisher."""
-    client = TestClient(FHIRStarter())
-
-    response = client.get("/metadata")
-
-    assert_expected_response(response, status.HTTP_200_OK)
-    assert "publisher" not in response.json()
+    assert_expected_response(
+        response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "CapabilityStatement",
+            "status": "active",
+            "date": app._created.isoformat(),
+            "kind": "instance",
+            "fhirVersion": "4.0.1",
+            "format": ["json"],
+            "rest": [
+                {
+                    "mode": "server",
+                    "resource": resource,
+                }
+            ],
+        },
+    )
 
 
 def test_capability_statement_pretty(
@@ -160,4 +139,47 @@ def test_capability_statement_xml(
         content=CapabilityStatement.parse_raw(
             response.content, content_type="text/xml"
         ).xml(pretty_print=(pretty == "true")),
+    )
+
+
+def test_set_capability_statement_modifier(
+    client_create_and_read_fixture: TestClient,
+) -> None:
+    """Test the set_capability_statement_modifier method."""
+    client = client_create_and_read_fixture
+    app = cast(FHIRStarter, client.app)
+
+    def modify_capability_statement(
+        capability_statement: MutableMapping[str, Any]
+    ) -> MutableMapping[str, Any]:
+        capability_statement["publisher"] = "Publisher"
+        return capability_statement
+
+    app.set_capability_statement_modifier(modify_capability_statement)
+
+    response = client.get("/metadata")
+
+    assert_expected_response(
+        response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "CapabilityStatement",
+            "status": "active",
+            "date": app._created.isoformat(),
+            "publisher": "Publisher",
+            "kind": "instance",
+            "fhirVersion": "4.0.1",
+            "format": ["json"],
+            "rest": [
+                {
+                    "mode": "server",
+                    "resource": [
+                        {
+                            "type": "Patient",
+                            "interaction": [{"code": "create"}, {"code": "read"}],
+                        }
+                    ],
+                }
+            ],
+        },
     )

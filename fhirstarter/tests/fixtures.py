@@ -82,9 +82,6 @@ async def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> I
 def app(provider: FHIRProvider) -> TestClient:
     """Create a FHIRStarter app, add the provider, reset the database, and return a TestClient."""
     config_file_contents = """
-[capability-statement]
-publisher = "Publisher"
-
 [search-parameters.Patient.nickname]
 type = "string"
 description = "Nickname"

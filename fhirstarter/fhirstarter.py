@@ -4,7 +4,7 @@ import asyncio
 import itertools
 import re
 from collections import defaultdict
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, MutableMapping
 from datetime import datetime
 from functools import cache
 from os import PathLike
@@ -80,18 +80,22 @@ class FHIRStarter(FastAPI):
         if config_file_name:
             with open(config_file_name, "rb") as file_:
                 config = tomli.load(file_)
-                self._publisher = config.get("capability-statement", {}).get(
-                    "publisher"
-                )
                 self._search_parameters = SearchParameters(
                     config.get("search-parameters")
                 )
         else:
-            self._publisher = None
             self._search_parameters = SearchParameters()
 
         self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
         self._created = datetime.utcnow()
+
+        self._capability_statement_modifier: Callable[
+            [MutableMapping[str, Any]], MutableMapping[str, Any]
+        ] | None = None
+
+        self._exception_handler_callback: Callable[
+            [Request, Exception], None
+        ] | None = None
 
         self._add_capabilities_route()
 
@@ -99,11 +103,11 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_set_content_type_header)
 
         self.add_exception_handler(
-            RequestValidationError, _validation_exception_handler
+            RequestValidationError, self.validation_exception_handler
         )
-        self.add_exception_handler(HTTPException, _http_exception_handler)
-        self.add_exception_handler(FHIRException, _fhir_exception_handler)
-        self.add_exception_handler(Exception, _exception_handler)
+        self.add_exception_handler(HTTPException, self.http_exception_handler)
+        self.add_exception_handler(FHIRException, self.fhir_exception_handler)
+        self.add_exception_handler(Exception, self.general_exception_handler)
 
     def add_providers(self, *providers: FHIRProvider) -> None:
         """
@@ -128,6 +132,198 @@ class FHIRStarter(FastAPI):
 
             self._capabilities[resource_type][label] = interaction
             self._add_route(interaction)
+
+    def set_capability_statement_modifier(
+        self, modifier: Callable[[MutableMapping[str, Any]], MutableMapping[str, Any]]
+    ) -> None:
+        """
+        Set a user-provided callable that will make adjustments to the automatically-generated
+        capability statement.
+
+        The user-provided callable must take a mutable mapping, which will be the capability
+        statement, and return a mutable mapping, which will be the modified version of the
+        capability statement.
+
+        This method enables any desired change to be made to the capability statement, such as
+        filling in fields that are not automatically generated, or adding extensions.
+
+        All modifications made to the capability statement must conform to the specification of the
+        FHIR CapabilityStatement resource, or server startup will fail.
+        """
+        self._capability_statement_modifier = modifier
+
+    def set_exception_handler_callback(
+        self, callback: Callable[[Request], Exception]
+    ) -> None:
+        """
+        Set a user-provided callback function that will run whenever any type of exception occurs.
+
+        This configuration option is useful for injecting additional exception handling behavior,
+        such as exception logging.
+        """
+        self._exception_handler_callback = callback
+
+    async def validation_exception_handler(
+        self, request: Request, exception: RequestValidationError
+    ) -> Response:
+        """
+        Validation exception handler that overrides the default FastAPI validation exception
+        handler.
+
+        Creates an operation outcome by destructuring the RequestValidationError and mapping the
+        values to the correct places in the OperationOutcome.
+        """
+        if self._exception_handler_callback:
+            self._exception_handler_callback(request, exception)
+
+        operation_outcome = OperationOutcome(
+            **{
+                "issue": [
+                    {
+                        "severity": "error",
+                        "code": _pydantic_error_to_fhir_issue_type(error["type"]),
+                        "details": {
+                            "text": display_errors([error]).replace("\n ", " —")
+                        },
+                    }
+                    for error in exception.errors()
+                ]
+            }
+        )
+
+        return format_response(
+            resource=operation_outcome,
+            status_code=status.HTTP_400_BAD_REQUEST,
+            format_parameters=FormatParameters.from_request(
+                request, raise_exception=False
+            ),
+        )
+
+    async def http_exception_handler(
+        self, request: Request, exception: HTTPException
+    ) -> Response:
+        """
+        HTTP exception handler that overrides the default FastAPI HTTP exception handler.
+
+        This exception handler exists primarily to convert an HTTP exception into an
+        OperationOutcome.
+        """
+        if self._exception_handler_callback:
+            self._exception_handler_callback(request, exception)
+
+        return _exception_response(
+            request=request,
+            severity="error",
+            code="processing",
+            details_text=exception.detail,
+            status_code=exception.status_code,
+        )
+
+    async def fhir_exception_handler(
+        self, request: Request, exception: FHIRException
+    ) -> Response:
+        """
+        General exception handler to catch all other FHIRExceptions. Returns an OperationOutcome.
+
+        Set the request on the exception so that the exception has more context with which to form
+        an OperationOutcome.
+        """
+        if self._exception_handler_callback:
+            self._exception_handler_callback(request, exception)
+
+        exception.set_request(request)
+
+        return format_response(
+            resource=exception.operation_outcome(),
+            status_code=exception.status_code,
+            format_parameters=FormatParameters.from_request(
+                request, raise_exception=False
+            ),
+        )
+
+    async def general_exception_handler(
+        self, request: Request, exception: Exception
+    ) -> Response:
+        """
+        General exception handler to catch server framework errors. Returns an OperationOutcome.
+        """
+        if self._exception_handler_callback:
+            self._exception_handler_callback(request, exception)
+
+        return _exception_response(
+            request=request,
+            severity="error",
+            code="exception",
+            details_text=str(exception),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    @cache
+    def capability_statement(self) -> CapabilityStatement:
+        """
+        Generate the capability statement for the instance based on the FHIR interactions provided.
+
+        In addition to declaring the interactions (e.g. create, read, search-type, and update), the
+        supported search parameters are also declared.
+        """
+        resources = []
+        for resource_type, interactions in sorted(self._capabilities.items()):
+            search_parameter_metadata = self._search_parameters.get_metadata(
+                resource_type
+            )
+
+            resource = {
+                "type": resource_type,
+                "interaction": [
+                    {"code": label} for label in sorted(interactions.keys())
+                ],
+            }
+            if search_type_interaction := interactions.get("search-type"):
+                supported_search_parameters_ = []
+                for search_parameter in supported_search_parameters(
+                    search_type_interaction.handler
+                ):
+                    search_parameter_name = var_name_to_qp_name(search_parameter.name)
+                    metadata = search_parameter_metadata[search_parameter_name]
+                    if metadata["include-in-capability-statement"]:
+                        supported_search_parameters_.append(
+                            {
+                                "name": search_parameter_name,
+                                "definition": metadata["uri"],
+                                "type": metadata["type"],
+                                "documentation": metadata["description"],
+                            }
+                        )
+                resource["searchParam"] = sorted(
+                    supported_search_parameters_,
+                    key=lambda p: search_parameter_sort_key(
+                        p["name"], search_parameter_metadata
+                    ),
+                )
+            resources.append(resource)
+
+        # TODO: Status can be filled in based on environment
+        # TODO: Date could be the release date (from an environment variable)
+        capability_statement = {
+            "status": "active",
+            "date": self._created,
+            "kind": "instance",
+            "fhirVersion": "4.0.1",
+            "format": ["json"],
+            "rest": [
+                {
+                    "mode": "server",
+                    "resource": resources,
+                }
+            ],
+        }
+
+        if self._capability_statement_modifier:
+            capability_statement = self._capability_statement_modifier(
+                capability_statement
+            )
+
+        return CapabilityStatement(**capability_statement)
 
     def openapi(self) -> dict[str, Any]:
         """
@@ -274,70 +470,6 @@ class FHIRStarter(FastAPI):
                     make_update_function(interaction)
                 )
 
-    @cache
-    def capability_statement(self) -> CapabilityStatement:
-        """
-        Generate the capability statement for the instance based on the FHIR interactions provided.
-
-        In addition to declaring the interactions (e.g. create, read, search-type, and update), the
-        supported search parameters are also declared.
-        """
-        resources = []
-        for resource_type, interactions in sorted(self._capabilities.items()):
-            search_parameter_metadata = self._search_parameters.get_metadata(
-                resource_type
-            )
-
-            resource = {
-                "type": resource_type,
-                "interaction": [
-                    {"code": label} for label in sorted(interactions.keys())
-                ],
-            }
-            if search_type_interaction := interactions.get("search-type"):
-                supported_search_parameters_ = []
-                for search_parameter in supported_search_parameters(
-                    search_type_interaction.handler
-                ):
-                    search_parameter_name = var_name_to_qp_name(search_parameter.name)
-                    metadata = search_parameter_metadata[search_parameter_name]
-                    if metadata["include-in-capability-statement"]:
-                        supported_search_parameters_.append(
-                            {
-                                "name": search_parameter_name,
-                                "definition": metadata["uri"],
-                                "type": metadata["type"],
-                                "documentation": metadata["description"],
-                            }
-                        )
-                resource["searchParam"] = sorted(
-                    supported_search_parameters_,
-                    key=lambda p: search_parameter_sort_key(
-                        p["name"], search_parameter_metadata
-                    ),
-                )
-            resources.append(resource)
-
-        # TODO: Status can be filled in based on environment
-        # TODO: Date could be the release date (from an environment variable)
-        capability_statement = {
-            "status": "active",
-            "date": self._created,
-            "kind": "instance",
-            "fhirVersion": "4.0.1",
-            "format": ["json"],
-            "rest": [
-                {
-                    "mode": "server",
-                    "resource": resources,
-                }
-            ],
-        }
-        if self._publisher:
-            capability_statement["publisher"] = self._publisher
-
-        return CapabilityStatement(**capability_statement)
-
 
 async def _transform_search_type_post_request(
     request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
@@ -430,81 +562,6 @@ def _pydantic_error_to_fhir_issue_type(error: str) -> str:
             return "value"
         case _:
             return "invalid"
-
-
-async def _validation_exception_handler(
-    request: Request, exception: RequestValidationError
-) -> Response:
-    """
-    Validation exception handler that overrides the default FastAPI validation exception handler.
-
-    Creates an operation outcome by destructuring the RequestValidationError and mapping the values
-    to the correct places in the OperationOutcome.
-    """
-    operation_outcome = OperationOutcome(
-        **{
-            "issue": [
-                {
-                    "severity": "error",
-                    "code": _pydantic_error_to_fhir_issue_type(error["type"]),
-                    "details": {"text": display_errors([error]).replace("\n ", " —")},
-                }
-                for error in exception.errors()
-            ]
-        }
-    )
-
-    return format_response(
-        resource=operation_outcome,
-        status_code=status.HTTP_400_BAD_REQUEST,
-        format_parameters=FormatParameters.from_request(request, raise_exception=False),
-    )
-
-
-async def _http_exception_handler(
-    request: Request, exception: HTTPException
-) -> Response:
-    """
-    HTTP exception handler that overrides the default FastAPI HTTP exception handler.
-
-    This exception handler exists primarily to convert an HTTP exception into an OperationOutcome.
-    """
-    return _exception_response(
-        request=request,
-        severity="error",
-        code="processing",
-        details_text=exception.detail,
-        status_code=exception.status_code,
-    )
-
-
-async def _fhir_exception_handler(
-    request: Request, exception: FHIRException
-) -> Response:
-    """
-    General exception handler to catch all other FHIRExceptions. Returns an OperationOutcome.
-
-    Set the request on the exception so that the exception has more context with which to form an
-    OperationOutcome.
-    """
-    exception.set_request(request)
-
-    return format_response(
-        resource=exception.operation_outcome(),
-        status_code=exception.status_code,
-        format_parameters=FormatParameters.from_request(request, raise_exception=False),
-    )
-
-
-async def _exception_handler(request: Request, exception: Exception) -> Response:
-    """General exception handler to catch server framework errors. Returns an OperationOutcome."""
-    return _exception_response(
-        request=request,
-        severity="error",
-        code="exception",
-        details_text=str(exception),
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    )
 
 
 def _exception_response(
