@@ -6,9 +6,8 @@ import re
 from collections import defaultdict
 from collections.abc import Callable, Coroutine, MutableMapping
 from datetime import datetime
-from functools import cache
 from os import PathLike
-from typing import Any, cast
+from typing import Any, TypeAlias, cast
 from urllib.parse import parse_qs, urlencode
 
 import tomli
@@ -56,6 +55,10 @@ from .utils import (
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
+CapabilityStatementModifier: TypeAlias = Callable[
+    [MutableMapping[str, Any], Request, Response], MutableMapping[str, Any]
+]
+
 
 class FHIRStarter(FastAPI):
     """
@@ -89,9 +92,7 @@ class FHIRStarter(FastAPI):
         self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
         self._created = datetime.utcnow()
 
-        self._capability_statement_modifier: Callable[
-            [MutableMapping[str, Any]], MutableMapping[str, Any]
-        ] | None = None
+        self._capability_statement_modifier: CapabilityStatementModifier | None = None
 
         self._exception_handler_callback: Callable[
             [Request, Exception], None
@@ -134,7 +135,7 @@ class FHIRStarter(FastAPI):
             self._add_route(interaction)
 
     def set_capability_statement_modifier(
-        self, modifier: Callable[[MutableMapping[str, Any]], MutableMapping[str, Any]]
+        self, modifier: CapabilityStatementModifier
     ) -> None:
         """
         Set a user-provided callable that will make adjustments to the automatically-generated
@@ -258,8 +259,9 @@ class FHIRStarter(FastAPI):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    @cache
-    def capability_statement(self) -> CapabilityStatement:
+    def capability_statement(
+        self, request: Request, response: Response
+    ) -> CapabilityStatement:
         """
         Generate the capability statement for the instance based on the FHIR interactions provided.
 
@@ -320,7 +322,7 @@ class FHIRStarter(FastAPI):
 
         if self._capability_statement_modifier:
             capability_statement = self._capability_statement_modifier(
-                capability_statement
+                capability_statement, request, response
             )
 
         return CapabilityStatement(**capability_statement)
@@ -415,7 +417,7 @@ class FHIRStarter(FastAPI):
             _pretty: str = PRETTY_QP,
         ) -> CapabilityStatement | Response:
             return format_response(
-                resource=self.capability_statement(),
+                resource=self.capability_statement(request, response),
                 response=response,
                 format_parameters=FormatParameters.from_request(request),
             )
