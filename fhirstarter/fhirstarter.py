@@ -155,6 +155,12 @@ class FHIRStarter(FastAPI):
     def set_exception_handler_callback(
         self, callback: Callable[[Request], Exception]
     ) -> None:
+        """
+        Set a user-provided callback function that will run whenever any type of exception occurs.
+
+        This configuration option is useful for injecting additional exception handling behavior,
+        such as exception logging.
+        """
         self._exception_handler_callback = callback
 
     async def validation_exception_handler(
