@@ -4,6 +4,7 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any, cast
 
 import pytest
+from fastapi import Request, Response
 from fhir.resources.capabilitystatement import CapabilityStatement
 
 from .. import status
@@ -150,7 +151,9 @@ def test_set_capability_statement_modifier(
     app = cast(FHIRStarter, client.app)
 
     def modify_capability_statement(
-        capability_statement: MutableMapping[str, Any]
+        capability_statement: MutableMapping[str, Any],
+        request: Request,
+        response: Response,
     ) -> MutableMapping[str, Any]:
         capability_statement["publisher"] = "Publisher"
         return capability_statement
