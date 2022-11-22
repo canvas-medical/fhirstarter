@@ -9,12 +9,14 @@ def is_resource_type(resource_type: str) -> bool:
     return resource_type in _RESOURCE_TYPES
 
 
-def load_example(resource_type: str) -> dict[str, Any]:
+def load_example(resource_type: str) -> dict[str, Any] | None:
     """Load the example for the specified resource type."""
-
-    return _load_json_file(
-        Path(__file__).parent / "examples" / f"{resource_type.lower()}-example.json"
-    )
+    try:
+        return _load_json_file(
+            Path(__file__).parent / "examples" / f"{resource_type.lower()}-example.json"
+        )
+    except FileNotFoundError:
+        return None
 
 
 def load_search_parameters() -> dict[str, Any]:

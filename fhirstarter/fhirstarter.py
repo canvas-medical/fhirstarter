@@ -19,7 +19,7 @@ from fhir.resources.operationoutcome import OperationOutcome
 from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
-from .fhir_specification.utils import load_example
+from .fhir_specification.utils import load_example, is_resource_type
 from .functions import (
     FORMAT_QP,
     PRETTY_QP,
@@ -397,7 +397,7 @@ class FHIRStarter(FastAPI):
             resource_type = schema["properties"].get("resource_type", {}).get("const")
 
             if (
-                not resource_type
+                not is_resource_type(resource_type)
                 or resource_type in {"Bundle", "OperationOutcome"}
                 or "example" in schema
             ):
