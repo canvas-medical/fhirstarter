@@ -94,10 +94,6 @@ class FHIRStarter(FastAPI):
 
         self._capability_statement_modifier: CapabilityStatementModifier | None = None
 
-        self._exception_handler_callback: Callable[
-            [Request, Exception], None
-        ] | None = None
-
         self._add_capabilities_route()
 
         self.middleware("http")(_transform_search_type_post_request)
@@ -153,17 +149,6 @@ class FHIRStarter(FastAPI):
         """
         self._capability_statement_modifier = modifier
 
-    def set_exception_handler_callback(
-        self, callback: Callable[[Request], Exception]
-    ) -> None:
-        """
-        Set a user-provided callback function that will run whenever any type of exception occurs.
-
-        This configuration option is useful for injecting additional exception handling behavior,
-        such as exception logging.
-        """
-        self._exception_handler_callback = callback
-
     async def validation_exception_handler(
         self, request: Request, exception: RequestValidationError
     ) -> Response:
@@ -174,9 +159,6 @@ class FHIRStarter(FastAPI):
         Creates an operation outcome by destructuring the RequestValidationError and mapping the
         values to the correct places in the OperationOutcome.
         """
-        if self._exception_handler_callback:
-            self._exception_handler_callback(request, exception)
-
         operation_outcome = OperationOutcome(
             **{
                 "issue": [
@@ -209,9 +191,6 @@ class FHIRStarter(FastAPI):
         This exception handler exists primarily to convert an HTTP exception into an
         OperationOutcome.
         """
-        if self._exception_handler_callback:
-            self._exception_handler_callback(request, exception)
-
         return _exception_response(
             request=request,
             severity="error",
@@ -229,9 +208,6 @@ class FHIRStarter(FastAPI):
         Set the request on the exception so that the exception has more context with which to form
         an OperationOutcome.
         """
-        if self._exception_handler_callback:
-            self._exception_handler_callback(request, exception)
-
         exception.set_request(request)
 
         return format_response(
@@ -248,9 +224,6 @@ class FHIRStarter(FastAPI):
         """
         General exception handler to catch server framework errors. Returns an OperationOutcome.
         """
-        if self._exception_handler_callback:
-            self._exception_handler_callback(request, exception)
-
         return _exception_response(
             request=request,
             severity="error",
