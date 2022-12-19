@@ -13,9 +13,6 @@ jobs:
           python-version: '3.10'
           cache: 'poetry'
       - name: Install Python packages
-        env:
-          POETRY_HTTP_BASIC_CANVAS_PYPI_USERNAME: ${{ secrets.POETRY_HTTP_BASIC_CANVAS_PYPI_USERNAME }}
-          POETRY_HTTP_BASIC_CANVAS_PYPI_PASSWORD: ${{ secrets.POETRY_HTTP_BASIC_CANVAS_PYPI_PASSWORD }}
         run: poetry install
       - name: Run tests
         run: poetry run pytest
