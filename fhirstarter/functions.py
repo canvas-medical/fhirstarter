@@ -22,6 +22,7 @@ from fastapi import Body, Form, Path, Query, Request, Response
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
+from .exceptions import FHIRBadRequestError
 from .interactions import (
     CreateInteractionHandler,
     InteractionContext,
@@ -224,6 +225,12 @@ def make_update_function(
             alias=interaction.resource_type.get_resource_type(),
         ),
     ) -> ResourceType | Response | None:
+        if resource.id and id_ != resource.id:
+            raise FHIRBadRequestError(
+                code="invalid",
+                details_text="Logical Id in URL must match logical Id in resource",
+            )
+
         handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
         result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore
         _, result_resource = _result_to_id_resource_tuple(result)
