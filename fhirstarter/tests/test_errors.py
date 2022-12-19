@@ -9,12 +9,11 @@ from fastapi import HTTPException
 from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 
-from ..exceptions import FHIRGeneralError
 from ..fhirstarter import FHIRProvider, FHIRStarter, Request, Response, status
 from ..interactions import InteractionContext
 from ..testclient import TestClient
 from ..utils import make_operation_outcome
-from .fixtures import app, client_fixture
+from .config import app
 from .utils import assert_expected_response, generate_fhir_resource_id
 
 

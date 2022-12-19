@@ -10,7 +10,7 @@ from fhir.resources.capabilitystatement import CapabilityStatement
 from .. import status
 from ..fhirstarter import FHIRStarter
 from ..testclient import TestClient
-from .fixtures import client, client_create_and_read, client_create_and_read_fixture
+from .config import client, client_create_and_read
 from .utils import assert_expected_response
 
 

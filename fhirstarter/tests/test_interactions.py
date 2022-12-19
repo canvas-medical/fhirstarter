@@ -13,19 +13,13 @@ from ..interactions import InteractionContext
 from ..providers import FHIRProvider
 from ..testclient import TestClient
 from ..utils import make_operation_outcome
-from .fixtures import (
-    DATABASE,
-    app,
-    client_fixture,
-    create_response_fixture,
-    patient_create,
-    resource,
-)
+from .config import DATABASE, app, patient_create
 from .utils import (
     assert_expected_response,
     generate_fhir_resource_id,
     id_from_create_response,
     json_dumps_pretty,
+    resource,
 )
 
 
