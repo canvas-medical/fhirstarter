@@ -94,17 +94,17 @@ class FHIRStarter(FastAPI):
 
         self._capability_statement_modifier: CapabilityStatementModifier | None = None
 
+        self._add_capabilities_route()
+
+        self.middleware("http")(_transform_search_type_post_request)
+        self.middleware("http")(_set_content_type_header)
+
         async def default_exception_callback(
             request: Request, response: Response, exception: Exception
         ) -> Response:
             return response
 
         self._exception_callback = default_exception_callback
-
-        self._add_capabilities_route()
-
-        self.middleware("http")(_transform_search_type_post_request)
-        self.middleware("http")(_set_content_type_header)
 
         self.add_exception_handler(
             RequestValidationError, self.validation_exception_handler
