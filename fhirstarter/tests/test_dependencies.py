@@ -7,7 +7,7 @@ from fhir.resources.patient import Patient
 
 from ..exceptions import FHIRUnauthorizedError
 from ..fhirstarter import FHIRProvider, status
-from .fixtures import app, patient_create
+from .config import app, patient_create
 from .utils import assert_expected_response, resource
 
 _VALID_TOKEN = "valid"

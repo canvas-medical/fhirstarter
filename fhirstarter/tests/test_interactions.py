@@ -13,19 +13,13 @@ from ..interactions import InteractionContext
 from ..providers import FHIRProvider
 from ..testclient import TestClient
 from ..utils import make_operation_outcome
-from .fixtures import (
-    DATABASE,
-    app,
-    client_fixture,
-    create_response_fixture,
-    patient_create,
-    resource,
-)
+from .config import DATABASE, app, patient_create
 from .utils import (
     assert_expected_response,
     generate_fhir_resource_id,
     id_from_create_response,
     json_dumps_pretty,
+    resource,
 )
 
 
@@ -312,4 +306,37 @@ def test_update_not_found(client_fixture: TestClient) -> None:
             code="not-found",
             details_text=f"Unknown Patient resource '{id_}'",
         ).dict(),
+    )
+
+
+def test_update_id_mismatch(
+    client_fixture: TestClient, create_response_fixture: Response
+) -> None:
+    """
+    Test FHIR update interaction where the logical Id in the URL does not match the logical ID in
+    the resource.
+    """
+    client = client_fixture
+
+    id_ = id_from_create_response(create_response_fixture)
+    read_response = client.get(f"/Patient/{id_}")
+    content = read_response.json()
+    content["id"] = generate_fhir_resource_id()
+    put_response = client.put(f"/Patient/{id_}", json=content)
+
+    assert_expected_response(
+        put_response,
+        status.HTTP_400_BAD_REQUEST,
+        content={
+            "resourceType": "OperationOutcome",
+            "issue": [
+                {
+                    "severity": "error",
+                    "code": "invalid",
+                    "details": {
+                        "text": "Logical Id in URL must match logical Id in resource"
+                    },
+                }
+            ],
+        },
     )

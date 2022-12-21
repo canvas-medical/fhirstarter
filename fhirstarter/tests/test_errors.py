@@ -2,18 +2,18 @@
 
 import json
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi import HTTPException
 from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 
-from ..fhirstarter import FHIRProvider, status
+from ..fhirstarter import FHIRProvider, FHIRStarter, Request, Response, status
 from ..interactions import InteractionContext
 from ..testclient import TestClient
 from ..utils import make_operation_outcome
-from .fixtures import app, client_fixture
+from .config import app
 from .utils import assert_expected_response, generate_fhir_resource_id
 
 
@@ -137,6 +137,40 @@ def test_http_exception() -> None:
                     "severity": "error",
                     "code": "processing",
                     "details": {"text": "Bad Request"},
+                }
+            ],
+        },
+    )
+
+
+def test_set_exception_callback(client_fixture: TestClient) -> None:
+    """Test set_exception_callback."""
+    client = client_fixture
+    app = cast(FHIRStarter, client.app)
+
+    async def callback(
+        request: Request, response: Response, exception: Exception
+    ) -> Response:
+        # Change the status code from 404 to 400 so that we can test that the callback was actually
+        # called.
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return response
+
+    app.set_exception_callback(callback)
+
+    id_ = generate_fhir_resource_id()
+    response = client.get(f"/Patient/{id_}")
+
+    assert_expected_response(
+        response,
+        status.HTTP_400_BAD_REQUEST,
+        content={
+            "resourceType": "OperationOutcome",
+            "issue": [
+                {
+                    "severity": "error",
+                    "code": "not-found",
+                    "details": {"text": f"Unknown Patient resource '{id_}'"},
                 }
             ],
         },

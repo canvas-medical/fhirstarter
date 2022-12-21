@@ -1,22 +1,20 @@
-"""FHIRStarter test fixtures"""
+"""FHIRStarter test configuration"""
 
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 from typing import cast
 
-import pytest
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.humanname import HumanName
 from fhir.resources.patient import Patient
-from requests.models import Response
 
 from ..exceptions import FHIRResourceNotFoundError
 from ..fhirstarter import FHIRStarter
 from ..interactions import InteractionContext
 from ..providers import FHIRProvider
 from ..testclient import TestClient
-from .utils import generate_fhir_resource_id, resource
+from .utils import generate_fhir_resource_id
 
 # In-memory "database" used to simulate persistence of created FHIR resources
 DATABASE: dict[str, Patient] = {}
@@ -101,12 +99,6 @@ include-in-capability-statement = true
     return TestClient(app)
 
 
-@pytest.fixture
-def client_fixture() -> TestClient:
-    """Test fixture that creates an app that provides all FHIR interactions."""
-    return client()
-
-
 def client() -> TestClient:
     """Create an app that provides all FHIR interactions."""
     provider = FHIRProvider()
@@ -118,12 +110,6 @@ def client() -> TestClient:
     return app(provider)
 
 
-@pytest.fixture
-def client_create_and_read_fixture() -> TestClient:
-    """Test fixture that creates an app that only provides FHIR create and read interactions."""
-    return client_create_and_read()
-
-
 def client_create_and_read() -> TestClient:
     """Create an app that only provides FHIR create and read interactions."""
     provider = FHIRProvider()
@@ -131,10 +117,3 @@ def client_create_and_read() -> TestClient:
     provider.read(Patient)(patient_read)
 
     return app(provider)
-
-
-@pytest.fixture
-def create_response_fixture(client_fixture: TestClient) -> Response:
-    """Test fixture that provides a response from a FHIR create interaction."""
-    client = client_fixture
-    return client.post("/Patient", json=resource())

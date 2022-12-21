@@ -19,7 +19,7 @@ from fhir.resources.operationoutcome import OperationOutcome
 from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
-from .fhir_specification.utils import load_example, is_resource_type
+from .fhir_specification.utils import is_resource_type, load_example
 from .functions import (
     FORMAT_QP,
     PRETTY_QP,
@@ -99,6 +99,13 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_transform_search_type_post_request)
         self.middleware("http")(_set_content_type_header)
 
+        async def default_exception_callback(
+            request: Request, response: Response, exception: Exception
+        ) -> Response:
+            return response
+
+        self._exception_callback = default_exception_callback
+
         self.add_exception_handler(
             RequestValidationError, self.validation_exception_handler
         )
@@ -149,6 +156,19 @@ class FHIRStarter(FastAPI):
         """
         self._capability_statement_modifier = modifier
 
+    def set_exception_callback(
+        self,
+        callback: Callable[
+            [Request, Response, Exception], Coroutine[None, None, Response]
+        ],
+    ) -> None:
+        """
+        Set a user-provided callback function that will run whenever any type of exception occurs.
+        This configuration option is useful for injecting additional exception handling behavior,
+        such as exception logging.
+        """
+        self._exception_callback = callback
+
     async def validation_exception_handler(
         self, request: Request, exception: RequestValidationError
     ) -> Response:
@@ -174,13 +194,15 @@ class FHIRStarter(FastAPI):
             }
         )
 
-        return format_response(
+        response = format_response(
             resource=operation_outcome,
             status_code=status.HTTP_400_BAD_REQUEST,
             format_parameters=FormatParameters.from_request(
                 request, raise_exception=False
             ),
         )
+
+        return await self._exception_callback(request, response, exception)
 
     async def http_exception_handler(
         self, request: Request, exception: HTTPException
@@ -191,13 +213,15 @@ class FHIRStarter(FastAPI):
         This exception handler exists primarily to convert an HTTP exception into an
         OperationOutcome.
         """
-        return _exception_response(
+        response = _exception_response(
             request=request,
             severity="error",
             code="processing",
             details_text=exception.detail,
             status_code=exception.status_code,
         )
+
+        return await self._exception_callback(request, response, exception)
 
     async def fhir_exception_handler(
         self, request: Request, exception: FHIRException
@@ -210,7 +234,7 @@ class FHIRStarter(FastAPI):
         """
         exception.set_request(request)
 
-        return format_response(
+        response = format_response(
             resource=exception.operation_outcome(),
             status_code=exception.status_code,
             format_parameters=FormatParameters.from_request(
@@ -218,19 +242,23 @@ class FHIRStarter(FastAPI):
             ),
         )
 
+        return await self._exception_callback(request, response, exception)
+
     async def general_exception_handler(
         self, request: Request, exception: Exception
     ) -> Response:
         """
         General exception handler to catch server framework errors. Returns an OperationOutcome.
         """
-        return _exception_response(
+        response = _exception_response(
             request=request,
             severity="error",
             code="exception",
             details_text=str(exception),
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+        return await self._exception_callback(request, response, exception)
 
     def capability_statement(
         self, request: Request, response: Response
