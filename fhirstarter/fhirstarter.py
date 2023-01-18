@@ -302,8 +302,6 @@ class FHIRStarter(FastAPI):
                 )
             resources.append(resource)
 
-        # TODO: Status can be filled in based on environment
-        # TODO: Date could be the release date (from an environment variable)
         capability_statement = {
             "status": "active",
             "date": self._created,
