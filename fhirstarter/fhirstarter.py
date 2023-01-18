@@ -7,6 +7,7 @@ import re
 import tomllib
 from collections import defaultdict
 from collections.abc import Callable, Coroutine, MutableMapping
+from copy import deepcopy
 from datetime import datetime
 from os import PathLike
 from typing import Any, TypeAlias, cast
@@ -20,7 +21,11 @@ from fhir.resources.operationoutcome import OperationOutcome
 from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
-from .fhir_specification.utils import is_resource_type, load_example
+from .fhir_specification.utils import (
+    is_resource_type,
+    load_bundle_example,
+    load_example,
+)
 from .functions import (
     FORMAT_QP,
     PRETTY_QP,
@@ -361,15 +366,14 @@ class FHIRStarter(FastAPI):
                 path["post"]["requestBody"]["content"][
                     "application/x-www-form-urlencoded"
                 ]["schema"] = openapi_schema["components"]["schemas"].pop(
-                    f"Body_search_type_{resource_type}__search_post"
+                    f"Body_type_search_post_{resource_type}"
                 )
 
             # Iterate over all operations for a given path
             for operation_name, operation in path.items():
-                responses = operation["responses"]
-
                 # For each possible response (i.e. status code), remove the default FastAPI response
                 # schema
+                responses = operation["responses"]
                 status_codes: tuple[str, ...] = tuple(responses.keys())
                 for status_code in status_codes:
                     if (
@@ -386,6 +390,21 @@ class FHIRStarter(FastAPI):
                 for response in responses.values():
                     if schema := response["content"].pop("application/json", None):
                         response["content"]["application/fhir+json"] = schema
+
+                # For search operations, provide a bundle example that contains the correct resource
+                # type
+                interaction_level, interaction_type, method, *rest = operation[
+                    "operationId"
+                ].split("|")
+                if interaction_type == "search":
+                    resource_type = rest[0]
+                    example = load_bundle_example(resource_type)
+                    operation["responses"]["200"]["content"]["application/fhir+json"][
+                        "schema"
+                    ] = deepcopy(openapi_schema["components"]["schemas"]["Bundle"])
+                    operation["responses"]["200"]["content"]["application/fhir+json"][
+                        "schema"
+                    ]["example"] = example
 
         # For each schema (except for Bundle and OperationOutcome), provide an actual FHIR example
         # response unless an example exists on the actual model
@@ -426,6 +445,7 @@ class FHIRStarter(FastAPI):
             summary="Get a capability statement for the system",
             description="The capabilities interaction retrieves the information about a server's "
             "capabilities - which portions of the FHIR specification it supports.",
+            operation_id="system|capabilities|get",
             response_model_exclude_none=True,
         )(capability_statement_handler)
 

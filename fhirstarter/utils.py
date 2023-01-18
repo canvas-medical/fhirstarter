@@ -210,6 +210,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
             _forbidden,
             _unprocessable_entity,
         ),
+        "operation_id": f"type|create|post|{resource_type_str}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -230,6 +231,7 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any
         "responses": _responses(
             interaction, _ok, _unauthorized, _forbidden, _not_found
         ),
+        "operation_id": f"instance|read|get|{resource_type_str}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -252,6 +254,7 @@ def search_type_route_args(
         "responses": _responses(
             interaction, _ok, _bad_request, _unauthorized, _forbidden
         ),
+        "operation_id": f"type|search|{'post' if post else 'get'}|{resource_type_str}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -277,6 +280,7 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
             _forbidden,
             _unprocessable_entity,
         ),
+        "operation_id": f"instance|update|put|{resource_type_str}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
