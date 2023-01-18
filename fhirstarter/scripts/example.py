@@ -4,11 +4,13 @@ interactions (i.e. endpoints) that perform create, read, search-type, and update
 """
 from copy import deepcopy
 from pathlib import Path
+from typing import cast
 from uuid import uuid4
 
 import uvicorn
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
+from fhir.resources.humanname import HumanName
 from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
 
@@ -68,7 +70,7 @@ async def patient_search_type(
     patients = []
     for patient in DATABASE.values():
         for name in patient.name:
-            if name.family == family:
+            if cast(HumanName, name).family == family:
                 patients.append(patient)
 
     bundle = Bundle(
@@ -111,5 +113,5 @@ if __name__ == "__main__":
         "example:app",
         use_colors=True,
         reload=True,
-        reload_dirs=[Path(__file__).parent.parent],
+        reload_dirs=str(Path(__file__).parent.parent),
     )

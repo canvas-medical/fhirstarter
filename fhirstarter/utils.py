@@ -196,7 +196,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
 
     return {
         "path": f"/{resource_type_str}",
-        "response_model": interaction.resource_type,
+        "response_model": interaction.resource_type | None,
         "status_code": status.HTTP_201_CREATED,
         "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
         "summary": f"{resource_type_str} {interaction.label()}",
@@ -263,7 +263,7 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
 
     return {
         "path": f"/{resource_type_str}/{{id}}",
-        "response_model": interaction.resource_type,
+        "response_model": interaction.resource_type | None,
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
         "summary": f"{resource_type_str} {interaction.label()}",

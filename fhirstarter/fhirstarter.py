@@ -2,7 +2,9 @@
 
 import asyncio
 import itertools
+import logging
 import re
+import tomllib
 from collections import defaultdict
 from collections.abc import Callable, Coroutine, MutableMapping
 from datetime import datetime
@@ -10,7 +12,6 @@ from os import PathLike
 from typing import Any, TypeAlias, cast
 from urllib.parse import parse_qs, urlencode
 
-import tomli
 import uvloop
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -46,12 +47,8 @@ from .utils import (
     update_route_args,
 )
 
-# TODO: Review documentation for create, read, search, and update interactions
-# TODO: Find out if user-provided type annotations need to be validated
-# TODO: Research auto-filling path and query parameter options from the FHIR specification
-# TODO: Research auto-filling path definition parameters with data from the FHIR specification
-# TODO: Review all of the path definition parameters and path/query/body parameters
-# TODO: Expose responses FastAPI argument so that developer can specify additional responses
+# Suppress warnings from base fhir.resources class
+logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
@@ -82,7 +79,7 @@ class FHIRStarter(FastAPI):
 
         if config_file_name:
             with open(config_file_name, "rb") as file_:
-                config = tomli.load(file_)
+                config = tomllib.load(file_)
                 self._search_parameters = SearchParameters(
                     config.get("search-parameters")
                 )
@@ -100,7 +97,7 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_set_content_type_header)
 
         async def default_exception_callback(
-            request: Request, response: Response, exception: Exception
+            _: Request, response: Response, __: Exception
         ) -> Response:
             return response
 
