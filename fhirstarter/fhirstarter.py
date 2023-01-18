@@ -353,7 +353,12 @@ class FHIRStarter(FastAPI):
 
         openapi_schema = super().openapi()
 
-        # Add examples for different operation outcomes
+        # Remove default FAstAPI validation errors, since FHIRStarter will always return operation
+        # outcomes
+        openapi_schema["components"]["schemas"].pop("HTTPValidationError", None)
+        openapi_schema["components"]["schemas"].pop("ValidationError", None)
+
+        # Add schema example for different operation outcomes
         for status_code, code, details_text in (
             (400, "invalid", "Bad Request"),
             (401, "unknown", "Authentication failed"),
