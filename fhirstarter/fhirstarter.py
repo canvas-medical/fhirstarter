@@ -360,6 +360,7 @@ class FHIRStarter(FastAPI):
             (403, "forbidden", "Authorization failed"),
             (404, "not-found", "Resource Not Found"),
             (422, "processing", "Unprocessable Entity"),
+            (500, "exception", "Internal Server Error"),
         ):
             title = f"OperationOutcome {status_code}"
             openapi_schema["components"]["schemas"][title] = deepcopy(
@@ -408,7 +409,10 @@ class FHIRStarter(FastAPI):
                     schema = response["content"].pop("application/json", None)
 
                     # Add specialized OperationOutcome responses if available for the status code
-                    if status_code in {"400", "401", "403", "404", "422"}:
+                    if (
+                        f"OperationOutcome {status_code}"
+                        in openapi_schema["components"]["schemas"]
+                    ):
                         response["content"]["application/fhir+json"] = openapi_schema[
                             "components"
                         ]["schemas"][f"OperationOutcome {status_code}"]

@@ -209,6 +209,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
             _unauthorized,
             _forbidden,
             _unprocessable_entity,
+            _internal_server_error,
         ),
         "operation_id": f"type|create|post|{resource_type_str}",
         "response_model_exclude_none": True,
@@ -229,7 +230,12 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any
         "description": f"The {resource_type_str} read interaction accesses "
         f"the current contents of a {resource_type_str} resource.",
         "responses": _responses(
-            interaction, _ok, _unauthorized, _forbidden, _not_found
+            interaction,
+            _ok,
+            _unauthorized,
+            _forbidden,
+            _not_found,
+            _internal_server_error,
         ),
         "operation_id": f"instance|read|get|{resource_type_str}",
         "response_model_exclude_none": True,
@@ -252,7 +258,12 @@ def search_type_route_args(
         "description": f"The {resource_type_str} search-type interaction searches a set of "
         "resources based on some filter criteria.",
         "responses": _responses(
-            interaction, _ok, _bad_request, _unauthorized, _forbidden
+            interaction,
+            _ok,
+            _bad_request,
+            _unauthorized,
+            _forbidden,
+            _internal_server_error,
         ),
         "operation_id": f"type|search|{'post' if post else 'get'}|{resource_type_str}",
         "response_model_exclude_none": True,
@@ -279,6 +290,7 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
             _unauthorized,
             _forbidden,
             _unprocessable_entity,
+            _internal_server_error,
         ),
         "operation_id": f"instance|update|put|{resource_type_str}",
         "response_model_exclude_none": True,
@@ -377,5 +389,15 @@ def _unprocessable_entity(interaction: TypeInteraction[ResourceType]) -> _Respon
             "description": f"The proposed {interaction.resource_type.get_resource_type()} resource"
             " violated applicable "
             "FHIR profiles or server business rules.",
+        }
+    }
+
+
+def _internal_server_error(_: TypeInteraction[ResourceType]) -> _Responses:
+    """Documentation for an HTTP 500 Internal Server error response."""
+    return {
+        status.HTTP_500_INTERNAL_SERVER_ERROR: {
+            "model": OperationOutcome,
+            "description": f"The server has encountered a situation it does not know how to handle.",
         }
     }
