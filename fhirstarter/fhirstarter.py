@@ -25,6 +25,7 @@ from .fhir_specification.utils import (
     is_resource_type,
     load_bundle_example,
     load_example,
+    make_operation_outcome_example,
 )
 from .functions import (
     FORMAT_QP,
@@ -352,10 +353,24 @@ class FHIRStarter(FastAPI):
 
         openapi_schema = super().openapi()
 
-        # Remove default FastAPI validation errors, since FHIRStarter will always return operation
-        # outcomes
-        openapi_schema["components"]["schemas"].pop("HTTPValidationError", None)
-        openapi_schema["components"]["schemas"].pop("ValidationError", None)
+        # Add examples for different operation outcomes
+        for status_code, code, details_text in (
+            (400, "invalid", "Bad Request"),
+            (401, "unknown", "Authentication failed"),
+            (403, "forbidden", "Authorization failed"),
+            (404, "not-found", "Resource Not Found"),
+            (422, "processing", "Unprocessable Entity"),
+        ):
+            title = f"OperationOutcome {status_code}"
+            openapi_schema["components"]["schemas"][title] = deepcopy(
+                openapi_schema["components"]["schemas"]["OperationOutcome"]
+            )
+            openapi_schema["components"]["schemas"][title]["title"] = title
+            openapi_schema["components"]["schemas"][title][
+                "example"
+            ] = make_operation_outcome_example(
+                severity="error", code=code, details_text=details_text
+            )
 
         # Iterate over the documentation for all paths
         for path_name, path in openapi_schema["paths"].items():
@@ -387,17 +402,26 @@ class FHIRStarter(FastAPI):
 
                 # For each response, change all instances of application/json to
                 # application/fhir+json
-                for response in responses.values():
-                    if schema := response["content"].pop("application/json", None):
+                # Iterate over the responses
+                for status_code, response in responses.items():
+                    # Remove the response for "application/json"
+                    schema = response["content"].pop("application/json", None)
+
+                    # Add specialized OperationOutcome responses if available for the status code
+                    if status_code in {"400", "401", "403", "404", "422"}:
+                        response["content"]["application/fhir+json"] = openapi_schema[
+                            "components"
+                        ]["schemas"][f"OperationOutcome {status_code}"]
+                    elif schema:
+                        # If there was a response originally, add it back as the response for
+                        # application/fhir+json
                         response["content"]["application/fhir+json"] = schema
 
                 # For search operations, provide a bundle example that contains the correct resource
                 # type
-                interaction_level, interaction_type, method, *rest = operation[
-                    "operationId"
-                ].split("|")
+                _, interaction_type, *rest = operation["operationId"].split("|")
                 if interaction_type == "search":
-                    resource_type = rest[0]
+                    resource_type = rest[1]
                     example = load_bundle_example(resource_type)
                     operation["responses"]["200"]["content"]["application/fhir+json"][
                         "schema"

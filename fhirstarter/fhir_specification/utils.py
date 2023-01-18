@@ -45,6 +45,23 @@ def load_bundle_example(resource_type: str) -> dict[str, Any]:
     return bundle_example
 
 
+def make_operation_outcome_example(
+    severity: str, code: str, details_text: str
+) -> dict[str, Any]:
+    """Make an OperationOutcome example given a severity, code, and details text."""
+    return {
+        "resourceType": "OperationOutcome",
+        "id": "101",
+        "issue": [
+            {
+                "severity": severity,
+                "code": code,
+                "details": {"text": details_text},
+            }
+        ],
+    }
+
+
 def load_search_parameters() -> dict[str, Any]:
     """Load the search parameters file."""
     return _load_json_file(Path(__file__).parent / "search-parameters.json")
