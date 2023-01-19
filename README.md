@@ -20,13 +20,21 @@ pip install fhirstarter
 
 ## Background
 
-FHIRStarter uses a provider-decorator pattern to enable developers to plug functions into the framework that implement FHIR interactions such as create, read, search, and update, which will then create FHIR-compatible API routes automatically. FHIR interactions that are supplied must use the resource classes defined by the [FHIR Resources](https://pypi.org/project/fhir.resources/) Python package, which is a collection of Pydantic models for FHIR resources.
+FHIRStarter uses a provider-decorator pattern. Developers can plug functions into the framework that
+implement FHIR interactions such as create, read, search-type, and update. FHIRStarter then
+automatically creates FHIR-compatible API routes from these developer-provided functions. FHIR
+interactions that are supplied must use the resource classes defined by the
+[FHIR Resources](https://pypi.org/project/fhir.resources/) Python package, which is a collection of
+Pydantic models for FHIR resources.
 
-In order to stand up a FHIR server, all that is required is to create a FHIRStarter and a FHIRProvider instance, register a FHIR interaction with the provider, add the provider to the FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server.
+In order to stand up a FHIR server, all that is required is to create a FHIRStarter and a
+FHIRProvider instance, register a FHIR interaction with the provider, add the provider to the
+FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server.
 
 ## Usage
 
-A detailed example is available here: [fhirstarter/scripts/example.py](fhirstarter/scripts/example.py).
+A detailed example is available here: 
+[fhirstarter/scripts/example.py](fhirstarter/scripts/example.py).
 
 ```python
 import uvicorn
