@@ -20,10 +20,10 @@ pip install fhirstarter
 
 ## Background
 
-FHIRStarter uses a provider-decorator pattern. Developers can plug functions into the framework that
-implement FHIR interactions such as create, read, search-type, and update. FHIRStarter then
-automatically creates FHIR-compatible API routes from these developer-provided functions. FHIR
-interactions that are supplied must use the resource classes defined by the
+FHIRStarter uses a provider-decorator pattern. Developers can write functions that implement FHIR
+interactions -- such as create, read, search-type, and update -- and plug them into the framework.
+FHIRStarter then automatically creates FHIR-compatible API routes from these developer-provided
+functions. FHIR interactions that are supplied must use the resource classes defined by the
 [FHIR Resources](https://pypi.org/project/fhir.resources/) Python package, which is a collection of
 Pydantic models for FHIR resources.
 
