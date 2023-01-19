@@ -72,7 +72,7 @@ class FHIRStarter(FastAPI):
     """
 
     def __init__(
-        self, config_file_name: str | PathLike[str] | None = None, **kwargs: Any
+        self, *, config_file_name: str | PathLike[str] | None = None, title: str = 'FHIRStarter', **kwargs: Any
     ) -> None:
         """
         On app creation, the following occurs:
@@ -81,7 +81,7 @@ class FHIRStarter(FastAPI):
         * Middleware is added (e.g. content-type header handling)
         * Exception handling is added
         """
-        super().__init__(**kwargs)
+        super().__init__(title=title, **kwargs)
 
         if config_file_name:
             with open(config_file_name, "rb") as file_:
