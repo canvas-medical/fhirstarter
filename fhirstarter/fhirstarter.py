@@ -475,7 +475,7 @@ class FHIRStarter(FastAPI):
             response_model=CapabilityStatement,
             status_code=status.HTTP_200_OK,
             tags=["System"],
-            summary="Get a capability statement for the system",
+            summary="capabilities",
             description="The capabilities interaction retrieves the information about a server's "
             "capabilities - which portions of the FHIR specification it supports.",
             operation_id="system|capabilities|get",
