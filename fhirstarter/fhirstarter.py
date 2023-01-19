@@ -72,7 +72,11 @@ class FHIRStarter(FastAPI):
     """
 
     def __init__(
-        self, *, config_file_name: str | PathLike[str] | None = None, title: str = 'FHIRStarter', **kwargs: Any
+        self,
+        *,
+        config_file_name: str | PathLike[str] | None = None,
+        title: str = "FHIRStarter",
+        **kwargs: Any,
     ) -> None:
         """
         On app creation, the following occurs:
