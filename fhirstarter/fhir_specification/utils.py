@@ -9,11 +9,57 @@ def is_resource_type(resource_type: str) -> bool:
     return resource_type in _RESOURCE_TYPES
 
 
-def load_example(resource_type: str) -> dict[str, Any] | None:
+def load_example(resource_type: str) -> dict[str, Any]:
     """Load the example for the specified resource type."""
     return _load_json_file(
         Path(__file__).parent / "examples" / f"{resource_type.lower()}-example.json"
     )
+
+
+def load_bundle_example(resource_type: str) -> dict[str, Any]:
+    """
+    Load a bundle example for a specific resource type.
+
+    The standard bundle example is modified based on the given resource type.
+    """
+    resource_example = load_example(resource_type)
+    bundle_example = load_example("Bundle")
+
+    bundle_example["link"][0] = {
+        "relation": "self",
+        "url": f"https://example.com/base/{resource_type}?_count=1",
+    }
+    bundle_example["link"][1] = {
+        "relation": "next",
+        "url": f"https://example.com/base/{resource_type}?"
+        "searchId=ff15fd40-ff71-4b48-b366-09c706bed9d0&page=2",
+    }
+    bundle_example["entry"] = [
+        {
+            "fullUrl": f"https://example.com/base/{resource_type}/3123",
+            "resource": resource_example,
+            "search": {"mode": "match", "score": 1},
+        }
+    ]
+
+    return bundle_example
+
+
+def make_operation_outcome_example(
+    severity: str, code: str, details_text: str
+) -> dict[str, Any]:
+    """Make an OperationOutcome example given a severity, code, and details text."""
+    return {
+        "resourceType": "OperationOutcome",
+        "id": "101",
+        "issue": [
+            {
+                "severity": severity,
+                "code": code,
+                "details": {"text": details_text},
+            }
+        ],
+    }
 
 
 def load_search_parameters() -> dict[str, Any]:

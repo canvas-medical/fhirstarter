@@ -6,11 +6,9 @@ from typing import Any, cast
 
 import pytest
 from fastapi import HTTPException
-from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 
 from ..fhirstarter import FHIRProvider, FHIRStarter, Request, Response, status
-from ..interactions import InteractionContext
 from ..testclient import TestClient
 from ..utils import make_operation_outcome
 from .config import app
@@ -25,7 +23,9 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="structure",
-                details_text="body -> 1 — Expecting value: line 1 column 2 (char 1) (type=value_error.jsondecode; msg=Expecting value; doc= ; pos=1; lineno=1; colno=2)",
+                details_text="body -> 1 — Expecting value: line 1 column 2 (char 1) "
+                "(type=value_error.jsondecode; msg=Expecting value; doc= ; pos=1; lineno=1; "
+                "colno=2)",
             ),
         ),
         (
@@ -33,7 +33,8 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="structure",
-                details_text="body -> extraField — extra fields not permitted (type=value_error.extra)",
+                details_text="body -> extraField — extra fields not permitted "
+                "(type=value_error.extra)",
             ),
         ),
         (
@@ -41,7 +42,8 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="required",
-                details_text="body -> communication -> 0 -> language — field required (type=value_error.missing)",
+                details_text="body -> communication -> 0 -> language — field required "
+                "(type=value_error.missing)",
             ),
         ),
         (
@@ -49,7 +51,8 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="value",
-                details_text="body -> id — ensure this value has at least 1 characters (type=value_error.any_str.min_length; limit_value=1)",
+                details_text="body -> id — ensure this value has at least 1 characters "
+                "(type=value_error.any_str.min_length; limit_value=1)",
             ),
         ),
         (
@@ -69,14 +72,16 @@ from .utils import assert_expected_response, generate_fhir_resource_id
                         "severity": "error",
                         "code": "required",
                         "details": {
-                            "text": "body -> communication -> 0 -> language — field required (type=value_error.missing)"
+                            "text": "body -> communication -> 0 -> language — field required "
+                            "(type=value_error.missing)"
                         },
                     },
                     {
                         "severity": "error",
                         "code": "structure",
                         "details": {
-                            "text": "body -> extraField — extra fields not permitted (type=value_error.extra)"
+                            "text": "body -> extraField — extra fields not permitted "
+                            "(type=value_error.extra)"
                         },
                     },
                 ],
@@ -105,7 +110,7 @@ def test_validation_error(
     if isinstance(request_body, Mapping):
         request_body = json.dumps(request_body)
 
-    create_response = client.post("/Patient", data=request_body)
+    create_response = client.post("/Patient", content=request_body)
 
     assert_expected_response(
         create_response,
@@ -117,7 +122,7 @@ def test_validation_error(
 def test_http_exception() -> None:
     """Test exception handling for HTTP Exceptions."""
 
-    async def patient_read(context: InteractionContext, id_: Id) -> Patient:
+    async def patient_read(*_: Any) -> Patient:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
     provider = FHIRProvider()
@@ -146,17 +151,15 @@ def test_http_exception() -> None:
 def test_set_exception_callback(client_fixture: TestClient) -> None:
     """Test set_exception_callback."""
     client = client_fixture
-    app = cast(FHIRStarter, client.app)
+    test_app = cast(FHIRStarter, client.app)
 
-    async def callback(
-        request: Request, response: Response, exception: Exception
-    ) -> Response:
+    async def callback(_: Request, response_: Response, __: Exception) -> Response:
         # Change the status code from 404 to 400 so that we can test that the callback was actually
         # called.
-        response.status_code = status.HTTP_400_BAD_REQUEST
-        return response
+        response_.status_code = status.HTTP_400_BAD_REQUEST
+        return response_
 
-    app.set_exception_callback(callback)
+    test_app.set_exception_callback(callback)
 
     id_ = generate_fhir_resource_id()
     response = client.get(f"/Patient/{id_}")

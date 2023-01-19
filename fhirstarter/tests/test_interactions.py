@@ -2,9 +2,11 @@
 
 from collections.abc import Callable
 from functools import partial
+from typing import cast
 
 import pytest
 from fhir.resources.bundle import Bundle
+from fhir.resources.humanname import HumanName
 from fhir.resources.patient import Patient
 from requests.models import Response
 
@@ -204,7 +206,7 @@ def test_search_type_parameter_multiple_values(
         patients = []
         for patient in DATABASE.values():
             for name in patient.name:
-                if set(given).issubset(name.given):
+                if set(given).issubset(cast(HumanName, name).given):
                     patients.append(patient)
 
         bundle = Bundle(

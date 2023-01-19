@@ -20,13 +20,15 @@ _EXTRA_SEARCH_PARAMETERS = {
     "Resource": {
         "_list": {
             "type": "string",
-            "description": "All resources in nominated list (by id, Type/id, url or one of the magic List types)",
+            "description": "All resources in nominated list (by id, Type/id, url or one of the "
+            "magic List types)",
             "uri": "http://hl7.org/fhir/SearchParameter/Resource-list",
             "include-in-capability-statement": True,
         },
         "_sort": {
             "type": "string",
-            "description": "Order to sort results in (can repeat for inner sort orders)\r\n\r\nAllowable Content: Name of a valid search parameter",
+            "description": "Order to sort results in (can repeat for inner sort "
+            "orders)\r\n\r\nAllowable Content: Name of a valid search parameter",
             "include-in-capability-statement": False,
         },
         "_count": {
@@ -36,27 +38,32 @@ _EXTRA_SEARCH_PARAMETERS = {
         },
         "_include": {
             "type": "string",
-            "description": "Other resources to include in the search results that search matches point to\r\n\r\nAllowable Content: SourceType:searchParam(:targetType)",
+            "description": "Other resources to include in the search results that search matches "
+            "point to\r\n\r\nAllowable Content: SourceType:searchParam(:targetType)",
             "include-in-capability-statement": False,
         },
         "_revinclude": {
             "type": "string",
-            "description": "Other resources to include in the search results when they refer to search matches\r\n\r\nAllowable Content: SourceType:searchParam(:targetType)",
+            "description": "Other resources to include in the search results when they refer to "
+            "search matches\r\n\r\nAllowable Content: SourceType:searchParam(:targetType)",
             "include-in-capability-statement": False,
         },
         "_summary": {
             "type": "string",
-            "description": "Just return the summary elements (for resources where this is defined)\r\n\r\nAllowable Content: true | false (false is default)",
+            "description": "Just return the summary elements (for resources where this is "
+            "defined)\r\n\r\nAllowable Content: true | false (false is default)",
             "include-in-capability-statement": False,
         },
         "_contained": {
             "type": "string",
-            "description": "Whether to return resources contained in other resources in the search matches\r\n\r\nAllowable Content: true | false | both (false is default)",
+            "description": "Whether to return resources contained in other resources in the search "
+            "matches\r\n\r\nAllowable Content: true | false | both (false is default)",
             "include-in-capability-statement": False,
         },
         "_containedType": {
             "type": "string",
-            "description": "If returning contained resources, whether to return the contained or container resources\r\n\r\nAllowable Content: container | contained",
+            "description": "If returning contained resources, whether to return the contained or "
+            "container resources\r\n\r\nAllowable Content: container | contained",
             "include-in-capability-statement": False,
         },
     }

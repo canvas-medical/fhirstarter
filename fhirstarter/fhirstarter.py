@@ -2,15 +2,17 @@
 
 import asyncio
 import itertools
+import logging
 import re
+import tomllib
 from collections import defaultdict
 from collections.abc import Callable, Coroutine, MutableMapping
+from copy import deepcopy
 from datetime import datetime
 from os import PathLike
 from typing import Any, TypeAlias, cast
 from urllib.parse import parse_qs, urlencode
 
-import tomli
 import uvloop
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -19,7 +21,12 @@ from fhir.resources.operationoutcome import OperationOutcome
 from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
-from .fhir_specification.utils import is_resource_type, load_example
+from .fhir_specification.utils import (
+    is_resource_type,
+    load_bundle_example,
+    load_example,
+    make_operation_outcome_example,
+)
 from .functions import (
     FORMAT_QP,
     PRETTY_QP,
@@ -46,12 +53,8 @@ from .utils import (
     update_route_args,
 )
 
-# TODO: Review documentation for create, read, search, and update interactions
-# TODO: Find out if user-provided type annotations need to be validated
-# TODO: Research auto-filling path and query parameter options from the FHIR specification
-# TODO: Research auto-filling path definition parameters with data from the FHIR specification
-# TODO: Review all of the path definition parameters and path/query/body parameters
-# TODO: Expose responses FastAPI argument so that developer can specify additional responses
+# Suppress warnings from base fhir.resources class
+logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
@@ -69,7 +72,11 @@ class FHIRStarter(FastAPI):
     """
 
     def __init__(
-        self, config_file_name: str | PathLike[str] | None = None, **kwargs: Any
+        self,
+        *,
+        config_file_name: str | PathLike[str] | None = None,
+        title: str = "FHIRStarter",
+        **kwargs: Any,
     ) -> None:
         """
         On app creation, the following occurs:
@@ -78,11 +85,11 @@ class FHIRStarter(FastAPI):
         * Middleware is added (e.g. content-type header handling)
         * Exception handling is added
         """
-        super().__init__(**kwargs)
+        super().__init__(title=title, **kwargs)
 
         if config_file_name:
             with open(config_file_name, "rb") as file_:
-                config = tomli.load(file_)
+                config = tomllib.load(file_)
                 self._search_parameters = SearchParameters(
                     config.get("search-parameters")
                 )
@@ -100,7 +107,7 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_set_content_type_header)
 
         async def default_exception_callback(
-            request: Request, response: Response, exception: Exception
+            _: Request, response: Response, __: Exception
         ) -> Response:
             return response
 
@@ -305,8 +312,6 @@ class FHIRStarter(FastAPI):
                 )
             resources.append(resource)
 
-        # TODO: Status can be filled in based on environment
-        # TODO: Date could be the release date (from an environment variable)
         capability_statement = {
             "status": "active",
             "date": self._created,
@@ -357,6 +362,26 @@ class FHIRStarter(FastAPI):
         openapi_schema["components"]["schemas"].pop("HTTPValidationError", None)
         openapi_schema["components"]["schemas"].pop("ValidationError", None)
 
+        # Add schema example for different operation outcomes
+        for status_code, code, details_text in (
+            (400, "invalid", "Bad Request"),
+            (401, "unknown", "Authentication failed"),
+            (403, "forbidden", "Authorization failed"),
+            (404, "not-found", "Resource Not Found"),
+            (422, "processing", "Unprocessable Entity"),
+            (500, "exception", "Internal Server Error"),
+        ):
+            title = f"OperationOutcome {status_code}"
+            openapi_schema["components"]["schemas"][title] = deepcopy(
+                openapi_schema["components"]["schemas"]["OperationOutcome"]
+            )
+            openapi_schema["components"]["schemas"][title]["title"] = title
+            openapi_schema["components"]["schemas"][title][
+                "example"
+            ] = make_operation_outcome_example(
+                severity="error", code=code, details_text=details_text
+            )
+
         # Iterate over the documentation for all paths
         for path_name, path in openapi_schema["paths"].items():
             # Inline the schemas generated for search by POST. These schemas are only used in one
@@ -366,15 +391,14 @@ class FHIRStarter(FastAPI):
                 path["post"]["requestBody"]["content"][
                     "application/x-www-form-urlencoded"
                 ]["schema"] = openapi_schema["components"]["schemas"].pop(
-                    f"Body_search_type_{resource_type}__search_post"
+                    f"Body_type_search_post_{resource_type}"
                 )
 
             # Iterate over all operations for a given path
             for operation_name, operation in path.items():
-                responses = operation["responses"]
-
                 # For each possible response (i.e. status code), remove the default FastAPI response
                 # schema
+                responses = operation["responses"]
                 status_codes: tuple[str, ...] = tuple(responses.keys())
                 for status_code in status_codes:
                     if (
@@ -388,9 +412,36 @@ class FHIRStarter(FastAPI):
 
                 # For each response, change all instances of application/json to
                 # application/fhir+json
-                for response in responses.values():
-                    if schema := response["content"].pop("application/json", None):
+                # Iterate over the responses
+                for status_code, response in responses.items():
+                    # Remove the response for "application/json"
+                    schema = response["content"].pop("application/json", None)
+
+                    # Add specialized OperationOutcome responses if available for the status code
+                    if (
+                        f"OperationOutcome {status_code}"
+                        in openapi_schema["components"]["schemas"]
+                    ):
+                        response["content"]["application/fhir+json"] = openapi_schema[
+                            "components"
+                        ]["schemas"][f"OperationOutcome {status_code}"]
+                    elif schema:
+                        # If there was a response originally, add it back as the response for
+                        # application/fhir+json
                         response["content"]["application/fhir+json"] = schema
+
+                # For search operations, provide a bundle example that contains the correct resource
+                # type
+                _, interaction_type, *rest = operation["operationId"].split("|")
+                if interaction_type == "search":
+                    resource_type = rest[1]
+                    example = load_bundle_example(resource_type)
+                    operation["responses"]["200"]["content"]["application/fhir+json"][
+                        "schema"
+                    ] = deepcopy(openapi_schema["components"]["schemas"]["Bundle"])
+                    operation["responses"]["200"]["content"]["application/fhir+json"][
+                        "schema"
+                    ]["example"] = example
 
         # For each schema (except for Bundle and OperationOutcome), provide an actual FHIR example
         # response unless an example exists on the actual model
@@ -428,9 +479,10 @@ class FHIRStarter(FastAPI):
             response_model=CapabilityStatement,
             status_code=status.HTTP_200_OK,
             tags=["System"],
-            summary="Get a capability statement for the system",
+            summary="capabilities",
             description="The capabilities interaction retrieves the information about a server's "
             "capabilities - which portions of the FHIR specification it supports.",
+            operation_id="system|capabilities|get",
             response_model_exclude_none=True,
         )(capability_statement_handler)
 

@@ -4,7 +4,6 @@ from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any, cast
 
 import pytest
-from fastapi import Request, Response
 from fhir.resources.capabilitystatement import CapabilityStatement
 
 from .. import status
@@ -37,9 +36,11 @@ from .utils import assert_expected_response
                         },
                         {
                             "name": "general-practitioner",
-                            "definition": "http://hl7.org/fhir/SearchParameter/Patient-general-practitioner",
+                            "definition": "http://hl7.org/fhir/SearchParameter/"
+                            "Patient-general-practitioner",
                             "type": "reference",
-                            "documentation": "Patient's nominated general practitioner, not the organization that manages the record",
+                            "documentation": "Patient's nominated general practitioner, not the "
+                            "organization that manages the record",
                         },
                         {
                             "name": "nickname",
@@ -49,7 +50,8 @@ from .utils import assert_expected_response
                         },
                         {
                             "name": "_lastUpdated",
-                            "definition": "http://hl7.org/fhir/SearchParameter/Resource-lastUpdated",
+                            "definition": "http://hl7.org/fhir/SearchParameter/"
+                            "Resource-lastUpdated",
                             "type": "date",
                             "documentation": "When the resource version last changed",
                         },
@@ -78,10 +80,9 @@ def test_capability_statement(
     Two scenarios are parameterized: a server with create, read, search, and update supported, and
     a server with only create and read supported.
     """
-    client = test_client
-    app = cast(FHIRStarter, client.app)
+    app = cast(FHIRStarter, test_client.app)
 
-    response = client.get("/metadata")
+    response = test_client.get("/metadata")
 
     assert_expected_response(
         response,
@@ -107,9 +108,9 @@ def test_capability_statement_pretty(
     client_create_and_read_fixture: TestClient,
 ) -> None:
     """Test the capability statement with a pretty response."""
-    client = client_create_and_read_fixture
+    test_client = client_create_and_read_fixture
 
-    response = client.get("/metadata?_pretty=true")
+    response = test_client.get("/metadata?_pretty=true")
 
     assert_expected_response(
         response,
@@ -129,9 +130,9 @@ def test_capability_statement_xml(
     client_create_and_read_fixture: TestClient, pretty: str
 ) -> None:
     """Test the capability statement with an XML response."""
-    client = client_create_and_read_fixture
+    test_client = client_create_and_read_fixture
 
-    response = client.get(f"/metadata?_format=xml&_pretty={pretty}")
+    response = test_client.get(f"/metadata?_format=xml&_pretty={pretty}")
 
     assert_expected_response(
         response,
@@ -147,20 +148,18 @@ def test_set_capability_statement_modifier(
     client_create_and_read_fixture: TestClient,
 ) -> None:
     """Test the set_capability_statement_modifier method."""
-    client = client_create_and_read_fixture
-    app = cast(FHIRStarter, client.app)
+    test_client = client_create_and_read_fixture
+    app = cast(FHIRStarter, test_client.app)
 
     def modify_capability_statement(
-        capability_statement: MutableMapping[str, Any],
-        request: Request,
-        response: Response,
+        capability_statement: MutableMapping[str, Any], *_: Any
     ) -> MutableMapping[str, Any]:
         capability_statement["publisher"] = "Publisher"
         return capability_statement
 
     app.set_capability_statement_modifier(modify_capability_statement)
 
-    response = client.get("/metadata")
+    response = test_client.get("/metadata")
 
     assert_expected_response(
         response,

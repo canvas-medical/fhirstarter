@@ -23,5 +23,5 @@ def client_create_and_read_fixture() -> TestClient:
 @pytest.fixture
 def create_response_fixture(client_fixture: TestClient) -> Response:
     """Test fixture that provides a response from a FHIR create interaction."""
-    client = client_fixture
-    return client.post("/Patient", json=resource())
+    test_client = client_fixture
+    return test_client.post("/Patient", json=resource())
