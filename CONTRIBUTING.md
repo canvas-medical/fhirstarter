@@ -18,10 +18,9 @@ and other features of Python in order to produce a callable that can be passed t
 route creation.
 
 Particular attention should be paid to function signatures -- specifically variable names,
-annotations, and defaults -- because FastAPI uses this information for
-documentation generation. Annotations are overridden in several cases to ensure that the correct
-types are used for documentation generation, and in the search use case, the function signature
-itself must be changed.
+annotations, and defaults -- because FastAPI uses this information for documentation generation.
+Annotations are overridden in several cases to ensure that the correct types are used for
+documentation generation, and in the search use case, the function signature itself must be changed.
 
 The resultant wrapper functions have signatures that adhere to the FHIR specification, and they
 forward the requests on to the handlers provided by the developer.
