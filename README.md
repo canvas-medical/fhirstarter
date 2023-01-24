@@ -115,8 +115,8 @@ uri = "https://hostname/nickname"
 include-in-capability-statement = true
 ```
 
-Adding a custom search parameter via configuration allows this name to be used as an argument
-when defining a search-type interaction handler and also adds this search parameter to the API
+Adding a custom search parameter via configuration allows this name to be used as an argument when
+defining a search-type interaction handler and also adds this search parameter to the API
 documentation for the search endpoint.
 
 ### Capability statement
