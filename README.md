@@ -30,6 +30,14 @@ pip install fhirstarter
 * Automatically-generated, integrated documentation generated from the FHIR specification
 * Custom search parameters for search endpoints
 
+### Disclaimer
+
+The use case for which FHIRStarter was built is based on the business needs of Canvas Medical. At
+any point in time it may not be broadly applicable to the industry at large. Canvas Medical has
+has open-sourced the project so that it can be used by healthcare software developers whose needs
+it does meet. Ongoing support and development will continue to be based on the needs of Canvas
+Medical.
+
 ## Background
 
 FHIRStarter uses a provider-decorator pattern. Developers can write functions that implement FHIR
