@@ -32,10 +32,9 @@ pip install fhirstarter
 
 ### Disclaimer
 
-The use case for which FHIRStarter was built is based on the business needs of Canvas Medical. At
-any point in time it may not be broadly applicable to the industry at large. Canvas Medical has
-has open-sourced the project so that it can be used by healthcare software developers whose needs
-it does meet. Ongoing support and development will continue to be based on the business needs of
+FHIRStarter was built based on the business needs of Canvas Medical. At
+any point in time, it may not be broadly applicable to the industry at large. Canvas Medical has open-sourced the project so that it can be used by healthcare software developers whose needs
+it might also meet. Ongoing support and development will be based on the business needs of
 Canvas Medical.
 
 ## Background
