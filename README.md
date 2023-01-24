@@ -55,7 +55,7 @@ FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server.
 
 ### Currently-supported functionality
 
-FHIRStarter supports create, read, update, and search-type endpoints across all FHIR R4 resource
+FHIRStarter supports create, read, search-type, and update endpoints across all FHIR R4 resource
 types, and will automatically generate the `/metadata` capabilities statement endpoint.
 
 ### Example
@@ -138,9 +138,9 @@ app.set_capability_statement_modifier(amend_capability_statement)
 
 FastAPI's dependency injection is exposed at various levels:
 
-* application: the __init__ method on the FHIRStarter class
-* provider: the __init_ method on the FHIRProvider class
-* handler: the decorator used to add a handler to a provider
+* **application**: the `__init__` method on the FHIRStarter class
+* **provider**: the `__init__` method on the FHIRProvider class
+* **handler**: the `create`, `read`, `search_type`, or `update` decorator used to add a handler to a provider
 
 Dependencies specified at the application level will be injected into all routes in the application.
 
