@@ -4,6 +4,12 @@
   <a href="https://github.com/canvas-medical/fhirstarter/actions/workflows/test.yml">
     <img src="https://github.com/canvas-medical/fhirstarter/actions/workflows/test.yml/badge.svg">
   </a>
+  <a href="https://pypi.org/project/fhirstarter/">
+    <img src="https://img.shields.io/pypi/v/fhirstarter">
+  </a>
+  <a href="https://pypi.org/project/fhirstarter/">
+    <img src="https://img.shields.io/pypi/pyversions/fhirstarter.svg">
+  </a>
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg">
   </a>
