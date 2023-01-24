@@ -1,6 +1,7 @@
 # fhirstarter
 
-An ASGI FHIR API framework built on top of [FastAPI](https://fastapi.tiangolo.com) and [FHIR Resources](https://pypi.org/project/fhir.resources/).
+An ASGI FHIR API framework built on top of [FastAPI](https://fastapi.tiangolo.com) and
+[FHIR Resources](https://pypi.org/project/fhir.resources/).
 
 The only version of FHIR that is currently supported is 4.0.1.
 
@@ -13,10 +14,12 @@ pip install fhirstarter
 ## Features
 
 * Automatic, standardized API route creation
-* Automatic validation of inputs and outputs through the use of FHIR resource Pydantic models
-* Automatically-generated capability statement and capability statement API route
+* Automatic validation of inputs and outputs through the use of FHIR Resources Pydantic models
+* Automatically-generated capability statement that can be customized, and a capability statement
+  API route
 * An exception-handling framework that produces FHIR-friendly responses (i.e. OperationOutcomes)
 * Automatically-generated, integrated documentation generated from the FHIR specification
+* Custom search parameters for search endpoints
 
 ## Background
 
@@ -32,6 +35,13 @@ FHIRProvider instance, register a FHIR interaction with the provider, add the pr
 FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server.
 
 ## Usage
+
+### Currently-supported functionality
+
+FHIRStarter supports create, read, update, and search-type endpoints across all FHIR R4 resource
+types, and will automatically generate the `/metadata` capabilities statement endpoint.
+
+### Example
 
 A detailed example is available here: 
 [fhirstarter/scripts/example.py](fhirstarter/scripts/example.py).
@@ -75,3 +85,43 @@ if __name__ == "__main__":
     # Start the server
     uvicorn.run(app)
 ```
+
+### Custom search parameters
+
+Custom search parameters can be defined in a configuration file that can be passed to the app on
+creation.
+
+```toml
+[search-parameters.Patient.nickname]
+type = "string"
+description = "Nickname"
+uri = "https://hostname/nickname"
+include-in-capability-statement = true
+```
+
+Adding a custom search parameter via configuration will allow this name to be used as an argument
+when defining a search-type interaction handler, and will add this search parameter to the API
+documentation for the search endpoint.
+
+### Capability statement
+
+It is possible to customize the capability statement by setting a capability statement modifier:
+
+```python
+def amend_capability_statement(
+    capability_statement: MutableMapping[str, Any], request: Request, response: Response
+) -> MutableMapping[str, Any]:
+    capability_statement["publisher"] = "Canvas Medical"
+    return capability_statement
+
+app.set_capability_statement_modifier(amend_capability_statement)
+```
+
+## Forward compatibility
+
+At some point in the future, it will be necessary to support FHIR R5. How this might be supported on
+a server that continues to support R4 has not yet been determined (e.g. a header that specifies the
+version, adding the FHIR version to the URL path, etc.). It may be necessary to support alteration
+of how the URL path is specified through the provider construct. Currently, the FHIR version is not
+part of the URL path, so the default behavior is that an API route defined as `/Patient` will be an
+R4 endpoint.
