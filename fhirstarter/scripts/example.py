@@ -2,9 +2,10 @@
 An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR
 interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
 """
+from collections.abc import MutableMapping
 from copy import deepcopy
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 from uuid import uuid4
 
 import uvicorn
@@ -14,7 +15,7 @@ from fhir.resources.humanname import HumanName
 from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
 
-from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext
+from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext, Request, Response
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 
 # Create the app with the provided config file
@@ -99,6 +100,17 @@ async def patient_update(context: InteractionContext, id_: Id, resource: Patient
 # Add the provider to the app. This will automatically generate the API routes for the interactions
 # provided by the providers (e.g. create, read, search-type, and update).
 app.add_providers(provider)
+
+
+# Customize the capability statement
+def amend_capability_statement(
+    capability_statement: MutableMapping[str, Any], request: Request, response: Response
+) -> MutableMapping[str, Any]:
+    capability_statement["publisher"] = "Canvas Medical"
+    return capability_statement
+
+
+app.set_capability_statement_modifier(amend_capability_statement)
 
 
 # Redirect the main page to the API docs
