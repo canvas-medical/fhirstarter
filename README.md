@@ -1,5 +1,7 @@
 # fhirstarter
 
+![tests badge](https://github.com/canvas-medical/fhirstarter/actions/workflows/test.yml/badge.svg)
+
 An ASGI FHIR API framework built on top of [FastAPI](https://fastapi.tiangolo.com) and
 [FHIR Resources](https://pypi.org/project/fhir.resources/).
 
