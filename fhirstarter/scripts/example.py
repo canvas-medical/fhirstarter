@@ -2,11 +2,10 @@
 An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR
 interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
 """
-from fhirstarter import Request, Response
 from collections.abc import MutableMapping
 from copy import deepcopy
 from pathlib import Path
-from typing import cast, Any
+from typing import Any, cast
 from uuid import uuid4
 
 import uvicorn
@@ -16,7 +15,7 @@ from fhir.resources.humanname import HumanName
 from fhir.resources.patient import Patient
 from starlette.responses import RedirectResponse
 
-from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext
+from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext, Request, Response
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 
 # Create the app with the provided config file
