@@ -134,6 +134,21 @@ def amend_capability_statement(
 app.set_capability_statement_modifier(amend_capability_statement)
 ```
 
+### FastAPI Dependency Injection
+
+FastAPI's dependency injection is exposed at various levels:
+
+* application: the __init__ method on the FHIRStarter class
+* provider: the __init_ method on the FHIRProvider class
+* handler: the decorator used to add a handler to a provider
+
+Dependencies specified at the application level will be injected into all routes in the application.
+
+Dependencies specified at the provider level will be injected into all routes that are added to
+the application from that specific provider.
+
+Dependencies specified at the handler level only apply to that specific FHIR interaction.
+
 ## Forward compatibility
 
 At some point in the future, it will be necessary to support FHIR R5. How this might be supported on
