@@ -134,7 +134,7 @@ def amend_capability_statement(
 app.set_capability_statement_modifier(amend_capability_statement)
 ```
 
-### FastAPI Dependency Injection
+### FastAPI dependency injection
 
 FastAPI's dependency injection is exposed at various levels:
 
