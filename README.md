@@ -68,8 +68,7 @@ types, and will automatically generate the `/metadata` capabilities statement en
 
 ### Example
 
-A detailed example is available here: 
-[fhirstarter/scripts/example.py](fhirstarter/scripts/example.py).
+A detailed example is available here: [example.py](https://github.com/canvas-medical/fhirstarter/blob/main/fhirstarter/scripts/example.py).
 
 ```python
 import uvicorn
