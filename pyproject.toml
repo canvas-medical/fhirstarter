@@ -16,6 +16,7 @@ classifiers = [
     "Intended Audience :: Healthcare Industry",
     "Intended Audience :: Information Technology",
     "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.11",
     "Topic :: Internet",

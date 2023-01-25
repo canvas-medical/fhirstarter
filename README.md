@@ -10,10 +10,17 @@
   <a href="https://pypi.org/project/fhirstarter/">
     <img src="https://img.shields.io/pypi/pyversions/fhirstarter.svg">
   </a>
+  <a href="https://pypi.org/project/fhirstarter/">
+    <img src="https://img.shields.io/pypi/l/fhirstarter.svg">
+  </a>
   <a href="https://github.com/psf/black">
     <img src="https://img.shields.io/badge/code%20style-black-000000.svg">
   </a>
 </p>
+
+
+https://img.shields.io/pypi/l/fhirstarter.svg
+
 
 An ASGI FHIR API framework built on top of [FastAPI](https://fastapi.tiangolo.com) and
 [FHIR Resources](https://pypi.org/project/fhir.resources/).
