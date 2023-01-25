@@ -18,10 +18,6 @@
   </a>
 </p>
 
-
-https://img.shields.io/pypi/l/fhirstarter.svg
-
-
 An ASGI FHIR API framework built on top of [FastAPI](https://fastapi.tiangolo.com) and
 [FHIR Resources](https://pypi.org/project/fhir.resources/).
 
