@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "fhirstarter"
-version = "0.13.2"
+version = "0.13.3"
 description = "An ASGI FHIR API framework built on top of FastAPI and FHIR Resources"
 authors = ["Christopher Sande <christopher.sande@canvasmedical.com>"]
+maintainers = ["Canvas Medical Engineering <engineering@canvasmedical.com>"]
 readme = "README.md"
 homepage = "https://github.com/canvas-medical/fhirstarter"
 repository = "https://github.com/canvas-medical/fhirstarter"
@@ -16,6 +17,7 @@ classifiers = [
     "Intended Audience :: Healthcare Industry",
     "Intended Audience :: Information Technology",
     "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3.11",
     "Topic :: Internet",
@@ -31,7 +33,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "^0.89.1"
-"fhir.resources" = "^6.5.0"
+"fhir.resources" = "~6.4.0"
 lxml = "^4.9.2"
 python-multipart = "^0.0.5"
 uvloop = "^0.17.0"
