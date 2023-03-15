@@ -32,22 +32,22 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = "^0.89.1"
+fastapi = "^0.94.1"
 "fhir.resources" = "~6.4.0"
 lxml = "^4.9.2"
-python-multipart = "^0.0.5"
+python-multipart = "^0.0.6"
 uvloop = "^0.17.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^22.12.0"
-funcy = "^1.17"
+black = "^23.1.0"
+funcy = "^1.18"
 httpx = "^0.23.3"
-isort = "^5.11.4"
+isort = "^5.12.0"
 mypy = "^0.991"
-pytest = "^7.2.1"
+pytest = "^7.2.2"
 requests = "^2.28.2"
-types-requests = "^2.28.11.7"
-uvicorn = {version = "^0.20.0", extras = ["standard"]}
+types-requests = "^2.28.11.15"
+uvicorn = {version = "^0.21.0", extras = ["standard"]}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
