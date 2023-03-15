@@ -39,7 +39,7 @@ python-multipart = "^0.0.5"
 uvloop = "^0.17.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^22.12.0"
+black = ">=22.12,<24.0"
 funcy = "^1.17"
 httpx = "^0.23.3"
 isort = "^5.11.4"
