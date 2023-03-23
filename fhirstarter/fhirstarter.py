@@ -12,6 +12,7 @@ from datetime import datetime
 from os import PathLike
 from typing import Any, TypeAlias, cast
 from urllib.parse import parse_qs, urlencode
+from zoneinfo import ZoneInfo
 
 import uvloop
 from fastapi import FastAPI, HTTPException, Request, Response, status
@@ -97,7 +98,7 @@ class FHIRStarter(FastAPI):
             self._search_parameters = SearchParameters()
 
         self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
-        self._created = datetime.utcnow()
+        self._created = datetime.now(ZoneInfo("UTC"))
 
         self._capability_statement_modifier: CapabilityStatementModifier | None = None
 
