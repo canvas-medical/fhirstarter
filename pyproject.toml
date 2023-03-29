@@ -40,7 +40,7 @@ uvloop = "^0.17.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
-funcy = "^1.18"
+funcy = ">=1.18,<3.0"
 httpx = "^0.23.3"
 isort = "^5.12.0"
 mypy = "^0.991"
