@@ -392,7 +392,7 @@ class FHIRStarter(FastAPI):
                 path["post"]["requestBody"]["content"][
                     "application/x-www-form-urlencoded"
                 ]["schema"] = openapi_schema["components"]["schemas"].pop(
-                    f"Body_type_search_post_{resource_type}"
+                    f"Body_fhirstarter_type_search_post_{resource_type}"
                 )
 
             # Iterate over all operations for a given path
@@ -433,16 +433,21 @@ class FHIRStarter(FastAPI):
 
                 # For search operations, provide a bundle example that contains the correct resource
                 # type
-                _, interaction_type, *rest = operation["operationId"].split("|")
-                if interaction_type == "search":
-                    resource_type = rest[1]
-                    example = load_bundle_example(resource_type)
-                    operation["responses"]["200"]["content"]["application/fhir+json"][
-                        "schema"
-                    ] = deepcopy(openapi_schema["components"]["schemas"]["Bundle"])
-                    operation["responses"]["200"]["content"]["application/fhir+json"][
-                        "schema"
-                    ]["example"] = example
+                if "|" in (
+                    operation_id := operation["operationId"]
+                ) and operation_id.startswith("fhirstarter|"):
+                    _, _, interaction_type, *rest = operation_id.split("|")
+                    if interaction_type == "search":
+                        resource_type = rest[1]
+                        example = load_bundle_example(resource_type)
+                        operation["responses"]["200"]["content"][
+                            "application/fhir+json"
+                        ]["schema"] = deepcopy(
+                            openapi_schema["components"]["schemas"]["Bundle"]
+                        )
+                        operation["responses"]["200"]["content"][
+                            "application/fhir+json"
+                        ]["schema"]["example"] = example
 
         # For each schema (except for Bundle and OperationOutcome), provide an actual FHIR example
         # response unless an example exists on the actual model
@@ -483,7 +488,7 @@ class FHIRStarter(FastAPI):
             summary="capabilities",
             description="The capabilities interaction retrieves the information about a server's "
             "capabilities - which portions of the FHIR specification it supports.",
-            operation_id="system|capabilities|get",
+            operation_id="fhirstarter|system|capabilities|get",
             response_model_exclude_none=True,
         )(capability_statement_handler)
 

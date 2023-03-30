@@ -211,7 +211,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
             _unprocessable_entity,
             _internal_server_error,
         ),
-        "operation_id": f"type|create|post|{resource_type_str}",
+        "operation_id": f"fhirstarter|type|create|post|{resource_type_str}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -237,7 +237,7 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any
             _not_found,
             _internal_server_error,
         ),
-        "operation_id": f"instance|read|get|{resource_type_str}",
+        "operation_id": f"fhirstarter|instance|read|get|{resource_type_str}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -265,7 +265,7 @@ def search_type_route_args(
             _forbidden,
             _internal_server_error,
         ),
-        "operation_id": f"type|search|{'post' if post else 'get'}|{resource_type_str}",
+        "operation_id": f"fhirstarter|type|search|{'post' if post else 'get'}|{resource_type_str}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -292,7 +292,7 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
             _unprocessable_entity,
             _internal_server_error,
         ),
-        "operation_id": f"instance|update|put|{resource_type_str}",
+        "operation_id": f"fhirstarter|instance|update|put|{resource_type_str}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
