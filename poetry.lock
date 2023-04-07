@@ -309,14 +309,14 @@ yaml = ["PyYAML (>=5.4.1)"]
 
 [[package]]
 name = "funcy"
-version = "1.18"
+version = "2.0"
 description = "A fancy and practical functional tools"
 category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "funcy-1.18-py2.py3-none-any.whl", hash = "sha256:00ce91afc850357a131dc54f0db2ad8a1110d5087f1fa4480d7ea3ba0249f89d"},
-    {file = "funcy-1.18.tar.gz", hash = "sha256:15448d19a8ebcc7a585afe7a384a19186d0bd67cbf56fb42cd1fd0f76313f9b2"},
+    {file = "funcy-2.0-py2.py3-none-any.whl", hash = "sha256:53df23c8bb1651b12f095df764bfb057935d49537a56de211b098f4c79614bb0"},
+    {file = "funcy-2.0.tar.gz", hash = "sha256:3963315d59d41c6f30c04bc910e10ab50a3ac4a225868bfa96feed133df075cb"},
 ]
 
 [[package]]
@@ -1150,4 +1150,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "3ae53c6761b38ec92511fe9ec6b8c7819ae3032e072c82f5ef875a73b43f9371"
+content-hash = "8a4449de7cad61b536a9e1d207cf05c0b37ab986f0163b99f1da1f27f98b9e94"
