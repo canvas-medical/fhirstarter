@@ -23,8 +23,8 @@ from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
 from .fhir_specification.utils import (
+    create_bundle_example,
     is_resource_type,
-    load_bundle_example,
     load_example,
     make_operation_outcome_example,
 )
@@ -383,6 +383,20 @@ class FHIRStarter(FastAPI):
                 severity="error", code=code, details_text=details_text
             )
 
+        # For each schema (except for Bundle and OperationOutcome), provide an actual FHIR example
+        # response unless an example exists on the actual model
+        for schema_name, schema in openapi_schema["components"]["schemas"].items():
+            resource_type = schema["properties"].get("resource_type", {}).get("const")
+
+            if (
+                not is_resource_type(resource_type)
+                or resource_type in {"Bundle", "OperationOutcome"}
+                or "example" in schema
+            ):
+                continue
+
+            schema["example"] = load_example(resource_type)
+
         # Iterate over the documentation for all paths
         for path_name, path in openapi_schema["paths"].items():
             # Inline the schemas generated for search by POST. These schemas are only used in one
@@ -439,7 +453,11 @@ class FHIRStarter(FastAPI):
                     _, _, interaction_type, *rest = operation_id.split("|")
                     if interaction_type == "search":
                         resource_type = rest[1]
-                        example = load_bundle_example(resource_type)
+                        example = create_bundle_example(
+                            openapi_schema["components"]["schemas"][resource_type].get(
+                                "example", {}
+                            )
+                        )
                         operation["responses"]["200"]["content"][
                             "application/fhir+json"
                         ]["schema"] = deepcopy(
@@ -448,20 +466,6 @@ class FHIRStarter(FastAPI):
                         operation["responses"]["200"]["content"][
                             "application/fhir+json"
                         ]["schema"]["example"] = example
-
-        # For each schema (except for Bundle and OperationOutcome), provide an actual FHIR example
-        # response unless an example exists on the actual model
-        for schema_name, schema in openapi_schema["components"]["schemas"].items():
-            resource_type = schema["properties"].get("resource_type", {}).get("const")
-
-            if (
-                not is_resource_type(resource_type)
-                or resource_type in {"Bundle", "OperationOutcome"}
-                or "example" in schema
-            ):
-                continue
-
-            schema["example"] = load_example(resource_type)
 
         return openapi_schema
 

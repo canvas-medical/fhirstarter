@@ -88,7 +88,7 @@ class SearchParameters:
         """
         search_parameters = _load_search_parameters_file()
         return (
-            search_parameters[resource_type]
+            search_parameters.get(resource_type, {})
             | search_parameters["DomainResource"]
             | search_parameters["Resource"]
             | self._custom_search_parameters.get(resource_type, {})
