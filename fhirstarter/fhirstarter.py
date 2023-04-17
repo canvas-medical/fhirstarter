@@ -453,11 +453,17 @@ class FHIRStarter(FastAPI):
                     _, _, interaction_type, *rest = operation_id.split("|")
                     if interaction_type == "search":
                         resource_type = rest[1]
-                        example = create_bundle_example(
-                            openapi_schema["components"]["schemas"][resource_type].get(
-                                "example", {}
-                            )
-                        )
+
+                        if is_resource_type(resource_type):
+                            example = load_example(resource_type)
+                        else:
+                            try:
+                                example = self._capabilities[resource_type][
+                                    "search-type"
+                                ].resource_type.Config.schema_extra["example"]
+                            except (AttributeError, KeyError):
+                                example = {"resourceType": resource_type}
+
                         operation["responses"]["200"]["content"][
                             "application/fhir+json"
                         ]["schema"] = deepcopy(
@@ -465,7 +471,7 @@ class FHIRStarter(FastAPI):
                         )
                         operation["responses"]["200"]["content"][
                             "application/fhir+json"
-                        ]["schema"]["example"] = example
+                        ]["schema"]["example"] = create_bundle_example(example)
 
         return openapi_schema
 
