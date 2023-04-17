@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 
 def is_resource_type(resource_type: str) -> bool:
@@ -16,13 +16,13 @@ def load_example(resource_type: str) -> dict[str, Any]:
     )
 
 
-def load_bundle_example(resource_type: str) -> dict[str, Any]:
+def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]:
     """
-    Load a bundle example for a specific resource type.
+    Create a bundle example for a specific resource type.
 
-    The standard bundle example is modified based on the given resource type.
+    The standard bundle example is modified based on the given resource example.
     """
-    resource_example = load_example(resource_type)
+    resource_type = resource_example["resourceType"]
     bundle_example = load_example("Bundle")
 
     bundle_example["link"][0] = {
