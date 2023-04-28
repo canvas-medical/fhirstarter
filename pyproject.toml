@@ -47,7 +47,7 @@ mypy = "^0.991"
 pytest = "^7.2.2"
 requests = "^2.28.2"
 types-requests = "^2.28.11.15"
-uvicorn = {version = "^0.21.0", extras = ["standard"]}
+uvicorn = {version = ">=0.21,<0.23", extras = ["standard"]}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
