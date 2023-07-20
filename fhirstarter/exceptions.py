@@ -104,7 +104,7 @@ class FHIRResourceNotFoundError(FHIRException):
 
     def operation_outcome(self) -> OperationOutcome:
         try:
-            _, resource_type_str, id_ = self._request.url.components.path.split("/")  # type: ignore
+            resource_type_str, id_ = self._request.url.components.path.split("/")[-2:]
         except Exception as exception:
             raise AssertionError(
                 "Unable to get resource type and resource ID from request; request must be set"
