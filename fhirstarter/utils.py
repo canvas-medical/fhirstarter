@@ -1,5 +1,6 @@
 """Utility functions for creation of routes and responses."""
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, ClassVar
@@ -19,6 +20,7 @@ from .interactions import ResourceType, SearchTypeInteraction, TypeInteraction
 class InteractionInfo:
     resource_type: str | None
     interaction_type: str | None
+    resource_id: str | None
 
 
 def categorize_fhir_request(request: Request) -> InteractionInfo:
@@ -57,6 +59,67 @@ def categorize_fhir_request(request: Request) -> InteractionInfo:
             assert "Unexpected request format"
 
     return InteractionInfo(resource_type, interaction_type)  # type: ignore
+
+
+def parse_fhir_request(request: Request) -> InteractionInfo:
+    """
+    Parse a FHIR request into its component parts, and determine an interaction type.
+
+    Note: This function is currently oriented around specific use cases for this framework.
+    Specifically, it will correctly categorize create, read, search-type, update, and capabilities
+    interactions. Further enhancement is needed to support more use cases.
+    """
+    no_info = InteractionInfo(  # type: ignore
+        resource_type=None, interaction_type=None, resource_id=None
+    )
+
+    split_path = request.url.path.split("/")
+    if not split_path:
+        return no_info
+
+    resource_type = None
+    interaction_type = None
+    resource_id = None
+
+    if request.method == "GET":
+        if split_path[-1] == "metadata":
+            return InteractionInfo(  # type: ignore
+                resource_type=None, interaction_type="capabilities", resource_id=None
+            )
+        elif is_resource_type(split_path[-1]):
+            resource_type = split_path[-1]
+            interaction_type = "search-type"
+        elif len(split_path) >= 3:
+            resource_type, resource_id = split_path[-2:]
+            interaction_type = "read"
+        else:
+            return no_info
+    elif request.method == "POST":
+        if is_resource_type(split_path[-1]):
+            resource_type = split_path[-1]
+            interaction_type = "create"
+        elif split_path[-1] == "_search":
+            resource_type = split_path[-2]
+            interaction_type = "search-type"
+        else:
+            return no_info
+    elif request.method == "PUT":
+        if len(split_path) >= 3:
+            resource_type, resource_id = split_path[-2:]
+            interaction_type = "update"
+        else:
+            return no_info
+    else:
+        return no_info
+
+    if not is_resource_type(resource_type):
+        return no_info
+
+    return InteractionInfo(  # type: ignore
+        resource_type=resource_type,
+        interaction_type=interaction_type,
+        resource_id=resource_id,
+    )
 
 
 def make_operation_outcome(
