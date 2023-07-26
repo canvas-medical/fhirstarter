@@ -1,5 +1,6 @@
 """Utility functions for creation of routes and responses."""
 
+import logging
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -31,13 +32,18 @@ def categorize_fhir_request(request: Request) -> InteractionInfo:
     Specifically, it will correctly categorize create, read, search-type, update, and capabilities
     interactions. Further enhancement is needed to support more cases.
     """
+    logging.warning(
+        "fhirstarter.utils.categorize_fhir_request has been deprecated and will be "
+        "removed in a future release"
+    )
+
     _, first_part, *rest = request.url.path.split("/")
 
     if request.method == "GET" and first_part == "metadata":
-        return InteractionInfo(resource_type=None, interaction_type="capabilities")  # type: ignore
+        return InteractionInfo(resource_type=None, interaction_type="capabilities", resource_id=None)  # type: ignore
 
     if not is_resource_type(first_part):
-        return InteractionInfo(resource_type=None, interaction_type=None)  # type: ignore
+        return InteractionInfo(resource_type=None, interaction_type=None, resource_id=None)  # type: ignore
 
     resource_type = first_part
     second_part = rest[0] if rest else None
@@ -58,7 +64,7 @@ def categorize_fhir_request(request: Request) -> InteractionInfo:
         case _:
             assert "Unexpected request format"
 
-    return InteractionInfo(resource_type, interaction_type)  # type: ignore
+    return InteractionInfo(resource_type, interaction_type, resource_id=id_)  # type: ignore
 
 
 def parse_fhir_request(request: Request) -> InteractionInfo:
