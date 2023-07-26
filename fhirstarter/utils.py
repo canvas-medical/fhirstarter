@@ -63,6 +63,8 @@ def make_operation_outcome(
     severity: str, code: str, details_text: str
 ) -> OperationOutcome:
     """Create a simple OperationOutcome given a severity, code, and details."""
+    assert details_text, "OperationOutcome details text must contain a value"
+
     return OperationOutcome(
         **{
             "issue": [
