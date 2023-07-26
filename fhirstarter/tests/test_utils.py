@@ -8,28 +8,37 @@ from .utils import generate_fhir_resource_id, make_request
 
 
 @pytest.mark.parametrize(
-    argnames="request_,expected_result",
+    argnames="mount_path",
+    argvalues=["", "/subapi"],
+    ids=["without mount", "with mount"],
+)
+@pytest.mark.parametrize(
+    argnames="request_method,path,expected_result",
     argvalues=[
         (
-            make_request("GET", "/metadata"),
+            "GET",
+            "/metadata",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type="capabilities", resource_id=None
             ),
         ),
         (
-            make_request("POST", "/Patient"),
+            "POST",
+            "/Patient",
             InteractionInfo(  # type: ignore
                 resource_type="Patient", interaction_type="create", resource_id=None
             ),
         ),
         (
-            make_request("GET", f"/Patient/{(id_ := generate_fhir_resource_id())}"),
+            "GET",
+            f"/Patient/{(id_ := generate_fhir_resource_id())}",
             InteractionInfo(  # type: ignore
                 resource_type="Patient", interaction_type="read", resource_id=id_
             ),
         ),
         (
-            make_request("GET", "/Patient"),
+            "GET",
+            "/Patient",
             InteractionInfo(  # type: ignore
                 resource_type="Patient",
                 interaction_type="search-type",
@@ -37,7 +46,8 @@ from .utils import generate_fhir_resource_id, make_request
             ),
         ),
         (
-            make_request("POST", "/Patient/_search"),
+            "POST",
+            "/Patient/_search",
             InteractionInfo(  # type: ignore
                 resource_type="Patient",
                 interaction_type="search-type",
@@ -45,71 +55,71 @@ from .utils import generate_fhir_resource_id, make_request
             ),
         ),
         (
-            make_request("PUT", f"/Patient/{(id_ := generate_fhir_resource_id())}"),
+            "PUT",
+            f"/Patient/{(id_ := generate_fhir_resource_id())}",
             InteractionInfo(  # type: ignore
                 resource_type="Patient", interaction_type="update", resource_id=id_
             ),
         ),
         (
-            make_request(
-                "GET", f"/FakeResource/{(id_ := generate_fhir_resource_id())}"
-            ),
+            "GET",
+            f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type=None, resource_id=None
             ),
         ),
         (
-            make_request("GET", f"/FakeResource"),
+            "GET",
+            f"/FakeResource",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type=None, resource_id=None
             ),
         ),
         (
-            make_request(
-                "GET", f"/Patient/{(id_ := generate_fhir_resource_id())}/extra"
-            ),
+            "GET",
+            f"/Patient/{(id_ := generate_fhir_resource_id())}/extra",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type=None, resource_id=None
             ),
         ),
         (
-            make_request("POST", "/FakeResource"),
+            "POST",
+            "/FakeResource",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type=None, resource_id=None
             ),
         ),
         (
-            make_request("POST", "/FakeResource/_search"),
+            "POST",
+            "/FakeResource/_search",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type=None, resource_id=None
             ),
         ),
         (
-            make_request("POST", "/FakeResource/extra"),
+            "POST",
+            "/FakeResource/extra",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type=None, resource_id=None
             ),
         ),
         (
-            make_request(
-                "PUT", f"/FakeResource/{(id_ := generate_fhir_resource_id())}"
-            ),
+            "PUT",
+            f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type=None, resource_id=None
             ),
         ),
         (
-            make_request(
-                "PUT", f"/FakeResource/{(id_ := generate_fhir_resource_id())}/extra"
-            ),
+            "PUT",
+            f"/FakeResource/{(id_ := generate_fhir_resource_id())}/extra",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type=None, resource_id=None
             ),
         ),
         (
-            make_request(
-                "HEAD", f"/Patient/{(id_ := generate_fhir_resource_id())}/extra"
-            ),
+            "HEAD",
+            f"/Patient/{(id_ := generate_fhir_resource_id())}/extra",
             InteractionInfo(  # type: ignore
                 resource_type=None, interaction_type=None, resource_id=None
             ),
@@ -134,6 +144,9 @@ from .utils import generate_fhir_resource_id, make_request
     ],
 )
 def test_parse_fhir_request(
-    request_: Request, expected_result: InteractionInfo
+    mount_path: str, request_method: str, path: str, expected_result: InteractionInfo
 ) -> None:
-    assert parse_fhir_request(request_) == expected_result
+    assert (
+        parse_fhir_request(make_request(request_method, f"{mount_path}{path}"))
+        == expected_result
+    )
