@@ -2,7 +2,6 @@
 
 import pytest
 
-from .. import Request
 from ..utils import InteractionInfo, parse_fhir_request
 from .utils import generate_fhir_resource_id, make_request
 
