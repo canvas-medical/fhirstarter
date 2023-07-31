@@ -1,10 +1,9 @@
 """Utility functions for creation of routes and responses."""
 
 import logging
-import re
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
@@ -20,7 +19,9 @@ from .interactions import ResourceType, SearchTypeInteraction, TypeInteraction
 @dataclass
 class InteractionInfo:
     resource_type: str | None
-    interaction_type: str | None
+    interaction_type: Literal[
+        "create", "read", "update", "search-type", "capabilities"
+    ] | None
     resource_id: str | None
 
 
@@ -83,8 +84,6 @@ def parse_fhir_request(request: Request) -> InteractionInfo:
     if not split_path:
         return no_info
 
-    resource_type = None
-    interaction_type = None
     resource_id = None
 
     if request.method == "GET":
