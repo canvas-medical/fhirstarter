@@ -49,6 +49,7 @@ from .utils import (
     create_route_args,
     format_response,
     make_operation_outcome,
+    parse_fhir_request,
     read_route_args,
     search_type_route_args,
     update_route_args,
@@ -558,8 +559,10 @@ async def _transform_search_type_post_request(
     is consumed when it parses the body to pass the values down to the handlers. Catching the
     request here allows for the body parameters to be merged with the query string parameters.
     """
+    interaction_info = parse_fhir_request(request)
+
     if (
-        request.url.path.endswith("/_search")
+        interaction_info.interaction_type == "search-type"
         and request.method == "POST"
         and request.headers.get("Content-Type") == "application/x-www-form-urlencoded"
     ):
@@ -640,7 +643,7 @@ def _exception_response(
 ) -> Response:
     """Create a JSONResponse with an OperationOutcome and an HTTP status code."""
     operation_outcome = make_operation_outcome(
-        severity=severity, code=code, details_text=details_text
+        severity=severity, code=code, details_text=details_text or "Exception"
     )
 
     return format_response(

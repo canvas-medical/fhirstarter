@@ -3,11 +3,14 @@
 import json
 from collections.abc import Mapping
 from typing import Any
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from fhir.resources.fhirtypes import Id
 from funcy import omit
 from requests.models import Response
+
+from .. import Request
 
 _RESOURCE = {
     "resourceType": "Patient",
@@ -42,6 +45,33 @@ def id_from_create_response(response: Response) -> str:
 def json_dumps_pretty(value: Any) -> str:
     """Dump the value to JSON in pretty format."""
     return json.dumps(value, indent=2, separators=(", ", ": "))
+
+
+def make_request(
+    method: str,
+    path: str,
+) -> Request:
+    """Make a request for the purpose of testing."""
+    parsed_path = urlparse(path)
+
+    path = parsed_path.path
+    query_string = parsed_path.query
+
+    return Request(
+        scope={
+            "type": "http",
+            "http_version": "1.1",
+            "method": method,
+            "path": path,
+            "raw_path": path.encode(),
+            "root_path": "",
+            "scheme": "http",
+            "server": ("testserver", 80),
+            "headers": [],
+            "path_params": {},
+            "query_string": query_string,
+        }
+    )
 
 
 def assert_expected_response(
