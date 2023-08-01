@@ -11,7 +11,7 @@ from fastapi import Request, status
 from fastapi.exceptions import HTTPException
 from fhir.resources.operationoutcome import OperationOutcome
 
-from .utils import make_operation_outcome
+from .utils import make_operation_outcome, parse_fhir_request
 
 
 class FHIRException(HTTPException, ABC):
@@ -104,15 +104,16 @@ class FHIRResourceNotFoundError(FHIRException):
 
     def operation_outcome(self) -> OperationOutcome:
         try:
-            _, resource_type_str, id_ = self._request.url.components.path.split("/")  # type: ignore
+            interaction_info = parse_fhir_request(self._request)
         except Exception as exception:
             raise AssertionError(
-                "Unable to get resource type and resource ID from request; request must be set"
+                "Unable to get resource type and resource ID from request; request must be set "
                 "before the response is created"
             ) from exception
         else:
             return make_operation_outcome(
                 "error",
                 "not-found",
-                f"Unknown {resource_type_str} resource '{id_}'",
+                f"Unknown {interaction_info.resource_type} resource "
+                f"'{interaction_info.resource_id}'",
             )

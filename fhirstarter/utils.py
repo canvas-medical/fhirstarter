@@ -1,8 +1,9 @@
 """Utility functions for creation of routes and responses."""
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
@@ -18,7 +19,10 @@ from .interactions import ResourceType, SearchTypeInteraction, TypeInteraction
 @dataclass
 class InteractionInfo:
     resource_type: str | None
-    interaction_type: str | None
+    interaction_type: Literal[
+        "create", "read", "update", "search-type", "capabilities"
+    ] | None
+    resource_id: str | None
 
 
 def categorize_fhir_request(request: Request) -> InteractionInfo:
@@ -29,13 +33,18 @@ def categorize_fhir_request(request: Request) -> InteractionInfo:
     Specifically, it will correctly categorize create, read, search-type, update, and capabilities
     interactions. Further enhancement is needed to support more cases.
     """
+    logging.warning(
+        "fhirstarter.utils.categorize_fhir_request has been deprecated and will be "
+        "removed in a future release"
+    )
+
     _, first_part, *rest = request.url.path.split("/")
 
     if request.method == "GET" and first_part == "metadata":
-        return InteractionInfo(resource_type=None, interaction_type="capabilities")  # type: ignore
+        return InteractionInfo(resource_type=None, interaction_type="capabilities", resource_id=None)  # type: ignore
 
     if not is_resource_type(first_part):
-        return InteractionInfo(resource_type=None, interaction_type=None)  # type: ignore
+        return InteractionInfo(resource_type=None, interaction_type=None, resource_id=None)  # type: ignore
 
     resource_type = first_part
     second_part = rest[0] if rest else None
@@ -56,7 +65,66 @@ def categorize_fhir_request(request: Request) -> InteractionInfo:
         case _:
             assert "Unexpected request format"
 
-    return InteractionInfo(resource_type, interaction_type)  # type: ignore
+    return InteractionInfo(resource_type, interaction_type, resource_id=id_)  # type: ignore
+
+
+def parse_fhir_request(request: Request) -> InteractionInfo:
+    """
+    Parse a FHIR request into its component parts, and determine an interaction type.
+
+    Note: This function is currently oriented around specific use cases for this framework.
+    Specifically, it will correctly categorize create, read, search-type, update, and capabilities
+    interactions. Further enhancement is needed to support more use cases.
+    """
+    no_info = InteractionInfo(  # type: ignore
+        resource_type=None, interaction_type=None, resource_id=None
+    )
+
+    split_path = request.url.path.split("/")
+    if not split_path:
+        return no_info
+
+    resource_id = None
+
+    if request.method == "GET":
+        if split_path[-1] == "metadata":
+            return InteractionInfo(  # type: ignore
+                resource_type=None, interaction_type="capabilities", resource_id=None
+            )
+        elif is_resource_type(split_path[-1]):
+            resource_type = split_path[-1]
+            interaction_type = "search-type"
+        elif len(split_path) >= 3:
+            resource_type, resource_id = split_path[-2:]
+            interaction_type = "read"
+        else:
+            return no_info
+    elif request.method == "POST":
+        if is_resource_type(split_path[-1]):
+            resource_type = split_path[-1]
+            interaction_type = "create"
+        elif split_path[-1] == "_search":
+            resource_type = split_path[-2]
+            interaction_type = "search-type"
+        else:
+            return no_info
+    elif request.method == "PUT":
+        if len(split_path) >= 3:
+            resource_type, resource_id = split_path[-2:]
+            interaction_type = "update"
+        else:
+            return no_info
+    else:
+        return no_info
+
+    if not is_resource_type(resource_type):
+        return no_info
+
+    return InteractionInfo(  # type: ignore
+        resource_type=resource_type,
+        interaction_type=interaction_type,
+        resource_id=resource_id,
+    )
 
 
 def make_operation_outcome(
