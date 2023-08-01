@@ -148,7 +148,7 @@ def search_parameter_sort_key(
     parameter_annotation: type | None = None,
 ) -> tuple[bool, bool, bool, bool, bool, str]:
     """
-    Return a sort key for a search paramter.
+    Return a sort key for a search parameter.
 
     This function allows for consistent sorting of search parameters throughout the package.
 
