@@ -640,7 +640,7 @@ def _exception_response(
 ) -> Response:
     """Create a JSONResponse with an OperationOutcome and an HTTP status code."""
     operation_outcome = make_operation_outcome(
-        severity=severity, code=code, details_text=details_text
+        severity=severity, code=code, details_text=details_text or "Exception"
     )
 
     return format_response(
