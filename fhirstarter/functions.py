@@ -11,6 +11,11 @@ set of search parameters (i.e. query parameters), the approach used for the crea
 use cases to create the callables does not work. Instead, a function that takes arbitrary kwargs is
 created, and the function signature is modified afterward to provide the information needed by
 FastAPI for documentation purposes: variable name, annotation, and default value.
+
+These functions can create FastAPI path operation functions for both async and non-async handlers,
+though not elegantly. Unfortunately the code has to be duplicated, and maintainers will need to be
+cognizant that changes made to these generated path operation functions must be applied in two
+places.
 """
 
 import keyword
