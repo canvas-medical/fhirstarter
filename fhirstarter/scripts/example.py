@@ -12,11 +12,24 @@ import uvicorn
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.humanname import HumanName
-from fhir.resources.patient import Patient
+from fhir.resources.patient import Patient as PatientBase
 from starlette.responses import RedirectResponse
 
 from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext, Request, Response
 from fhirstarter.exceptions import FHIRResourceNotFoundError
+
+
+# Provide a custom example for the automatic documentation by defining a subclass of the FHIR
+# Patient Pydantic model
+class Patient(PatientBase):
+    class Config:
+        schema_extra = {
+            "example": {
+                "resourceType": "Patient",
+                "name": [{"family": "Baggins", "given": ["Bilbo"]}],
+            }
+        }
+
 
 # Create the app with the provided config file
 app = FHIRStarter(
