@@ -459,6 +459,10 @@ def _set_search_type_function_signature(
     [Request, Response, str, str],
     Coroutine[None, None, Bundle | Response] | Bundle | Response,
 ]:
+    """
+    Set the function signature of the search-type function so that it includes the search parameters
+    that the handler supports.
+    """
     sig = signature(search_type_function)
     parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
 
