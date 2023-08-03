@@ -8,15 +8,19 @@ from fhir.resources.resource import Resource
 
 from .interactions import (
     CreateInteraction,
+    CreateInteractionAsyncHandler,
     CreateInteractionHandler,
     InteractionHandler,
     ReadInteraction,
+    ReadInteractionAsyncHandler,
     ReadInteractionHandler,
     ResourceType,
     SearchTypeInteraction,
+    SearchTypeInteractionAsyncHandler,
     SearchTypeInteractionHandler,
     TypeInteraction,
     UpdateInteraction,
+    UpdateInteractionAsyncHandler,
     UpdateInteractionHandler,
 )
 
@@ -57,10 +61,16 @@ class FHIRProvider:
         *,
         dependencies: Sequence[params.Depends] | None = None,
         include_in_schema: bool = True
-    ) -> Callable[
-        [CreateInteractionHandler[ResourceType]],
-        CreateInteractionHandler[ResourceType],
-    ]:
+    ) -> (
+        Callable[
+            [CreateInteractionAsyncHandler[ResourceType]],
+            CreateInteractionAsyncHandler[ResourceType],
+        ]
+        | Callable[
+            [CreateInteractionHandler[ResourceType]],
+            CreateInteractionHandler[ResourceType],
+        ]
+    ):
         """Register a FHIR create interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -75,10 +85,15 @@ class FHIRProvider:
         *,
         dependencies: Sequence[params.Depends] | None = None,
         include_in_schema: bool = True
-    ) -> Callable[
-        [ReadInteractionHandler[ResourceType]],
-        ReadInteractionHandler[ResourceType],
-    ]:
+    ) -> (
+        Callable[
+            [ReadInteractionAsyncHandler[ResourceType]],
+            ReadInteractionAsyncHandler[ResourceType],
+        ]
+        | Callable[
+            [ReadInteractionHandler[ResourceType]], ReadInteractionHandler[ResourceType]
+        ]
+    ):
         """Register a FHIR read interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -93,7 +108,10 @@ class FHIRProvider:
         *,
         dependencies: Sequence[params.Depends] | None = None,
         include_in_schema: bool = True
-    ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
+    ) -> (
+        Callable[[SearchTypeInteractionAsyncHandler], SearchTypeInteractionAsyncHandler]
+        | Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]
+    ):
         """Register a FHIR search-type interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -108,10 +126,16 @@ class FHIRProvider:
         *,
         dependencies: Sequence[params.Depends] | None = None,
         include_in_schema: bool = True
-    ) -> Callable[
-        [UpdateInteractionHandler[ResourceType]],
-        UpdateInteractionHandler[ResourceType],
-    ]:
+    ) -> (
+        Callable[
+            [UpdateInteractionAsyncHandler[ResourceType]],
+            UpdateInteractionAsyncHandler[ResourceType],
+        ]
+        | Callable[
+            [UpdateInteractionHandler[ResourceType]],
+            UpdateInteractionHandler[ResourceType],
+        ]
+    ):
         """Register a FHIR update interaction."""
         return self._register_type_interaction(
             resource_type,

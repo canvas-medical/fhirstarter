@@ -15,7 +15,7 @@ FastAPI for documentation purposes: variable name, annotation, and default value
 
 import keyword
 from collections.abc import Callable, Coroutine
-from inspect import Parameter, signature
+from inspect import Parameter, iscoroutinefunction, signature
 from typing import cast
 
 from fastapi import Body, Form, Path, Query, Request, Response
@@ -24,12 +24,16 @@ from fhir.resources.resource import Resource
 
 from .exceptions import FHIRBadRequestError
 from .interactions import (
+    CreateInteractionAsyncHandler,
     CreateInteractionHandler,
     InteractionContext,
+    ReadInteractionAsyncHandler,
     ReadInteractionHandler,
     ResourceType,
+    SearchTypeInteractionAsyncHandler,
     SearchTypeInteractionHandler,
     TypeInteraction,
+    UpdateInteractionAsyncHandler,
     UpdateInteractionHandler,
 )
 from .search_parameters import (
@@ -50,81 +54,158 @@ FORMAT_QP = Query(None, description=_FORMAT_PARAMETER_DESCRIPTION)
 PRETTY_QP = Query(None, description=_PRETTY_PARAMETER_DESCRIPTION)
 
 
+# Note: I'm not currently aware of a better way do support both async and non-async handlers than
+#       branching based on the result of the iscoroutinefunction function and duplicating most of
+#       the code. If there is a better way to do this, I will refactor later.
+
+
 def make_create_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
     [Request, Response, str, str, ResourceType],
-    Coroutine[None, None, ResourceType | Response | None],
+    Coroutine[None, None, ResourceType | Response | None]
+    | ResourceType
+    | Response
+    | None,
 ]:
     """Make a function suitable for creation of a FHIR create API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
-    async def create(
-        request: Request,
-        response: Response,
-        _format: str = FORMAT_QP,
-        _pretty: str = PRETTY_QP,
-        resource: ResourceType = Body(
-            None,
-            media_type="application/fhir+json",
-            alias=resource_type_str,
-        ),
-    ) -> ResourceType | Response | None:
-        """
-        Function for create interaction.
+    if iscoroutinefunction(interaction.handler):
 
-        Calls the handler, and sets the Location header based on the Id of the created resource.
-        """
-        handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
-        result = await handler(InteractionContext(request, response), resource)  # type: ignore
-        id_, result_resource = _result_to_id_resource_tuple(result)
+        async def create_async(
+            request: Request,
+            response: Response,
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
+            resource: ResourceType = Body(
+                None,
+                media_type="application/fhir+json",
+                alias=resource_type_str,
+            ),
+        ) -> ResourceType | Response | None:
+            """
+            Function for create interaction.
 
-        response.headers[
-            "Location"
-        ] = f"{request.base_url}{resource_type_str}/{id_}/_history/1"
+            Calls the handler, and sets the Location header based on the Id of the created resource.
+            """
+            handler = cast(
+                CreateInteractionAsyncHandler[ResourceType], interaction.handler
+            )
+            result = await handler(InteractionContext(request, response), resource)  # type: ignore
+            id_, result_resource = _result_to_id_resource_tuple(result)
 
-        return format_response(
-            resource=result_resource,
-            response=response,
-            format_parameters=FormatParameters.from_request(request),
-        )
+            response.headers[
+                "Location"
+            ] = f"{request.base_url}{resource_type_str}/{id_}/_history/1"
 
-    create.__annotations__ |= {
-        "resource": interaction.resource_type,
-    }
+            return format_response(
+                resource=result_resource,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
 
-    return create
+        create_async.__annotations__ |= {
+            "resource": interaction.resource_type,
+        }
+
+        return create_async
+    else:
+
+        def create(
+            request: Request,
+            response: Response,
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
+            resource: ResourceType = Body(
+                None, media_type="application/fhir+json", alias=resource_type_str
+            ),
+        ) -> ResourceType | Response | None:
+            """
+            Function for create interaction.
+
+            Calls the handler, and sets the Location header based on the Id of the created resource.
+            """
+            handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
+            result = handler(InteractionContext(request, response), resource)  # type: ignore
+            id_, result_resource = _result_to_id_resource_tuple(result)
+
+            response.headers[
+                "Location"
+            ] = f"{request.base_url}{resource_type_str}/{id_}/_history/1"
+
+            return format_response(
+                resource=result_resource,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
+        create.__annotations__ |= {
+            "resource": interaction.resource_type,
+        }
+
+        return create
 
 
 def make_read_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, Id, str, str], Coroutine[None, None, ResourceType | Response]
+    [Request, Response, Id, str, str],
+    Coroutine[None, None, ResourceType | Response] | ResourceType | Response,
 ]:
     """Make a function suitable for creation of a FHIR read API route."""
 
-    async def read(
-        request: Request,
-        response: Response,
-        id_: Id = Path(
-            None,
-            alias="id",
-            description=Resource.schema()["properties"]["id"]["title"],
-        ),
-        _format: str = FORMAT_QP,
-        _pretty: str = PRETTY_QP,
-    ) -> ResourceType | Response:
-        """Function for read interaction."""
-        handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
-        result_resource = await handler(InteractionContext(request, response), id_)  # type: ignore
+    if iscoroutinefunction(interaction.handler):
 
-        return format_response(
-            resource=result_resource,
-            response=response,
-            format_parameters=FormatParameters.from_request(request),
-        )
+        async def read_async(
+            request: Request,
+            response: Response,
+            id_: Id = Path(
+                None,
+                alias="id",
+                description=Resource.schema()["properties"]["id"]["title"],
+            ),
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
+        ) -> ResourceType | Response:
+            """Function for read interaction."""
+            handler = cast(
+                ReadInteractionAsyncHandler[ResourceType], interaction.handler
+            )
+            result_resource = await handler(InteractionContext(request, response), id_)  # type: ignore
 
-    return read
+            return format_response(
+                resource=result_resource,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
+        return read_async
+
+    else:
+
+        def read(
+            request: Request,
+            response: Response,
+            id_: Id = Path(
+                None,
+                alias="id",
+                description=Resource.schema()["properties"]["id"]["title"],
+            ),
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
+        ) -> ResourceType | Response:
+            """Function for read interaction."""
+            handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
+            result_resource = handler(InteractionContext(request, response), id_)  # type: ignore
+
+            return format_response(
+                resource=result_resource,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
+        return read
 
 
 # TODO: If possible, map FHIR primitives to correct type annotations for better validation
@@ -133,7 +214,8 @@ def make_search_type_function(
     search_parameter_metadata: dict[str, dict[str, str]],
     post: bool,
 ) -> Callable[
-    [Request, Response, str, str], Coroutine[None, None, Resource | Response]
+    [Request, Response, str, str],
+    Coroutine[None, None, Resource | Response] | Resource | Response,
 ]:
     """
     Make a function suitable for creation of a FHIR search-type API route.
@@ -147,31 +229,12 @@ def make_search_type_function(
     After the function is created, the function signature is changed to account for what search
     parameters are supported by the developer-defined handler.
     """
-
     if post:
         format_annotation = Form(None, description=_FORMAT_PARAMETER_DESCRIPTION)
         pretty_annotation = Form(None, description=_PRETTY_PARAMETER_DESCRIPTION)
     else:
         format_annotation = FORMAT_QP
         pretty_annotation = PRETTY_QP
-
-    async def search_type(
-        request: Request,
-        response: Response,
-        *,
-        _format: str = format_annotation,
-        _pretty: str = pretty_annotation,
-        **kwargs: str,
-    ) -> Resource | Response:
-        """Function for search-type interaction."""
-        handler = cast(SearchTypeInteractionHandler, interaction.handler)
-        bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore
-
-        return format_response(
-            resource=bundle,
-            response=response,
-            format_parameters=FormatParameters.from_request(request),
-        )
 
     search_parameters: tuple[Parameter, ...] = tuple(
         _make_search_parameter(
@@ -185,67 +248,146 @@ def make_search_type_function(
         for search_parameter in supported_search_parameters(interaction.handler)
     )
 
-    sig = signature(search_type)
-    parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
+    if iscoroutinefunction(interaction.handler):
 
-    sorted_search_parameters: list[Parameter] = sorted(
-        parameters + search_parameters,
-        key=lambda p: search_parameter_sort_key(
-            p.name, search_parameter_metadata, p.annotation
-        ),
-    )
+        async def search_type_async(
+            request: Request,
+            response: Response,
+            *,
+            _format: str = format_annotation,
+            _pretty: str = pretty_annotation,
+            **kwargs: str,
+        ) -> Resource | Response:
+            """Function for search-type interaction."""
+            handler = cast(SearchTypeInteractionAsyncHandler, interaction.handler)
+            bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore
 
-    sig = sig.replace(parameters=sorted_search_parameters)
-    setattr(search_type, "__signature__", sig)
+            return format_response(
+                resource=bundle,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
 
-    return search_type
+        return _set_search_type_function_signature(
+            search_type_async, search_parameters, search_parameter_metadata
+        )
+
+    else:
+
+        def search_type(
+            request: Request,
+            response: Response,
+            *,
+            _format: str = format_annotation,
+            _pretty: str = pretty_annotation,
+            **kwargs: str,
+        ) -> Resource | Response:
+            """Function for search-type interaction."""
+            handler = cast(SearchTypeInteractionHandler, interaction.handler)
+            bundle = handler(InteractionContext(request, response), **kwargs)  # type: ignore
+
+            return format_response(
+                resource=bundle,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
+        return _set_search_type_function_signature(
+            search_type, search_parameters, search_parameter_metadata
+        )
 
 
 def make_update_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
     [Request, Response, Id, str, str, ResourceType],
-    Coroutine[None, None, ResourceType | Response | None],
+    Coroutine[None, None, ResourceType | Response | None]
+    | ResourceType
+    | Response
+    | None,
 ]:
     """Make a function suitable for creation of a FHIR update API route."""
 
-    async def update(
-        request: Request,
-        response: Response,
-        id_: Id = Path(
-            None,
-            alias="id",
-            description=Resource.schema()["properties"]["id"]["title"],
-        ),
-        _format: str = FORMAT_QP,
-        _pretty: str = PRETTY_QP,
-        resource: ResourceType = Body(
-            None,
-            media_type="application/fhir+json",
-            alias=interaction.resource_type.get_resource_type(),
-        ),
-    ) -> ResourceType | Response | None:
-        if resource.id and id_ != resource.id:
-            raise FHIRBadRequestError(
-                code="invalid",
-                details_text="Logical Id in URL must match logical Id in resource",
+    if iscoroutinefunction(interaction.handler):
+
+        async def update_async(
+            request: Request,
+            response: Response,
+            id_: Id = Path(
+                None,
+                alias="id",
+                description=Resource.schema()["properties"]["id"]["title"],
+            ),
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
+            resource: ResourceType = Body(
+                None,
+                media_type="application/fhir+json",
+                alias=interaction.resource_type.get_resource_type(),
+            ),
+        ) -> ResourceType | Response | None:
+            if resource.id and id_ != resource.id:
+                raise FHIRBadRequestError(
+                    code="invalid",
+                    details_text="Logical Id in URL must match logical Id in resource",
+                )
+
+            handler = cast(
+                UpdateInteractionAsyncHandler[ResourceType], interaction.handler
+            )
+            result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore
+            _, result_resource = _result_to_id_resource_tuple(result)
+
+            return format_response(
+                resource=result_resource,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
             )
 
-        handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
-        result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore
-        _, result_resource = _result_to_id_resource_tuple(result)
+        update_async.__annotations__ |= {
+            "resource": interaction.resource_type,
+        }
 
-        return format_response(
-            resource=result_resource,
-            response=response,
-            format_parameters=FormatParameters.from_request(request),
-        )
+        return update_async
+    else:
 
-    update.__annotations__ |= {
-        "resource": interaction.resource_type,
-    }
+        def update(
+            request: Request,
+            response: Response,
+            id_: Id = Path(
+                None,
+                alias="id",
+                description=Resource.schema()["properties"]["id"]["title"],
+            ),
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
+            resource: ResourceType = Body(
+                None,
+                media_type="application/fhir+json",
+                alias=interaction.resource_type.get_resource_type(),
+            ),
+        ) -> ResourceType | Response | None:
+            if resource.id and id_ != resource.id:
+                raise FHIRBadRequestError(
+                    code="invalid",
+                    details_text="Logical Id in URL must match logical Id in resource",
+                )
 
-    return update
+            handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
+            result = handler(InteractionContext(request, response), id_, resource)  # type: ignore
+            _, result_resource = _result_to_id_resource_tuple(result)
+
+            return format_response(
+                resource=result_resource,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
+        update.__annotations__ |= {
+            "resource": interaction.resource_type,
+        }
+
+        return update
 
 
 def _result_to_id_resource_tuple(
@@ -298,3 +440,30 @@ def _is_valid_parameter_name(name: str) -> bool:
         "resource",
         "type",
     }
+
+
+def _set_search_type_function_signature(
+    search_type_function: Callable[
+        [Request, Response, str, str],
+        Coroutine[None, None, Resource | Response] | Resource | Response,
+    ],
+    search_parameters: tuple[Parameter, ...],
+    search_parameter_metadata: dict[str, dict[str, str]],
+) -> Callable[
+    [Request, Response, str, str],
+    Coroutine[None, None, Resource | Response] | Resource | Response,
+]:
+    sig = signature(search_type_function)
+    parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
+
+    sorted_search_parameters: list[Parameter] = sorted(
+        parameters + search_parameters,
+        key=lambda p: search_parameter_sort_key(
+            p.name, search_parameter_metadata, p.annotation
+        ),
+    )
+
+    sig = sig.replace(parameters=sorted_search_parameters)
+    setattr(search_type_function, "__signature__", sig)
+
+    return search_type_function

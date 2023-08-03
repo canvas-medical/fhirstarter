@@ -20,8 +20,10 @@ class InteractionContext:
 
 
 # TODO: Revisit definition of callback protocols and see if it is possible to make Mypy like them
-class CreateInteractionHandler(Protocol[ResourceType]):  # type: ignore
-    """Callback protocol that defines the signature of a handler for a FHIR create interaction."""
+class CreateInteractionAsyncHandler(Protocol[ResourceType]):  # type: ignore
+    """
+    Callback protocol that defines the signature of a handler for an async FHIR create interaction.
+    """
 
     async def __call__(
         self,
@@ -31,10 +33,38 @@ class CreateInteractionHandler(Protocol[ResourceType]):  # type: ignore
         ...
 
 
+class CreateInteractionHandler(Protocol[ResourceType]):  # type: ignore
+    """Callback protocol that defines the signature of a handler for a FHIR create interaction."""
+
+    def __call__(
+        self, context: InteractionContext, resource: ResourceType
+    ) -> Id | ResourceType:
+        ...
+
+
+class ReadInteractionAsyncHandler(Protocol[ResourceType]):  # type: ignore
+    """
+    Callback protocol that defines the signature of a handler for an async FHIR read interaction.
+    """
+
+    async def __call__(self, context: InteractionContext, id_: Id) -> ResourceType:
+        ...
+
+
 class ReadInteractionHandler(Protocol[ResourceType]):  # type: ignore
     """Callback protocol that defines the signature of a handler for a FHIR read interaction."""
 
-    async def __call__(self, context: InteractionContext, id_: Id) -> ResourceType:
+    def __call__(self, context: InteractionContext, id_: Id) -> ResourceType:
+        ...
+
+
+class SearchTypeInteractionAsyncHandler(Protocol):
+    """
+    Callback protocol that defines the signature of a handler for an async FHIR search-type
+    interaction.
+    """
+
+    async def __call__(self, context: InteractionContext, **kwargs: Any) -> Bundle:
         ...
 
 
@@ -43,12 +73,14 @@ class SearchTypeInteractionHandler(Protocol):
     Callback protocol that defines the signature of a handler for a FHIR search-type interaction.
     """
 
-    async def __call__(self, context: InteractionContext, **kwargs: Any) -> Bundle:
+    def __call__(self, context: InteractionContext, **kwargs: Any) -> Bundle:
         ...
 
 
-class UpdateInteractionHandler(Protocol[ResourceType]):  # type: ignore
-    """Callback protocol that defines the signature of a handler for a FHIR update interaction."""
+class UpdateInteractionAsyncHandler(Protocol[ResourceType]):  # type: ignore
+    """
+    Callback protocol that defines the signature of a handler for an async FHIR update interaction.
+    """
 
     async def __call__(
         self, context: InteractionContext, id_: Id, resource: ResourceType
@@ -56,10 +88,23 @@ class UpdateInteractionHandler(Protocol[ResourceType]):  # type: ignore
         ...
 
 
+class UpdateInteractionHandler(Protocol[ResourceType]):  # type: ignore
+    """Callback protocol that defines the signature of a handler for a FHIR update interaction."""
+
+    def __call__(
+        self, context: InteractionContext, id_: Id, resource: ResourceType
+    ) -> Id | ResourceType:
+        ...
+
+
 InteractionHandler = (
-    CreateInteractionHandler[ResourceType]
+    CreateInteractionAsyncHandler[ResourceType]
+    | CreateInteractionHandler[ResourceType]
+    | ReadInteractionAsyncHandler[ResourceType]
     | ReadInteractionHandler[ResourceType]
+    | SearchTypeInteractionAsyncHandler
     | SearchTypeInteractionHandler
+    | UpdateInteractionAsyncHandler[ResourceType]
     | UpdateInteractionHandler[ResourceType]
 )
 
