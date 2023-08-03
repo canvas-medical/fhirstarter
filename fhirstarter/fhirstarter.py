@@ -404,14 +404,11 @@ class FHIRStarter(FastAPI):
             # place, so they don't need to exist in the schemas section.
             if match := re.fullmatch("/(.*)/_search", path_name):
                 resource_type = match.group(1)
-                try:
-                    path["post"]["requestBody"]["content"][
-                        "application/x-www-form-urlencoded"
-                    ]["schema"] = openapi_schema["components"]["schemas"].pop(
-                        f"Body_fhirstarter_type_search-type_post_{resource_type}"
-                    )
-                except Exception as e:
-                    pass
+                path["post"]["requestBody"]["content"][
+                    "application/x-www-form-urlencoded"
+                ]["schema"] = openapi_schema["components"]["schemas"].pop(
+                    f"Body_fhirstarter_type_search-type_post_{resource_type}"
+                )
 
             # Iterate over all operations for a given path
             for operation_name, operation in path.items():
