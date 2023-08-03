@@ -359,7 +359,7 @@ class FHIRStarter(FastAPI):
 
         openapi_schema = super().openapi()
 
-        # Remove default FAstAPI validation errors, since FHIRStarter will always return operation
+        # Remove default FastAPI validation errors, since FHIRStarter will always return operation
         # outcomes
         openapi_schema["components"]["schemas"].pop("HTTPValidationError", None)
         openapi_schema["components"]["schemas"].pop("ValidationError", None)
@@ -404,11 +404,14 @@ class FHIRStarter(FastAPI):
             # place, so they don't need to exist in the schemas section.
             if match := re.fullmatch("/(.*)/_search", path_name):
                 resource_type = match.group(1)
-                path["post"]["requestBody"]["content"][
-                    "application/x-www-form-urlencoded"
-                ]["schema"] = openapi_schema["components"]["schemas"].pop(
-                    f"Body_fhirstarter_type_search_post_{resource_type}"
-                )
+                try:
+                    path["post"]["requestBody"]["content"][
+                        "application/x-www-form-urlencoded"
+                    ]["schema"] = openapi_schema["components"]["schemas"].pop(
+                        f"Body_fhirstarter_type_search-type_post_{resource_type}"
+                    )
+                except Exception as e:
+                    pass
 
             # Iterate over all operations for a given path
             for operation_name, operation in path.items():
@@ -452,7 +455,7 @@ class FHIRStarter(FastAPI):
                     operation_id := operation["operationId"]
                 ) and operation_id.startswith("fhirstarter|"):
                     _, _, interaction_type, *rest = operation_id.split("|")
-                    if interaction_type == "search":
+                    if interaction_type == "search-type":
                         resource_type = rest[1]
 
                         if is_resource_type(resource_type):

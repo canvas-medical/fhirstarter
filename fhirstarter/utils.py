@@ -333,7 +333,7 @@ def search_type_route_args(
             _forbidden,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|type|search|{'post' if post else 'get'}|{resource_type_str}",
+        "operation_id": f"fhirstarter|type|search-type|{'post' if post else 'get'}|{resource_type_str}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
