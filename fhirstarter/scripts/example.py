@@ -63,9 +63,10 @@ async def patient_read(context: InteractionContext, id_: Id) -> Patient:
 @provider.search_type(Patient)
 async def patient_search_type(
     context: InteractionContext,
+    birthdate: list[str] | None,
     general_practitioner: str | None,
     family: str | None,
-    nickname: list[str] | None,
+    nickname: str | None,
     _last_updated: str | None,
 ) -> Bundle:
     patients = []
