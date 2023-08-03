@@ -1,6 +1,7 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
 import asyncio
+import contextlib
 import itertools
 import logging
 import re
@@ -355,23 +356,17 @@ class FHIRStarter(FastAPI):
 
         openapi_schema = super().openapi()
 
-        # Add schema example for different operation outcomes
+        # Make schema examples for different operation outcomes
+        operation_outcome_examples = {}
         for status_code, code, details_text in (
-            (400, "invalid", "Bad Request"),
-            (401, "unknown", "Authentication failed"),
-            (403, "forbidden", "Authorization failed"),
-            (404, "not-found", "Resource Not Found"),
-            (422, "processing", "Unprocessable Entity"),
-            (500, "exception", "Internal Server Error"),
+            ("400", "invalid", "Bad Request"),
+            ("401", "unknown", "Authentication failed"),
+            ("403", "forbidden", "Authorization failed"),
+            ("404", "not-found", "Resource Not Found"),
+            ("422", "processing", "Unprocessable Entity"),
+            ("500", "exception", "Internal Server Error"),
         ):
-            title = f"OperationOutcome {status_code}"
-            openapi_schema["components"]["schemas"][title] = deepcopy(
-                openapi_schema["components"]["schemas"]["OperationOutcome"]
-            )
-            openapi_schema["components"]["schemas"][title]["title"] = title
-            openapi_schema["components"]["schemas"][title][
-                "example"
-            ] = make_operation_outcome_example(
+            operation_outcome_examples[status_code] = make_operation_outcome_example(
                 severity="error", code=code, details_text=details_text
             )
 
@@ -419,23 +414,17 @@ class FHIRStarter(FastAPI):
 
                 # For each response, change all instances of application/json to
                 # application/fhir+json
-                # Iterate over the responses
                 for status_code, response in responses.items():
-                    # Remove the response for "application/json"
+                    # Move the response for "application/json" to "application/fhir+json"
                     schema = response["content"].pop("application/json", None)
+                    if schema:
+                        response["content"]["application/fhir+json"] = schema
 
                     # Add specialized OperationOutcome responses if available for the status code
-                    if (
-                        f"OperationOutcome {status_code}"
-                        in openapi_schema["components"]["schemas"]
-                    ):
-                        response["content"]["application/fhir+json"] = openapi_schema[
-                            "components"
-                        ]["schemas"][f"OperationOutcome {status_code}"]
-                    elif schema:
-                        # If there was a response originally, add it back as the response for
-                        # application/fhir+json
-                        response["content"]["application/fhir+json"] = schema
+                    if example := operation_outcome_examples.get(status_code):
+                        response["content"]["application/fhir+json"][
+                            "example"
+                        ] = example
 
                 # For search operations, provide a bundle example that contains the correct resource
                 # type
@@ -453,6 +442,8 @@ class FHIRStarter(FastAPI):
                                 "search-type"
                             ].resource_type.Config.schema_extra["example"]
                         except (AttributeError, KeyError):
+                            example = None
+                        if not example:
                             if is_resource_type(resource_type):
                                 example = load_example(resource_type)
                             else:
