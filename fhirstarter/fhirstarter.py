@@ -350,19 +350,10 @@ class FHIRStarter(FastAPI):
         to FastAPI. This is not a significant vulnerability because the core server functionality
         will still work (i.e. this is just documentation).
         """
-        # TODO: It may be necessary to rethink some of the things that this function removes. For
-        #  example, if someone wants to add non-FHIR endpoints to their API, then maybe some of
-        #  these schemas shouldn't be removed. Also, for cases where paths or schemas are modified,
-        #  there should be a way to more precisely target items that are FHIR-related.
         if self.openapi_schema:
             return self.openapi_schema
 
         openapi_schema = super().openapi()
-
-        # Remove default FastAPI validation errors, since FHIRStarter will always return operation
-        # outcomes
-        openapi_schema["components"]["schemas"].pop("HTTPValidationError", None)
-        openapi_schema["components"]["schemas"].pop("ValidationError", None)
 
         # Add schema example for different operation outcomes
         for status_code, code, details_text in (
