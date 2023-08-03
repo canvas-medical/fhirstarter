@@ -455,16 +455,20 @@ class FHIRStarter(FastAPI):
                     if interaction_type == "search-type":
                         resource_type = rest[1]
 
-                        if is_resource_type(resource_type):
-                            example = load_example(resource_type)
-                        else:
-                            try:
-                                example = self._capabilities[resource_type][
-                                    "search-type"
-                                ].resource_type.Config.schema_extra["example"]
-                            except (AttributeError, KeyError):
+                        # Get the example for the resource. If a custom example is defined, it will
+                        # be used, otherwise an example will be loaded from the FHIR specification.
+                        try:
+                            example = self._capabilities[resource_type][
+                                "search-type"
+                            ].resource_type.Config.schema_extra["example"]
+                        except (AttributeError, KeyError):
+                            if is_resource_type(resource_type):
+                                example = load_example(resource_type)
+                            else:
                                 example = {"resourceType": resource_type}
 
+                        # For successful responses, copy the schema, and create and set a bundle
+                        # example that includes the example resource
                         operation["responses"]["200"]["content"][
                             "application/fhir+json"
                         ]["schema"] = deepcopy(
