@@ -19,6 +19,7 @@ from inspect import Parameter, iscoroutinefunction, signature
 from typing import cast
 
 from fastapi import Body, Form, Path, Query, Request, Response
+from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
 from fhir.resources.resource import Resource
 
@@ -215,7 +216,7 @@ def make_search_type_function(
     post: bool,
 ) -> Callable[
     [Request, Response, str, str],
-    Coroutine[None, None, Resource | Response] | Resource | Response,
+    Coroutine[None, None, Bundle | Response] | Bundle | Response,
 ]:
     """
     Make a function suitable for creation of a FHIR search-type API route.
@@ -257,7 +258,7 @@ def make_search_type_function(
             _format: str = format_annotation,
             _pretty: str = pretty_annotation,
             **kwargs: str,
-        ) -> Resource | Response:
+        ) -> Bundle | Response:
             """Function for search-type interaction."""
             handler = cast(SearchTypeInteractionAsyncHandler, interaction.handler)
             bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore
@@ -281,7 +282,7 @@ def make_search_type_function(
             _format: str = format_annotation,
             _pretty: str = pretty_annotation,
             **kwargs: str,
-        ) -> Resource | Response:
+        ) -> Bundle | Response:
             """Function for search-type interaction."""
             handler = cast(SearchTypeInteractionHandler, interaction.handler)
             bundle = handler(InteractionContext(request, response), **kwargs)  # type: ignore
@@ -391,8 +392,8 @@ def make_update_function(
 
 
 def _result_to_id_resource_tuple(
-    result: Id | Resource,
-) -> tuple[Id | None, Resource | None]:
+    result: Id | ResourceType,
+) -> tuple[Id | None, ResourceType | None]:
     """
     Given an Id or a Resource, return an Id and a Resource.
 
@@ -445,13 +446,13 @@ def _is_valid_parameter_name(name: str) -> bool:
 def _set_search_type_function_signature(
     search_type_function: Callable[
         [Request, Response, str, str],
-        Coroutine[None, None, Resource | Response] | Resource | Response,
+        Coroutine[None, None, Bundle | Response] | Bundle | Response,
     ],
     search_parameters: tuple[Parameter, ...],
     search_parameter_metadata: dict[str, dict[str, str]],
 ) -> Callable[
     [Request, Response, str, str],
-    Coroutine[None, None, Resource | Response] | Resource | Response,
+    Coroutine[None, None, Bundle | Response] | Bundle | Response,
 ]:
     sig = signature(search_type_function)
     parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
