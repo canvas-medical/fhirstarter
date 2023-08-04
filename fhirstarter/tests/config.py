@@ -4,16 +4,13 @@ from copy import deepcopy
 from tempfile import NamedTemporaryFile
 from typing import cast
 
-from fhir.resources.bundle import Bundle
-from fhir.resources.fhirtypes import Id
-from fhir.resources.humanname import HumanName
-from fhir.resources.patient import Patient
-
 from ..exceptions import FHIRResourceNotFoundError
 from ..fhirstarter import FHIRStarter
 from ..interactions import InteractionContext
 from ..providers import FHIRProvider
+from ..resources import Bundle, Id
 from ..testclient import TestClient
+from .resources import HumanName, Patient
 from .utils import generate_fhir_resource_id
 
 # In-memory "database" used to simulate persistence of created FHIR resources
