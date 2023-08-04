@@ -36,11 +36,11 @@ FHIR_RESOURCES_VERSION = importlib.metadata.version("fhir.resources")
 if FHIR_SEQUENCE == "R4":
     assert (
         FHIR_RESOURCES_VERSION == "6.4.0"
-    ), "fhir.resources package version must be 6.4.0 for FHIR R4 sequence"
+    ), f"fhir.resources package version must be 6.4.0 for FHIR R4 sequence; installed version is {FHIR_RESOURCES_VERSION}"
 else:
     assert (
         FHIR_RESOURCES_VERSION >= "7.0.0"
-    ), "fhir.resources package version must be 7.0.0 or greater for FHIR STU3, R4B, and R5 sequences"
+    ), f"fhir.resources package version must be 7.0.0 or greater for FHIR STU3, R4B, and R5 sequences; installed version is {FHIR_RESOURCES_VERSION}"
     assert (
         fhir.resources.__fhir_version__ == "5.0.0"
     ), f"fhir.resources package references unexpected FHIR version {fhir.resources.__fhir_version__}"
