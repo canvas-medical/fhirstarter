@@ -17,8 +17,6 @@ from zoneinfo import ZoneInfo
 import uvloop
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from fhir.resources.capabilitystatement import CapabilityStatement
-from fhir.resources.operationoutcome import OperationOutcome
 from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
@@ -38,6 +36,7 @@ from .functions import (
 )
 from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
+from .resources import CapabilityStatement, OperationOutcome
 from .search_parameters import (
     SearchParameters,
     search_parameter_sort_key,
