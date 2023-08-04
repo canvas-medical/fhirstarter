@@ -4,7 +4,6 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, Protocol, TypeVar
 
 from fastapi import params
-from fhir.resources.resource import Resource
 
 from .interactions import (
     CreateInteraction,
@@ -19,6 +18,7 @@ from .interactions import (
     UpdateInteraction,
     UpdateInteractionHandler,
 )
+from .resources import Resource
 
 C = TypeVar("C", bound=Callable[..., Any])
 

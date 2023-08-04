@@ -19,8 +19,6 @@ from inspect import Parameter, signature
 from typing import cast
 
 from fastapi import Body, Form, Path, Query, Request, Response
-from fhir.resources.fhirtypes import Id
-from fhir.resources.resource import Resource
 
 from .exceptions import FHIRBadRequestError
 from .interactions import (
@@ -32,6 +30,7 @@ from .interactions import (
     TypeInteraction,
     UpdateInteractionHandler,
 )
+from .resources import Id, Resource
 from .search_parameters import (
     search_parameter_sort_key,
     supported_search_parameters,

@@ -7,13 +7,11 @@ from typing import Any, ClassVar, Literal
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
-from fhir.resources.bundle import Bundle
-from fhir.resources.operationoutcome import OperationOutcome
-from fhir.resources.resource import Resource
 
 from . import status
 from .fhir_specification.utils import is_resource_type
 from .interactions import ResourceType, SearchTypeInteraction, TypeInteraction
+from .resources import Bundle, OperationOutcome, Resource
 
 
 @dataclass

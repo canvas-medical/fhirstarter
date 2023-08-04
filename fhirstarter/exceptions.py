@@ -9,8 +9,8 @@ from abc import ABC, abstractmethod
 
 from fastapi import Request, status
 from fastapi.exceptions import HTTPException
-from fhir.resources.operationoutcome import OperationOutcome
 
+from .resources import OperationOutcome
 from .utils import make_operation_outcome, parse_fhir_request
 
 

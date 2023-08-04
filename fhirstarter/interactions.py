@@ -6,9 +6,8 @@ from dataclasses import dataclass
 from typing import Any, Generic, Literal, Protocol, TypeVar
 
 from fastapi import Request, Response
-from fhir.resources.bundle import Bundle
-from fhir.resources.fhirtypes import Id
-from fhir.resources.resource import Resource
+
+from .resources import Bundle, Id, Resource
 
 ResourceType = TypeVar("ResourceType", bound=Resource)
 

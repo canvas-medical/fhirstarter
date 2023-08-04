@@ -255,23 +255,23 @@ test = ["anyio[trio] (>=3.2.1,<4.0.0)", "black (==23.1.0)", "coverage[toml] (>=6
 
 [[package]]
 name = "fhir-resources"
-version = "6.4.0"
+version = "7.0.2"
 description = "FHIR Resources as Model Class"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "fhir.resources-6.4.0-py2.py3-none-any.whl", hash = "sha256:226ff1939078efea79a0abec0cc26aa6e3b8bf6e943e4d55a66dd7713f6988bd"},
-    {file = "fhir.resources-6.4.0.tar.gz", hash = "sha256:8f380f108b6cfc8b445138d775b302a09b365a8d2dce60beacfebe11db1d70af"},
+    {file = "fhir.resources-7.0.2-py2.py3-none-any.whl", hash = "sha256:ba16b3348821614650dd2e7f04db170210ce4406f65a5cc873beb10317d595ff"},
+    {file = "fhir.resources-7.0.2.tar.gz", hash = "sha256:1e6392f7bc3b143463b07ada87a3b6a92dd8fe97947670423317fea69226f6de"},
 ]
 
 [package.dependencies]
-pydantic = {version = ">=1.7.2", extras = ["email"]}
+pydantic = {version = ">=1.7.2,<2.0.0", extras = ["email"]}
 
 [package.extras]
 all = ["PyYAML (>=5.4.1)", "lxml", "orjson (>=3.4.3)"]
-dev = ["Jinja2 (==2.11.1)", "MarkupSafe (==1.1.1)", "black", "certifi", "colorlog (==2.10.0)", "coverage", "fhirspec", "flake8 (==3.8.3)", "flake8-bugbear (==20.1.4)", "flake8-isort (==3.0.0)", "isort (==4.3.21)", "mypy (==0.812)", "pytest (>5.4.0)", "pytest-cov (>=2.10.0)", "requests (==2.23.0)", "zest-releaser[recommended]"]
+dev = ["Jinja2 (==2.11.1)", "MarkupSafe (==1.1.1)", "black", "certifi", "colorlog (==2.10.0)", "coverage", "fhirspec", "flake8 (==5.0.4)", "flake8-bugbear (==20.1.4)", "flake8-isort (==4.2.0)", "isort (==4.3.21)", "mypy (==0.812)", "pytest (>5.4.0)", "pytest-cov (>=2.10.0)", "requests (==2.23.0)", "setuptools (==65.6.3)", "zest-releaser[recommended]"]
 orjson = ["orjson (>=3.4.3)"]
-test = ["PyYAML (>=5.4.1)", "black", "coverage", "flake8 (==3.8.3)", "flake8-bugbear (==20.1.4)", "flake8-isort (==3.0.0)", "isort (==4.3.21)", "lxml", "mypy (==0.812)", "orjson (>=3.4.3)", "pytest (>5.4.0)", "pytest-cov (>=2.10.0)", "pytest-runner", "requests (==2.23.0)"]
+test = ["PyYAML (>=5.4.1)", "black", "coverage", "flake8 (==5.0.4)", "flake8-bugbear (==20.1.4)", "flake8-isort (==4.2.0)", "isort (==4.3.21)", "lxml", "mypy (==0.812)", "orjson (>=3.4.3)", "pytest (>5.4.0)", "pytest-cov (>=2.10.0)", "pytest-runner", "requests (==2.23.0)", "setuptools (==65.6.3)"]
 xml = ["lxml"]
 yaml = ["PyYAML (>=5.4.1)"]
 
@@ -1083,4 +1083,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "46457a92fd6bb337b1214cf243089d69850194521d0f14d0c9c739997da107c4"
+content-hash = "d5833e1750311b5213ed030195bc15806f50f60e26bcaedda9578601e138fe8c"
