@@ -27,7 +27,7 @@ jobs:
     - name: Install Python packages
       run: poetry install
     - name: Install FHIR Resources
-      run: pip install fhir.resources=${{ matrix.fhir-resources-version }}
+      run: pip install fhir.resources==${{ matrix.fhir-resources-version }}
     - name: Run tests
       env:
         FHIR_SEQUENCE: ${{ matrix.fhir-sequence }}
