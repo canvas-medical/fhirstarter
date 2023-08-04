@@ -32,8 +32,8 @@ assert (
 FHIR_RESOURCES_VERSION = importlib.metadata.version("fhir.resources")
 if FHIR_SEQUENCE == "R4":
     assert (
-        FHIR_RESOURCES_VERSION == "6.5.0"
-    ), "fhir.resources package version must be 6.5.0 for FHIR R4 sequence"
+        FHIR_RESOURCES_VERSION == "6.4.0"
+    ), "fhir.resources package version must be 6.4.0 for FHIR R4 sequence"
 else:
     assert (
         FHIR_RESOURCES_VERSION >= "7.0.0"
