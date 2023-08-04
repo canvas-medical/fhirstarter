@@ -332,6 +332,7 @@ def make_update_function(
                 alias=interaction.resource_type.get_resource_type(),
             ),
         ) -> ResourceType | Response | None:
+            """Function for update interaction."""
             if resource.id and id_ != resource.id:
                 raise FHIRBadRequestError(
                     code="invalid",
@@ -373,6 +374,7 @@ def make_update_function(
                 alias=interaction.resource_type.get_resource_type(),
             ),
         ) -> ResourceType | Response | None:
+            """Function for update interaction."""
             if resource.id and id_ != resource.id:
                 raise FHIRBadRequestError(
                     code="invalid",

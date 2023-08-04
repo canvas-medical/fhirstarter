@@ -23,7 +23,12 @@ _VALID_TOKEN = "valid"
 _INVALID_TOKEN = "invalid"
 
 
-async def patient_create(_: InteractionContext, resource: Patient) -> Id:
+async def patient_create_async(context: InteractionContext, resource: Patient) -> Id:
+    """Patient create FHIR interaction."""
+    return patient_create(context, resource)
+
+
+def patient_create(_: InteractionContext, resource: Patient) -> Id:
     """Patient create FHIR interaction."""
     patient = deepcopy(resource)
     patient.id = generate_fhir_resource_id()
@@ -32,7 +37,12 @@ async def patient_create(_: InteractionContext, resource: Patient) -> Id:
     return Id(patient.id)
 
 
-async def patient_read(_: InteractionContext, id_: Id) -> Patient:
+async def patient_read_async(context: InteractionContext, id_: Id) -> Patient:
+    """Patient read FHIR interaction."""
+    return patient_read(context, id_)
+
+
+def patient_read(_: InteractionContext, id_: Id) -> Patient:
     """Patient read FHIR interaction."""
     patient = DATABASE.get(id_)
     if not patient:
@@ -41,7 +51,20 @@ async def patient_read(_: InteractionContext, id_: Id) -> Patient:
     return patient
 
 
-async def patient_search_type(
+async def patient_search_type_async(
+    context: InteractionContext,
+    family: str | None,
+    general_practitioner: str | None,
+    nickname: str | None,
+    _last_updated: str | None,
+) -> Bundle:
+    """Patient search-type FHIR interaction."""
+    return patient_search_type(
+        context, family, general_practitioner, nickname, _last_updated
+    )
+
+
+def patient_search_type(
     _: InteractionContext,
     family: str | None,
     general_practitioner: str | None,
@@ -66,7 +89,14 @@ async def patient_search_type(
     return bundle
 
 
-async def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> Id:
+async def patient_update_async(
+    context: InteractionContext, id_: Id, resource: Patient
+) -> Id:
+    """Patient update FHIR interaction."""
+    return patient_update(context, id_, resource)
+
+
+def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> Id:
     """Patient update FHIR interaction."""
     if id_ not in DATABASE:
         raise FHIRResourceNotFoundError
@@ -99,21 +129,29 @@ include-in-capability-statement = true
     return TestClient(app)
 
 
-def client() -> TestClient:
-    """Create an app that provides all FHIR interactions."""
+def create_test_client(
+    interactions: tuple[str, ...], async_endpoints: bool
+) -> TestClient:
+    """Given a list of interactions and an async flag, create an app and return a test client."""
     provider = FHIRProvider()
-    provider.create(Patient)(patient_create)
-    provider.read(Patient)(patient_read)
-    provider.search_type(Patient)(patient_search_type)
-    provider.update(Patient)(patient_update)
 
-    return app(provider)
-
-
-def client_create_and_read() -> TestClient:
-    """Create an app that only provides FHIR create and read interactions."""
-    provider = FHIRProvider()
-    provider.create(Patient)(patient_create)
-    provider.read(Patient)(patient_read)
+    for interaction in interactions:
+        match interaction, async_endpoints:
+            case "create", True:
+                provider.create(Patient)(patient_create_async)
+            case "create", False:
+                provider.create(Patient)(patient_create)
+            case "read", True:
+                provider.read(Patient)(patient_read_async)
+            case "read", False:
+                provider.read(Patient)(patient_read)
+            case "search-type", True:
+                provider.search_type(Patient)(patient_search_type_async)
+            case "search-type", False:
+                provider.search_type(Patient)(patient_search_type)
+            case "update", True:
+                provider.update(Patient)(patient_update_async)
+            case "update", False:
+                provider.update(Patient)(patient_update)
 
     return app(provider)
