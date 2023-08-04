@@ -3,16 +3,32 @@ on: [pull_request]
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        fhir-sequence: [STU3, R4, R4B, R5]
+        include:
+          - fhir-sequence: STU3
+            fhir-resources-version: 7.0.2
+          - fhir-sequence: R4
+            fhir-resources-version: 6.4.0
+          - fhir-sequence: R4B
+            fhir-resources-version: 7.0.2
+          - fhir-sequence: R5
+            fhir-resources-version: 7.0.2
     steps:
-      - uses: actions/checkout@v3
-      - name: Install Poetry
-        run: pipx install poetry
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'poetry'
-      - name: Install Python packages
-        run: poetry install
-      - name: Run tests
-        run: poetry run pytest
+    - uses: actions/checkout@v3
+    - name: Install Poetry
+      run: pipx install poetry
+    - name: Install Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'poetry'
+    - name: Install Python packages
+      run: poetry install
+    - name: Install FHIR Resources
+      run: pip install fhir.resources=${{ matrix.fhir-resources-version }}
+    - name: Run tests
+      env:
+        FHIR_SEQUENCE=${{ matrix.fhir-sequence }}
+      run: poetry run pytest
