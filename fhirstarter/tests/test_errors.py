@@ -6,12 +6,12 @@ from typing import Any, cast
 
 import pytest
 from fastapi import HTTPException
-from fhir.resources.patient import Patient
 
 from ..fhirstarter import FHIRProvider, FHIRStarter, Request, Response, status
 from ..testclient import TestClient
 from ..utils import make_operation_outcome
 from .config import app
+from .resources import Patient
 from .utils import assert_expected_response, generate_fhir_resource_id
 
 

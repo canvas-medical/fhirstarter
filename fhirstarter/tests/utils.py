@@ -6,11 +6,11 @@ from typing import Any
 from urllib.parse import urlparse
 from uuid import uuid4
 
-from fhir.resources.fhirtypes import Id
 from funcy import omit
 from requests.models import Response
 
 from .. import Request
+from ..resources import Id
 
 _RESOURCE = {
     "resourceType": "Patient",

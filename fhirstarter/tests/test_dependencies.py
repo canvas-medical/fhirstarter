@@ -3,11 +3,11 @@
 import pytest
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fhir.resources.patient import Patient
 
 from ..exceptions import FHIRUnauthorizedError
 from ..fhirstarter import FHIRProvider, status
 from .config import app, patient_create
+from .resources import Patient
 from .utils import assert_expected_response, resource
 
 _VALID_TOKEN = "valid"

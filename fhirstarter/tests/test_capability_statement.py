@@ -1,13 +1,12 @@
 """Test the capability statement"""
-
 from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any, cast
 
 import pytest
-from fhir.resources.capabilitystatement import CapabilityStatement
 
 from .. import status
 from ..fhirstarter import FHIRStarter
+from ..resources import FHIR_SEQUENCE, FHIR_VERSION, CapabilityStatement
 from ..testclient import TestClient
 from .config import client, client_create_and_read
 from .utils import assert_expected_response
@@ -87,20 +86,23 @@ def test_capability_statement(
     assert_expected_response(
         response,
         status.HTTP_200_OK,
-        content={
-            "resourceType": "CapabilityStatement",
-            "status": "active",
-            "date": app._created.isoformat(),
-            "kind": "instance",
-            "fhirVersion": "4.0.1",
-            "format": ["json"],
-            "rest": [
-                {
-                    "mode": "server",
-                    "resource": resource,
-                }
-            ],
-        },
+        content=_fhir_sequence_adjust(
+            {
+                "resourceType": "CapabilityStatement",
+                "status": "active",
+                "date": app._created.isoformat(),
+                "kind": "instance",
+                "fhirVersion": FHIR_VERSION,
+                "acceptUnknown": "no",
+                "format": ["json"],
+                "rest": [
+                    {
+                        "mode": "server",
+                        "resource": resource,
+                    }
+                ],
+            }
+        ),
     )
 
 
@@ -164,24 +166,41 @@ def test_set_capability_statement_modifier(
     assert_expected_response(
         response,
         status.HTTP_200_OK,
-        content={
-            "resourceType": "CapabilityStatement",
-            "status": "active",
-            "date": app._created.isoformat(),
-            "publisher": "Publisher",
-            "kind": "instance",
-            "fhirVersion": "4.0.1",
-            "format": ["json"],
-            "rest": [
-                {
-                    "mode": "server",
-                    "resource": [
-                        {
-                            "type": "Patient",
-                            "interaction": [{"code": "create"}, {"code": "read"}],
-                        }
-                    ],
-                }
-            ],
-        },
+        content=_fhir_sequence_adjust(
+            {
+                "resourceType": "CapabilityStatement",
+                "status": "active",
+                "date": app._created.isoformat(),
+                "publisher": "Publisher",
+                "kind": "instance",
+                "fhirVersion": FHIR_VERSION,
+                "acceptUnknown": "no",
+                "format": ["json"],
+                "rest": [
+                    {
+                        "mode": "server",
+                        "resource": [
+                            {
+                                "type": "Patient",
+                                "interaction": [{"code": "create"}, {"code": "read"}],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
     )
+
+
+def _fhir_sequence_adjust(
+    capability_statement: MutableMapping[str, Any]
+) -> MutableMapping[str, Any]:
+    """
+    Adjust a capability statement for the purposes of comparison.
+
+    Example: For R4, R4B, and R5, the "acceptUnknown" value is no longer present.
+    """
+    if FHIR_SEQUENCE != "STU3":
+        del capability_statement["acceptUnknown"]
+
+    return capability_statement

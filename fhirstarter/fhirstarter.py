@@ -36,7 +36,12 @@ from .functions import (
 )
 from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
-from .resources import CapabilityStatement, OperationOutcome
+from .resources import (
+    FHIR_SEQUENCE,
+    FHIR_VERSION,
+    CapabilityStatement,
+    OperationOutcome,
+)
 from .search_parameters import (
     SearchParameters,
     search_parameter_sort_key,
@@ -317,7 +322,8 @@ class FHIRStarter(FastAPI):
             "status": "active",
             "date": self._created,
             "kind": "instance",
-            "fhirVersion": "4.0.1",
+            "fhirVersion": FHIR_VERSION,
+            "acceptUnknown": "no",
             "format": ["json"],
             "rest": [
                 {
@@ -326,6 +332,9 @@ class FHIRStarter(FastAPI):
                 }
             ],
         }
+
+        if FHIR_SEQUENCE != "STU3":
+            del capability_statement["acceptUnknown"]
 
         if self._capability_statement_modifier:
             capability_statement = self._capability_statement_modifier(

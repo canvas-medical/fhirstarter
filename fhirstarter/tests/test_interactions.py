@@ -5,17 +5,16 @@ from functools import partial
 from typing import cast
 
 import pytest
-from fhir.resources.bundle import Bundle
-from fhir.resources.humanname import HumanName
-from fhir.resources.patient import Patient
 from requests.models import Response
 
 from .. import status
 from ..interactions import InteractionContext
 from ..providers import FHIRProvider
+from ..resources import Bundle
 from ..testclient import TestClient
 from ..utils import make_operation_outcome
 from .config import DATABASE, app, patient_create
+from .resources import HumanName, Patient
 from .utils import (
     assert_expected_response,
     generate_fhir_resource_id,
