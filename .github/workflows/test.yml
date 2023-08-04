@@ -3,6 +3,8 @@ on: [pull_request]
 jobs:
   run-tests:
     runs-on: ubuntu-latest
+    env:
+      POETRY_VIRTUALENVS_CREATE: false
     strategy:
       max-parallel: 1
       matrix:
