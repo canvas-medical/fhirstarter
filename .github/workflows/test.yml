@@ -4,6 +4,7 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         fhir-sequence: [STU3, R4, R4B, R5]
         include:
