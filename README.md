@@ -18,10 +18,14 @@
   </a>
 </p>
 
-An ASGI FHIR API framework built on top of [FastAPI](https://fastapi.tiangolo.com) and
+An ASGI [FHIR](https://hl7.org/fhir/) API framework built on top of [FastAPI](https://fastapi.tiangolo.com) and
 [FHIR Resources](https://pypi.org/project/fhir.resources/).
 
-The only version of FHIR that is currently supported is 4.0.1.
+Supports FHIR sequences:
+* [STU (v3.0.2)](https://hl7.org/fhir/STU3/)
+* [R4 (v4.0.1)](https://hl7.org/fhir/R4/)
+* [R4B (v4.3.0)](https://hl7.org/fhir/R4B/)
+* [R5 (v5.0.0)](https://hl7.org/fhir/R5/)
 
 ## Installation
 
@@ -64,8 +68,39 @@ FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server.
 
 ### Currently-supported functionality
 
-FHIRStarter supports create, read, search-type, and update endpoints across all FHIR R4 resource
+FHIRStarter supports create, read, search-type, and update endpoints across all FHIR resource
 types, and will automatically generate the `/metadata` capabilities statement endpoint.
+
+### Configuration for specific FHIR sequences
+
+FHIRStarter will work out of the box as an R5 server. If a different sequence is desired, it must be
+specified with an environment variable:
+
+```shell
+FHIR_SEQUENCE="R4B"
+```
+
+The latest version of the [FHIR Resources](https://pypi.org/project/fhir.resources/) package only
+supports FHIR STU3, R4B, and R5. FHIR R4 is supported by an earlier version. Because of this, if a
+developer desires to use FHIR R4, then the developer must pin version **6.4.0** of fhir.resources in
+their project. FHIRStarter will check the version of fhir.resources against the specified FHIR
+version in the environment variable to ensure that they are compatible.
+
+Model imports are also affected by which version of fhir.resources is installed. For STU3 and R4B,
+model imports will look like this:
+
+```python
+from fhir.resources.STU3.patient import Patient
+```
+```python
+from fhir.resources.R4B.patient import Patient
+```
+
+For R4 and R5, model imports will look like this:
+
+```python
+from fhir.resources.patient import Patient
+```
 
 ### Example
 
@@ -156,12 +191,3 @@ Dependencies specified at the provider level will be injected into all routes th
 the application from that specific provider.
 
 Dependencies specified at the handler level only apply to that specific FHIR interaction.
-
-## Forward compatibility
-
-At some point in the future, it will be necessary to support FHIR R5. How this might be supported on
-a server that continues to support R4 has not yet been determined (e.g. a header that specifies the
-version, adding the FHIR version to the URL path, etc.). It may be necessary to support alteration
-of how the URL path is specified through the provider construct. Currently, the FHIR version is not
-part of the URL path, so the default behavior is that an API route defined as `/Patient` will be an
-R4 endpoint.
