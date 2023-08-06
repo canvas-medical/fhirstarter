@@ -7,7 +7,19 @@ from pathlib import Path
 import requests
 
 FILENAME_EXCEPTIONS: dict[str, dict[str, str]] = {
-    "STU3": {},
+    "STU3": {
+        "BodySite": "bodysite-example-skin-patch.json",
+        "Measure": "measure-exclusive-breastfeeding.json",
+        "MeasureReport": "measurereport-cms146-cat2-example.json",
+        "Medication": "medicationexample15.json",
+        "MedicationAdministration": "medicationadministration0302.json",
+        "MedicationDispense": "medicationdispense0302.json",
+        "MedicationRequest": "medicationrequest0301.json",
+        "MedicationStatement": "medicationstatementexample1.json",
+        "NutritionOrder": "nutritionorder-example-renaldiet.json",
+        "SupplyRequest": "supplyrequest-example-simpleorder.json",
+        "Task": "task-example1.json",
+    },
     "R4": {
         "BodyStructure": "bodystructure-example-skin-patch.json",
         "ChargeItemDefinition": "chargeitemdefinition-device-example.json",
