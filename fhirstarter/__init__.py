@@ -10,20 +10,6 @@ from .providers import FHIRProvider
 from .resources import FHIR_VERSION
 from .utils import categorize_fhir_request, parse_fhir_request
 
-__all__ = [
-    "Depends",
-    "FHIRProvider",
-    "FHIRStarter",
-    "InteractionContext",
-    "Request",
-    "Response",
-    "categorize_fhir_request",
-    "parse_fhir_request",
-    "status",
-    "FHIR_SEQUENCE",
-    "FHIR_VERSION",
-]
-
 # Ensure that the specified FHIR sequence is supported by FHIRStarter
 FHIR_SEQUENCE = os.getenv("FHIR_SEQUENCE", "R5")
 SUPPORTED_FHIR_SEQUENCES = ("STU3", "R4", "R4B", "R5")
@@ -44,3 +30,17 @@ else:
     assert (
         fhir.resources.__fhir_version__ == "5.0.0"
     ), f"fhir.resources package references unexpected FHIR version {fhir.resources.__fhir_version__}"
+
+__all__ = [
+    "Depends",
+    "FHIRProvider",
+    "FHIRStarter",
+    "InteractionContext",
+    "Request",
+    "Response",
+    "categorize_fhir_request",
+    "parse_fhir_request",
+    "status",
+    "FHIR_SEQUENCE",
+    "FHIR_VERSION",
+]
