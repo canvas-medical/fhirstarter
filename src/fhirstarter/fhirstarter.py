@@ -1,8 +1,8 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
-import asyncio
+# import asyncio
 import itertools
-import logging
+# import logging
 import re
 from collections import defaultdict
 from collections.abc import Callable, Coroutine, MutableMapping
@@ -12,7 +12,6 @@ from os import PathLike
 from typing import Any, TypeAlias, cast
 from urllib.parse import parse_qs, urlencode
 from zoneinfo import ZoneInfo
-
 import uvloop
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -34,6 +33,7 @@ from .functions import (
     make_read_function,
     make_search_type_function,
     make_update_function,
+    make_vread_function
 )
 from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
@@ -50,14 +50,15 @@ from .utils import (
     make_operation_outcome,
     parse_fhir_request,
     read_route_args,
+    vread_route_args,
     search_type_route_args,
     update_route_args,
 )
 
-# Suppress warnings from base fhir.resources class
-logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
+# # Suppress warnings from base fhir.resources class
+# logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
 
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+# asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 CapabilityStatementModifier: TypeAlias = Callable[
     [MutableMapping[str, Any], Request, Response], MutableMapping[str, Any]
@@ -503,6 +504,14 @@ class FHIRStarter(FastAPI):
                 self.get(**read_route_args(interaction))(
                     make_read_function(interaction)
                 )
+            case "vread":
+                self.get(**vread_route_args(interaction, post=False))(
+                    make_vread_function(interaction)
+                )
+                self.post(**vread_route_args(interaction, post=True))(
+                    make_vread_function(interaction)
+                )
+            
             case "search-type":
                 search_parameter_metadata = self._search_parameters.get_metadata(
                     interaction.resource_type.get_resource_type()

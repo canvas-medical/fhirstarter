@@ -80,7 +80,7 @@ def configure_logging() -> None:  # pragma: no cover
     """Configures logging."""
     loggers = (
         logging.getLogger(name)
-        for name in logging.root.manager.loggerDict
+        for name in logging.root.manager.loggerDicta
         if name.startswith("uvicorn.")
     )
     for uvicorn_logger in loggers:

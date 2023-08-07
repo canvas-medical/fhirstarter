@@ -36,6 +36,13 @@ class ReadInteractionHandler(Protocol[ResourceType]):  # type: ignore
 
     async def __call__(self, context: InteractionContext, id_: Id) -> ResourceType:
         ...
+        
+## New Vread interraction class Added to support vread interaction:       
+class VReadInteractionHandler(Protocol[ResourceType]):
+    """Callback protocol that defines the signature of a handler for a FHIR vread interaction."""
+
+    async def __call__(self, context: InteractionContext, id_: Id,version_id: str ,vid: Id) -> ResourceType:
+        ...
 
 
 class SearchTypeInteractionHandler(Protocol):
@@ -61,6 +68,7 @@ InteractionHandler = (
     | ReadInteractionHandler[ResourceType]
     | SearchTypeInteractionHandler
     | UpdateInteractionHandler[ResourceType]
+    | VReadInteractionHandler[ResourceType] #Handler for VReadInteraction
 )
 
 
@@ -101,6 +109,11 @@ class ReadInteraction(TypeInteraction[ResourceType]):
     @staticmethod
     def label() -> Literal["read"]:
         return "read"
+# Static methods for creating VRead interactions:    
+class VReadInteraction(TypeInteraction[ResourceType]):
+    @staticmethod
+    def label() -> Literal["vread"]:
+        return "vread"
 
 
 class SearchTypeInteraction(TypeInteraction[ResourceType]):

@@ -1,5 +1,3 @@
-"""FHIRProvider class, for registering FHIR interactions with a FHIRStarter app."""
-
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, Protocol, TypeVar
 
@@ -18,10 +16,11 @@ from .interactions import (
     TypeInteraction,
     UpdateInteraction,
     UpdateInteractionHandler,
+    VReadInteraction,
+    VReadInteractionHandler,
 )
 
 C = TypeVar("C", bound=Callable[..., Any])
-
 
 class TypeInteractionType(Protocol[ResourceType]):
     @staticmethod
@@ -32,17 +31,7 @@ class TypeInteractionType(Protocol[ResourceType]):
     ) -> TypeInteraction[ResourceType]:
         ...
 
-
 class FHIRProvider:
-    """
-    Class that contains a collection of FHIR interactions to be added to a FHIRStarter app. These
-    interactions are added as API routes.
-
-    Aside from instantiation, interaction with this class is performed solely through the register
-    decorators, e.g. register_read_interaction. One must use these decorators to decorate
-    functions that perform FHIR interactions.
-    """
-
     def __init__(self, *, dependencies: Sequence[params.Depends] | None = None) -> None:
         self._dependencies = dependencies or []
         self._interactions: list[TypeInteraction[Resource]] = []
@@ -61,7 +50,6 @@ class FHIRProvider:
         [CreateInteractionHandler[ResourceType]],
         CreateInteractionHandler[ResourceType],
     ]:
-        """Register a FHIR create interaction."""
         return self._register_type_interaction(
             resource_type,
             CreateInteraction[ResourceType],
@@ -79,7 +67,6 @@ class FHIRProvider:
         [ReadInteractionHandler[ResourceType]],
         ReadInteractionHandler[ResourceType],
     ]:
-        """Register a FHIR read interaction."""
         return self._register_type_interaction(
             resource_type,
             ReadInteraction[ResourceType],
@@ -94,7 +81,6 @@ class FHIRProvider:
         dependencies: Sequence[params.Depends] | None = None,
         include_in_schema: bool = True
     ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
-        """Register a FHIR search-type interaction."""
         return self._register_type_interaction(
             resource_type,
             SearchTypeInteraction[ResourceType],
@@ -112,10 +98,27 @@ class FHIRProvider:
         [UpdateInteractionHandler[ResourceType]],
         UpdateInteractionHandler[ResourceType],
     ]:
-        """Register a FHIR update interaction."""
         return self._register_type_interaction(
             resource_type,
             UpdateInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
+        )
+
+    def vread(
+        self,
+        resource_type: type[ResourceType],
+        *,
+        dependencies: Sequence[params.Depends] | None = None,
+        include_in_schema: bool = True
+    ) -> Callable[
+        [VReadInteractionHandler[ResourceType]],
+        VReadInteractionHandler[ResourceType],
+    ]:
+        """Register a FHIR vread interaction."""
+        return self._register_type_interaction(
+            resource_type,
+            VReadInteraction[ResourceType],
             dependencies,
             include_in_schema,
         )

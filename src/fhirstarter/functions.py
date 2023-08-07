@@ -5,7 +5,6 @@ The callables passed to FastAPI by FHIRStarter are created using functional prog
 The create, read, and updates use cases are fairly straightforward -- these functions simply call a
 developer-provided handler, perform some FHIR-related processing, and return the result up the
 chain.
-
 The search use case is slightly more complicated. Because each FHIR resource type has a different
 set of search parameters (i.e. query parameters), the approach used for the create, read, and update
 use cases to create the callables does not work. Instead, a function that takes arbitrary kwargs is
@@ -31,6 +30,7 @@ from .interactions import (
     SearchTypeInteractionHandler,
     TypeInteraction,
     UpdateInteractionHandler,
+    VReadInteractionHandler
 )
 from .search_parameters import (
     search_parameter_sort_key,
@@ -126,6 +126,43 @@ def make_read_function(
 
     return read
 
+
+def make_vread_function(
+    interaction: TypeInteraction[ResourceType],
+) -> Callable[
+    [Request, Response, Id, str, str], Coroutine[None, None, ResourceType | Response]
+]:
+    """Make a function suitable for creation of a FHIR vread API route."""
+
+    async def vread(
+        request: Request,
+        response: Response,
+        id_: Id = Path(
+            None,
+            alias="id",
+            description=Resource.schema()["properties"]["id"]["title"],
+        ),
+        version_id: str = Path(
+            None,
+            alias="vid",
+            description="The version id of the resource",
+        ),
+        _format: str = FORMAT_QP,
+        _pretty: str = PRETTY_QP,
+    ) -> ResourceType | Response:
+        """Function for vread interaction."""
+        handler = cast(VReadInteractionHandler[ResourceType], interaction.handler)
+        result_resource = await handler(
+            InteractionContext(request, response), id_, version_id
+        )  # type: ignore
+
+        return format_response(
+            resource=result_resource,
+            response=response,
+            format_parameters=FormatParameters.from_request(request),
+        )
+
+    return vread
 
 # TODO: If possible, map FHIR primitives to correct type annotations for better validation
 def make_search_type_function(
@@ -280,9 +317,10 @@ def _make_search_parameter(
         kind=Parameter.KEYWORD_ONLY,
         default=Form(None, alias=var_name_to_qp_name(name), description=description)
         if post
-        else Query(None, alias=var_name_to_qp_name(name), description=description),
+        else Query(None, alias=var_name_to_qp_name(name), description=description, multiple=multiple),
         annotation=list[str] if multiple else str,
     )
+
 
 
 def _is_valid_parameter_name(name: str) -> bool:
@@ -298,3 +336,4 @@ def _is_valid_parameter_name(name: str) -> bool:
         "resource",
         "type",
     }
+

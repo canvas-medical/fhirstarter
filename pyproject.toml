@@ -37,6 +37,10 @@ fastapi = "^0.94.1"
 lxml = "^4.9.2"
 python-multipart = "^0.0.6"
 uvloop = "^0.17.0"
+opentelemetry-api = "^1.19.0"
+opentelemetry-sdk = "^1.19.0"
+opentelemetry-instrumentation = "^0.40b0"
+opentelemetry-exporter-jaeger = "^1.19.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

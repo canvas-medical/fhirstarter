@@ -310,6 +310,30 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any
         **interaction.route_options,
     }
 
+#Adding the vread route arguments to vread request
+def vread_route_args(interaction: TypeInteraction[ResourceType], post: bool) -> dict[str, Any]:
+    resource_type_str = interaction.resource_type.get_resource_type()
+
+    return {
+        "path": f"/{resource_type_str}/{{id}}/_history/{{version_id}}",
+        "response_model": interaction.resource_type,
+        "status_code": status.HTTP_200_OK,
+        "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
+        "summary": f"{resource_type_str} {interaction.label()}",
+        "description": f"The {resource_type_str} {interaction.label()} interaction accesses "
+                       f"a specific version of a {resource_type_str} resource.",
+        "responses": _responses(
+            interaction,
+            _ok,
+            _unauthorized,
+            _forbidden,
+            _not_found,
+            _internal_server_error,
+        ),
+        "operation_id": f"fhirstarter|instance|{interaction.label()}|{'post' if post else 'get'}|{resource_type_str}",
+        "response_model_exclude_none": True,
+        **interaction.route_options,
+    }
 
 def search_type_route_args(
     interaction: TypeInteraction[ResourceType], post: bool
