@@ -1,18 +1,19 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
-# import asyncio
+
 import itertools
-# import logging
+
 import re
 from collections import defaultdict
 from collections.abc import Callable, Coroutine, MutableMapping
 from copy import deepcopy
 from datetime import datetime
 from os import PathLike
+
 from typing import Any, TypeAlias, cast
 from urllib.parse import parse_qs, urlencode
 from zoneinfo import ZoneInfo
-import uvloop
+
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fhir.resources.capabilitystatement import CapabilityStatement

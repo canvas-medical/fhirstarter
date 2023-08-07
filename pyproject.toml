@@ -57,6 +57,10 @@ uvicorn = {version = ">=0.21,<0.24", extras = ["standard"]}
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry.packages]
+include = ["src"]
+exclude = []
+
 [tool.mypy]
 check_untyped_defs = true
 color_output = true
