@@ -1,4 +1,4 @@
-""""Utilities for working with the FHIR specification."""
+"""Utilities for working with the FHIR specification."""
 
 import importlib.metadata
 import importlib.resources
