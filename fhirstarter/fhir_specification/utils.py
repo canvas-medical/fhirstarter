@@ -1,19 +1,68 @@
-"""Utilities for working with the FHIR specification."""
+""""Utilities for working with the FHIR specification."""
 
+from functools import cache
 import json
-from pathlib import Path
 from typing import Any, Mapping
+import os
+import importlib.metadata
+import importlib.resources
+import fhir.resources
+import sequences
+import zipfile
+
+FHIR_SEQUENCE = os.getenv("FHIR_SEQUENCE", "R5")
+
+# Set the FHIR version and ensure that the specified FHIR sequence is supported by FHIRStarter
+match FHIR_SEQUENCE:
+    case "STU3":
+        import fhir.resources.STU3
+        FHIR_VERSION = fhir.resources.STU3.__fhir_version__
+        FHIR_DATA_DIR = importlib.resources.files(sequences.STU3)
+    case "R4":
+        FHIR_VERSION = fhir.resources.__fhir_version__
+        FHIR_DATA_DIR = importlib.resources.files(sequences.R4)
+    case "R4B":
+        import fhir.resources.R4B
+        FHIR_VERSION = fhir.resources.R4B.__fhir_version__
+        FHIR_DATA_DIR = importlib.resources.files(sequences.R4B)
+    case "R5":
+        FHIR_VERSION = fhir.resources.__fhir_version__
+        FHIR_DATA_DIR = importlib.resources.files(sequences.R5)
+    case _:
+        raise AssertionError(f"Specified FHIR sequence must be one of: STU3, R4, R4B, R5")
+
+
+# Ensure that a compatible version of fhir.resources is installed
+FHIR_RESOURCES_VERSION = importlib.metadata.version("fhir.resources")
+if FHIR_SEQUENCE == "R4":
+    assert (
+        FHIR_RESOURCES_VERSION == "6.4.0"
+    ), f"fhir.resources package version must be 6.4.0 for FHIR R4 sequence; installed version is {FHIR_RESOURCES_VERSION}"
+else:
+    assert (
+        FHIR_RESOURCES_VERSION >= "7.0.0"
+    ), f"fhir.resources package version must be 7.0.0 or greater for FHIR STU3, R4B, and R5 sequences; installed version is {FHIR_RESOURCES_VERSION}"
+    assert (
+        fhir.resources.__fhir_version__ == "5.0.0"
+    ), f"fhir.resources package references unexpected FHIR version {fhir.resources.__fhir_version__}"
 
 
 def is_resource_type(resource_type: str) -> bool:
-    return resource_type in _RESOURCE_TYPES
+    """Return True or False depending on whether the given string is a recognized resource type."""
+    return resource_type in _load_resources_file()
+
+@cache
+def _load_resources_file() -> set[str]:
+    """Load the list of resources from the JSON file."""
+    with open(FHIR_DATA_DIR / "resources.json") as file_:
+        return set(json.loads(file_))
 
 
+@cache
 def load_example(resource_type: str) -> dict[str, Any]:
-    """Load the example for the specified resource type."""
-    return _load_json_file(
-        Path(__file__).parent / "examples" / f"{resource_type.lower()}-example.json"
-    )
+    """Load the resource example JSON file from the examples zip file."""
+    with zipfile.ZipFile(FHIR_DATA_DIR / "examples.zip") as file_:
+        return json.loads(file_.read(f"{resource_type.lower()}-example.json"))
 
 
 def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]:
@@ -62,161 +111,8 @@ def make_operation_outcome_example(
     }
 
 
+@cache
 def load_search_parameters() -> dict[str, Any]:
     """Load the search parameters file."""
-    return _load_json_file(Path(__file__).parent / "search-parameters.json")
-
-
-def _load_json_file(file_path: Path) -> dict[str, Any]:
-    with open(file_path) as file_:
-        return json.load(file_)
-
-
-_RESOURCE_TYPES = {
-    "Account",
-    "ActivityDefinition",
-    "AdverseEvent",
-    "AllergyIntolerance",
-    "Appointment",
-    "AppointmentResponse",
-    "AuditEvent",
-    "Basic",
-    "Binary",
-    "BiologicallyDerivedProduct",
-    "BodyStructure",
-    "Bundle",
-    "CapabilityStatement",
-    "CarePlan",
-    "CareTeam",
-    "CatalogEntry",
-    "ChargeItem",
-    "ChargeItemDefinition",
-    "Claim",
-    "ClaimResponse",
-    "ClinicalImpression",
-    "CodeSystem",
-    "Communication",
-    "CommunicationRequest",
-    "CompartmentDefinition",
-    "Composition",
-    "ConceptMap",
-    "Condition",
-    "Consent",
-    "Contract",
-    "Coverage",
-    "CoverageEligibilityRequest",
-    "CoverageEligibilityResponse",
-    "DetectedIssue",
-    "Device",
-    "DeviceDefinition",
-    "DeviceMetric",
-    "DeviceRequest",
-    "DeviceUseStatement",
-    "DiagnosticReport",
-    "DocumentManifest",
-    "DocumentReference",
-    "EffectEvidenceSynthesis",
-    "Encounter",
-    "Endpoint",
-    "EnrollmentRequest",
-    "EnrollmentResponse",
-    "EpisodeOfCare",
-    "EventDefinition",
-    "Evidence",
-    "EvidenceVariable",
-    "ExampleScenario",
-    "ExplanationOfBenefit",
-    "FamilyMemberHistory",
-    "Flag",
-    "Goal",
-    "GraphDefinition",
-    "Group",
-    "GuidanceResponse",
-    "HealthcareService",
-    "ImagingStudy",
-    "Immunization",
-    "ImmunizationEvaluation",
-    "ImmunizationRecommendation",
-    "ImplementationGuide",
-    "InsurancePlan",
-    "Invoice",
-    "Library",
-    "Linkage",
-    "List",
-    "Location",
-    "Measure",
-    "MeasureReport",
-    "Media",
-    "Medication",
-    "MedicationAdministration",
-    "MedicationDispense",
-    "MedicationKnowledge",
-    "MedicationRequest",
-    "MedicationStatement",
-    "MedicinalProduct",
-    "MedicinalProductAuthorization",
-    "MedicinalProductContraindication",
-    "MedicinalProductIndication",
-    "MedicinalProductIngredient",
-    "MedicinalProductInteraction",
-    "MedicinalProductManufactured",
-    "MedicinalProductPackaged",
-    "MedicinalProductPharmaceutical",
-    "MedicinalProductUndesirableEffect",
-    "MessageDefinition",
-    "MessageHeader",
-    "MolecularSequence",
-    "NamingSystem",
-    "NutritionOrder",
-    "Observation",
-    "ObservationDefinition",
-    "OperationDefinition",
-    "OperationOutcome",
-    "Organization",
-    "OrganizationAffiliation",
-    "Parameters",
-    "Patient",
-    "PaymentNotice",
-    "PaymentReconciliation",
-    "Person",
-    "PlanDefinition",
-    "Practitioner",
-    "PractitionerRole",
-    "Procedure",
-    "Provenance",
-    "Questionnaire",
-    "QuestionnaireResponse",
-    "RelatedPerson",
-    "RequestGroup",
-    "ResearchDefinition",
-    "ResearchElementDefinition",
-    "ResearchStudy",
-    "ResearchSubject",
-    "RiskAssessment",
-    "RiskEvidenceSynthesis",
-    "Schedule",
-    "SearchParameter",
-    "ServiceRequest",
-    "Slot",
-    "Specimen",
-    "SpecimenDefinition",
-    "StructureDefinition",
-    "StructureMap",
-    "Subscription",
-    "Substance",
-    "SubstanceNucleicAcid",
-    "SubstancePolymer",
-    "SubstanceProtein",
-    "SubstanceReferenceInformation",
-    "SubstanceSourceMaterial",
-    "SubstanceSpecification",
-    "SupplyDelivery",
-    "SupplyRequest",
-    "Task",
-    "TerminologyCapabilities",
-    "TestReport",
-    "TestScript",
-    "ValueSet",
-    "VerificationResult",
-    "VisionPrescription",
-}
+    with zipfile.ZipFile(FHIR_DATA_DIR / "search-parameters.zip") as file_:
+        return json.loads(file_.read('search-parameters.json'))
