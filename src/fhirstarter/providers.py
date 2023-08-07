@@ -73,6 +73,25 @@ class FHIRProvider:
             dependencies,
             include_in_schema,
         )
+        
+     
+    def vread(
+        self,
+        resource_type: type[ResourceType],
+        *,
+        dependencies: Sequence[params.Depends] | None = None,
+        include_in_schema: bool = True
+    ) -> Callable[
+        [VReadInteractionHandler[ResourceType]],
+        VReadInteractionHandler[ResourceType],
+    ]:
+        """Register a FHIR vread interaction."""
+        return self._register_type_interaction(
+            resource_type,
+            VReadInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
+        )   
 
     def search_type(
         self,
@@ -105,23 +124,6 @@ class FHIRProvider:
             include_in_schema,
         )
 
-    def vread(
-        self,
-        resource_type: type[ResourceType],
-        *,
-        dependencies: Sequence[params.Depends] | None = None,
-        include_in_schema: bool = True
-    ) -> Callable[
-        [VReadInteractionHandler[ResourceType]],
-        VReadInteractionHandler[ResourceType],
-    ]:
-        """Register a FHIR vread interaction."""
-        return self._register_type_interaction(
-            resource_type,
-            VReadInteraction[ResourceType],
-            dependencies,
-            include_in_schema,
-        )
 
     def _register_type_interaction(
         self,

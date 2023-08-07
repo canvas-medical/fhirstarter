@@ -4,12 +4,14 @@ from fhir.resources.patient import Patient
 from src.logging import configure_logging
 from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext
 from fhirstarter.exceptions import FHIRResourceNotFoundError
-from src.lifetime import register_shutdown_event, register_startup_event
+from src.lifetime import register_shutdown_event, register_startup_event,set_multiproc_dir
 
 # Create the app
 configure_logging()
 app = FHIRStarter()
-
+class Test:
+    def __init__(self):
+        pass
 # Create a provider
 provider = FHIRProvider()
 
@@ -45,7 +47,13 @@ async def patient_vread(context: InteractionContext, id_: Id, version_id: str) -
 
 # Add the provider to the app
 app.add_providers(provider)
+ # Adds startup and shutdown events.
+
 
 if __name__ == "__main__":
     # Start the server
+    
+    set_multiproc_dir()
+    register_startup_event(app)
+    register_shutdown_event(app)
     uvicorn.run(app)
