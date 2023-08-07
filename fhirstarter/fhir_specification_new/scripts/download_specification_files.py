@@ -1,7 +1,8 @@
-"""Script to populate the resource examples directory for each of the sequences"""
+"""Script to populate the FHIR specification data for each of the sequences"""
 
 import json
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -119,35 +120,64 @@ EXAMPLE_EXCEPTIONS: dict[str, dict[str, str | dict[str, Any]]] = {
 
 
 def main() -> None:
-    fhir_dir = sys.argv[1]
-    sequence = sys.argv[2]
+    fhir_dir = Path(sys.argv[1])
 
-    resources_json_file = Path(fhir_dir) / sequence / "resources.json"
-    output_dir = Path(fhir_dir) / sequence / "examples"
+    for sequence in ("STU3", "R4", "R4B", "R5"):
+        print(f"\nDownloading files for {sequence}...")
 
-    with open(resources_json_file) as file_:
-        resources = json.load(file_)
+        # Download the search parameters file
+        response = requests.get(
+            f"https://hl7.org/fhir/{sequence}/search-parameters.json"
+        )
 
-    for resource in resources:
-        example_exception = EXAMPLE_EXCEPTIONS[sequence].get(resource)
+        # Make a zip file with the search parameters file
+        with zipfile.ZipFile(
+            fhir_dir / "sequences" / sequence / "search-parameters.zip",
+            "w",
+            compression=zipfile.ZIP_DEFLATED,
+            compresslevel=9,
+        ) as file_:
+            file_.writestr("search-parameters.json", response.content)
 
-        if isinstance(example_exception, dict):
-            content = json.dumps(
-                example_exception, indent=2, separators=(",", " : ")
-            ).encode()
-        else:
-            if example_exception:
-                url = f"https://hl7.org/fhir/{sequence}/{example_exception}"
+        # Load the list of resources
+        with open(fhir_dir / "sequences" / sequence / "resources.json") as file_:
+            resources = json.load(file_)
+
+        for resource in resources:
+            # Get the example exception information if there is any
+            example_exception = EXAMPLE_EXCEPTIONS[sequence].get(resource)
+
+            # If the exception is a dict, then it's an inlined example -- use it for the content to
+            # be added to the zipfile later
+            if isinstance(example_exception, dict):
+                content = json.dumps(
+                    example_exception, indent=2, separators=(",", " : ")
+                ).encode()
+            # Else either there is no exception, or the exception is just a file name
             else:
-                url = f"https://hl7.org/fhir/{sequence}/{resource.lower()}-example.json"
+                # If there is an exception, override the URL to be used to download the example
+                if example_exception:
+                    url = f"https://hl7.org/fhir/{sequence}/{example_exception}"
+                # Else the standard URL should contain the content
+                else:
+                    url = f"https://hl7.org/fhir/{sequence}/{resource.lower()}-example.json"
 
-            response = requests.get(url)
-            if response.status_code != requests.codes.ok:
-                raise RuntimeError(f"Failed to get example for {resource}")
-            content = response.content
+                # Downlaod the example
+                response = requests.get(url)
+                if response.status_code != requests.codes.ok:
+                    raise RuntimeError(f"Failed to get example for {resource}")
+                content = response.content
 
-        with open(Path(output_dir) / f"{resource.lower()}-example.json", "wb") as file_:
-            file_.write(content)
+            # Add the example to the zipfile
+            with zipfile.ZipFile(
+                fhir_dir / "sequences" / sequence / "examples.zip",
+                mode="a",
+                compression=zipfile.ZIP_DEFLATED,
+                compresslevel=9,
+            ) as file_:
+                file_.writestr(f"{resource.lower()}-example.json", content)
+
+    print("\nDone")
 
 
 if __name__ == "__main__":
