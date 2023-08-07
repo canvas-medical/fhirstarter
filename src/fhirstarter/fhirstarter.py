@@ -9,7 +9,7 @@ from collections.abc import Callable, Coroutine, MutableMapping
 from copy import deepcopy
 from datetime import datetime
 from os import PathLike
-
+from config import settings
 from typing import Any, TypeAlias, cast
 from urllib.parse import parse_qs, urlencode
 from zoneinfo import ZoneInfo
@@ -55,6 +55,10 @@ from .utils import (
     search_type_route_args,
     update_route_args,
 )
+#All import for the healtchek route
+from fastapi import APIRouter, Response, status
+from pydantic import BaseModel
+from datetime import datetime
 
 # # Suppress warnings from base fhir.resources class
 # logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
@@ -645,3 +649,19 @@ def _exception_response(
         status_code=status_code,
         format_parameters=FormatParameters.from_request(request, raise_exception=False),
     )
+class HealthResponse(BaseModel):
+    """Health Check Response Model."""
+    app_name: str = settings.APP_NAME
+    app_version: str = settings.APP_VERSION
+    status: str = "pass"
+    timestamp: datetime = datetime.now()
+    
+router = APIRouter()
+
+@router.get("/healthcheck", response_model=HealthResponse, status_code=status.HTTP_200_OK)
+def health_check() -> HealthResponse:
+    """Checks the health of the application.
+
+    :return: A HealthResponse indicating the status of the application.
+    """
+    return HealthResponse()
