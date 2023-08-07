@@ -1,67 +1,79 @@
 """"Utilities for working with the FHIR specification."""
 
-from functools import cache
-import json
-from typing import Any, Mapping
-import os
 import importlib.metadata
 import importlib.resources
-import fhir.resources
-import sequences
+import json
+import os
 import zipfile
+from functools import cache
+from pathlib import Path
+from typing import Any, Mapping, cast
+
+import fhir.resources
+
+from . import sequences
 
 FHIR_SEQUENCE = os.getenv("FHIR_SEQUENCE", "R5")
 
-# Set the FHIR version and ensure that the specified FHIR sequence is supported by FHIRStarter
+# Set the FHIR version and the FHIR data directory location, and ensure that the specified FHIR
+# sequence is supported by FHIRStarter
 match FHIR_SEQUENCE:
     case "STU3":
         import fhir.resources.STU3
+
         FHIR_VERSION = fhir.resources.STU3.__fhir_version__
-        FHIR_DATA_DIR = importlib.resources.files(sequences.STU3)
+        FHIR_DIR = cast(Path, importlib.resources.files(sequences.STU3))
     case "R4":
         FHIR_VERSION = fhir.resources.__fhir_version__
-        FHIR_DATA_DIR = importlib.resources.files(sequences.R4)
+        FHIR_DIR = cast(Path, importlib.resources.files(sequences.R4))
     case "R4B":
         import fhir.resources.R4B
+
         FHIR_VERSION = fhir.resources.R4B.__fhir_version__
-        FHIR_DATA_DIR = importlib.resources.files(sequences.R4B)
+        FHIR_DIR = cast(Path, importlib.resources.files(sequences.R4B))
     case "R5":
         FHIR_VERSION = fhir.resources.__fhir_version__
-        FHIR_DATA_DIR = importlib.resources.files(sequences.R5)
+        FHIR_DIR = cast(Path, importlib.resources.files(sequences.R5))
     case _:
-        raise AssertionError(f"Specified FHIR sequence must be one of: STU3, R4, R4B, R5")
+        raise AssertionError(
+            f"Specified FHIR sequence must be one of: STU3, R4, R4B, R5"
+        )
 
 
 # Ensure that a compatible version of fhir.resources is installed
 FHIR_RESOURCES_VERSION = importlib.metadata.version("fhir.resources")
 if FHIR_SEQUENCE == "R4":
-    assert (
-        FHIR_RESOURCES_VERSION == "6.4.0"
-    ), f"fhir.resources package version must be 6.4.0 for FHIR R4 sequence; installed version is {FHIR_RESOURCES_VERSION}"
+    assert FHIR_RESOURCES_VERSION == "6.4.0", (
+        f"fhir.resources package version must be 6.4.0 for FHIR R4 sequence; installed version is "
+        "{FHIR_RESOURCES_VERSION}"
+    )
 else:
-    assert (
-        FHIR_RESOURCES_VERSION >= "7.0.0"
-    ), f"fhir.resources package version must be 7.0.0 or greater for FHIR STU3, R4B, and R5 sequences; installed version is {FHIR_RESOURCES_VERSION}"
-    assert (
-        fhir.resources.__fhir_version__ == "5.0.0"
-    ), f"fhir.resources package references unexpected FHIR version {fhir.resources.__fhir_version__}"
+    assert FHIR_RESOURCES_VERSION >= "7.0.0", (
+        f"fhir.resources package version must be 7.0.0 or greater for FHIR STU3, R4B, and R5 "
+        "sequences; installed version is {FHIR_RESOURCES_VERSION}"
+    )
+    assert fhir.resources.__fhir_version__ == "5.0.0", (
+        f"fhir.resources package references unexpected FHIR version "
+        "{fhir.resources.__fhir_version__}"
+    )
 
 
 def is_resource_type(resource_type: str) -> bool:
     """Return True or False depending on whether the given string is a recognized resource type."""
     return resource_type in _load_resources_file()
 
+
 @cache
 def _load_resources_file() -> set[str]:
     """Load the list of resources from the JSON file."""
-    with open(FHIR_DATA_DIR / "resources.json") as file_:
-        return set(json.loads(file_))
+    with open(FHIR_DIR / "resources.json") as file_:
+        return set(json.load(file_))
 
 
 @cache
 def load_example(resource_type: str) -> dict[str, Any]:
     """Load the resource example JSON file from the examples zip file."""
-    with zipfile.ZipFile(FHIR_DATA_DIR / "examples.zip") as file_:
+    with zipfile.ZipFile(FHIR_DIR / "examples.zip") as file_:
         return json.loads(file_.read(f"{resource_type.lower()}-example.json"))
 
 
@@ -114,5 +126,5 @@ def make_operation_outcome_example(
 @cache
 def load_search_parameters() -> dict[str, Any]:
     """Load the search parameters file."""
-    with zipfile.ZipFile(FHIR_DATA_DIR / "search-parameters.zip") as file_:
-        return json.loads(file_.read('search-parameters.json'))
+    with zipfile.ZipFile(FHIR_DIR / "search-parameters.zip") as file_:
+        return json.loads(file_.read("search-parameters.json"))

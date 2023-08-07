@@ -428,10 +428,12 @@ class FHIRStarter(FastAPI):
                         response["content"]["application/fhir+json"] = schema
 
                     # Add specialized OperationOutcome responses if available for the status code
-                    if example := operation_outcome_examples.get(status_code):
+                    if operation_outcome_example := operation_outcome_examples.get(
+                        status_code
+                    ):
                         response["content"]["application/fhir+json"][
                             "example"
-                        ] = example
+                        ] = operation_outcome_example
 
                 # For search operations, provide a bundle example that contains the correct resource
                 # type

@@ -1,3 +1,3 @@
-from .utils import FHIR_VERSION, FHIR_SEQUENCE
+from .utils import FHIR_SEQUENCE, FHIR_VERSION
 
 __all__ = ["FHIR_SEQUENCE", "FHIR_VERSION"]
