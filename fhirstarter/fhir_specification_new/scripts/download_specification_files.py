@@ -122,8 +122,10 @@ EXAMPLE_EXCEPTIONS: dict[str, dict[str, str | dict[str, Any]]] = {
 def main() -> None:
     fhir_dir = Path(sys.argv[1])
 
+    print("")
+
     for sequence in ("STU3", "R4", "R4B", "R5"):
-        print(f"\nDownloading files for {sequence}...")
+        print(f"Downloading files for {sequence}...")
 
         # Download the search parameters file
         response = requests.get(
@@ -162,7 +164,7 @@ def main() -> None:
                 else:
                     url = f"https://hl7.org/fhir/{sequence}/{resource.lower()}-example.json"
 
-                # Downlaod the example
+                # Download the example
                 response = requests.get(url)
                 if response.status_code != requests.codes.ok:
                     raise RuntimeError(f"Failed to get example for {resource}")
