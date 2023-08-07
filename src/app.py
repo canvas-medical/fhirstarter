@@ -12,7 +12,7 @@ from copy import deepcopy
 from fastapi import APIRouter
 from starlette import status
 from src.config import settings
-from pybreaker import CircuitBreaker, CircuitBreakerError
+from pybreaker import CircuitBreaker
 
 # Create the app
 configure_logging()

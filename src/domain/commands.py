@@ -31,7 +31,7 @@ class UpdateHumanNamePatient(Command):
 
 #Commande pour ajouter un contact à un patient
 @dataclass(frozen=True)
-class Contact(Command):
+class AddContact(Command):
     patient_id:str
     relationship_system: str
     relationship_code: str
