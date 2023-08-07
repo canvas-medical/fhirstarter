@@ -5,6 +5,7 @@ description = "An ASGI FHIR API framework built on top of FastAPI and FHIR Resou
 authors = ["Christopher Sande <christopher.sande@canvasmedical.com>"]
 maintainers = ["Canvas Medical Engineering <engineering@canvasmedical.com>"]
 readme = "README.md"
+packages = [ { include = "src" }, ]
 homepage = "https://github.com/canvas-medical/fhirstarter"
 repository = "https://github.com/canvas-medical/fhirstarter"
 keywords = ["fhir", "api", "resources", "framework", "fastapi", "healthcare", "hl7"]
@@ -41,6 +42,9 @@ opentelemetry-api = "^1.19.0"
 opentelemetry-sdk = "^1.19.0"
 opentelemetry-instrumentation = "^0.40b0"
 opentelemetry-exporter-jaeger = "^1.19.0"
+opentelemetry-exporter-otlp = "^1.19.0"
+opentelemetry-instrumentation-fastapi = "^0.40b0"
+prometheus-fastapi-instrumentator = "^6.1.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"
@@ -57,9 +61,7 @@ uvicorn = {version = ">=0.21,<0.24", extras = ["standard"]}
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry.packages]
-include = ["src"]
-exclude = []
+
 
 [tool.mypy]
 check_untyped_defs = true

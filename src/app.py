@@ -4,6 +4,7 @@ from fhir.resources.patient import Patient
 from src.logging import configure_logging
 from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext
 from fhirstarter.exceptions import FHIRResourceNotFoundError
+from src.lifetime import register_shutdown_event, register_startup_event
 
 # Create the app
 configure_logging()
