@@ -1100,6 +1100,17 @@ files = [
 ]
 
 [[package]]
+name = "pybreaker"
+version = "1.0.2"
+description = "Python implementation of the Circuit Breaker pattern"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "pybreaker-1.0.2-py3-none-any.whl", hash = "sha256:d54492046e862da9871d02fab7a17b71148315fed61b24947738c803ca18ac43"},
+    {file = "pybreaker-1.0.2.tar.gz", hash = "sha256:2382216a715ebdc3fbdf3a5407d328ea49d76aadd75782bdcef0f1c35347f183"},
+]
+
+[[package]]
 name = "pydantic"
 version = "1.10.12"
 description = "Data validation and settings management using python type hints"
@@ -1694,4 +1705,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "a6fecedf2af40e79d90c4710d15f9268e11ffb5584a45caf7bb8b46f36841520"
+content-hash = "859e4b64a27752ed4292c461104977844c45fe57b8ecc6aa8afbc8b4c4780836"

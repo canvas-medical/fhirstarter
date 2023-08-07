@@ -45,6 +45,7 @@ opentelemetry-exporter-jaeger = "^1.19.0"
 opentelemetry-exporter-otlp = "^1.19.0"
 opentelemetry-instrumentation-fastapi = "^0.40b0"
 prometheus-fastapi-instrumentator = "^6.1.0"
+pybreaker = "^1.0.2"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.1.0"

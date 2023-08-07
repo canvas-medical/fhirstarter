@@ -4,57 +4,51 @@ from fhir.resources.patient import Patient
 from src.logging import configure_logging
 from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext
 from fhirstarter.exceptions import FHIRResourceNotFoundError
-from src.lifetime import register_shutdown_event, register_startup_event,set_multiproc_dir
+from src.lifetime import register_shutdown_event, register_startup_event, set_multiproc_dir
 from pydantic import BaseModel
 from datetime import datetime
 from uuid import uuid4
 from copy import deepcopy
-#Import for healtcheck
 from fastapi import APIRouter
 from starlette import status
 from src.config import settings
+from pybreaker import CircuitBreaker, CircuitBreakerError
 
 # Create the app
 configure_logging()
 app = FHIRStarter()
-class Test:
-    def __init__(self):
-        pass
+
 # Create a provider
 provider = FHIRProvider()
 
+# Create a Circuit Breaker instance
+circuit_breaker = CircuitBreaker(fail_max=3, reset_timeout=30)
+
+# Create a "database" for demonstration purposes
+DATABASE: dict[str, Patient] = {}
+
 # Register the patient read FHIR interaction with the provider
 @provider.read(Patient)
+@circuit_breaker
 async def patient_read(context: InteractionContext, id_: Id) -> Patient:
-    # Get the patient from the database
-    patient = ...
-
+    patient = DATABASE.get(id_.value)
     if not patient:
         raise FHIRResourceNotFoundError
 
-    return Patient(
-        **{
-            # Map patient from database to FHIR Patient structure
-        }
-    )
+    return patient
 
 # Register the vread FHIR interaction with the provider
 @provider.vread(Patient)
+@circuit_breaker
 async def patient_vread(context: InteractionContext, id_: Id, version_id: str) -> Patient:
     # Get the patient from the database with the specified version_id
-    patient = ...
-
+    patient = DATABASE.get(id_.value)
     if not patient:
         raise FHIRResourceNotFoundError
 
-    return Patient(
-        **{
-            # Map patient from database to FHIR Patient structure for the specified version
-        }
-    )
-# regsiter the create patient FHIR interaction with the provider
-# Create a "database"
-DATABASE: dict[str, Patient] = {}
+    return patient
+
+# Register the create patient FHIR interaction with the provider
 @provider.create(Patient)
 async def patient_create(context: InteractionContext, resource: Patient) -> Id:
     patient = deepcopy(resource)
@@ -63,11 +57,8 @@ async def patient_create(context: InteractionContext, resource: Patient) -> Id:
 
     return Id(patient.id)
 
-
 # Add the provider to the app
 app.add_providers(provider)
-
-
 
 # Define a healthcheck route
 class HealthResponse(BaseModel):
@@ -89,11 +80,9 @@ def health_check() -> HealthResponse:
 
 app.include_router(router, prefix="/api/v1")
 
-
 if __name__ == "__main__":
     # Start the server
-    
     set_multiproc_dir()
     register_startup_event(app)
     register_shutdown_event(app)
-    uvicorn.run(app,use_colors=True)
+    uvicorn.run(app, use_colors=True)
