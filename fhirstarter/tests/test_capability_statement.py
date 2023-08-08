@@ -9,15 +9,14 @@ from ..fhir_specification import FHIR_SEQUENCE, FHIR_VERSION
 from ..fhirstarter import FHIRStarter
 from ..resources import CapabilityStatement
 from ..testclient import TestClient
-from .config import client, client_create_and_read
 from .utils import assert_expected_response
 
 
 @pytest.mark.parametrize(
-    argnames="test_client,resource",
+    argnames="client,resource",
     argvalues=[
         (
-            client(),
+            ["create", "read", "search-type", "update"],
             [
                 {
                     "type": "Patient",
@@ -60,7 +59,7 @@ from .utils import assert_expected_response
             ],
         ),
         (
-            client_create_and_read(),
+            ["create", "read"],
             [
                 {
                     "type": "Patient",
@@ -69,10 +68,11 @@ from .utils import assert_expected_response
             ],
         ),
     ],
-    ids=["all", "create_and_read"],
+    ids=["all", "create and read"],
+    indirect=["client"],
 )
 def test_capability_statement(
-    test_client: TestClient, resource: Sequence[Mapping[str, Any]]
+    client: TestClient, resource: Sequence[Mapping[str, Any]]
 ) -> None:
     """
     Test the capability statement.
@@ -80,9 +80,9 @@ def test_capability_statement(
     Two scenarios are parameterized: a server with create, read, search, and update supported, and
     a server with only create and read supported.
     """
-    app = cast(FHIRStarter, test_client.app)
+    app = cast(FHIRStarter, client.app)
 
-    response = test_client.get("/metadata")
+    response = client.get("/metadata")
 
     assert_expected_response(
         response,
@@ -107,13 +107,9 @@ def test_capability_statement(
     )
 
 
-def test_capability_statement_pretty(
-    client_create_and_read_fixture: TestClient,
-) -> None:
+def test_capability_statement_pretty(client_create_and_read: TestClient) -> None:
     """Test the capability statement with a pretty response."""
-    test_client = client_create_and_read_fixture
-
-    response = test_client.get("/metadata?_pretty=true")
+    response = client_create_and_read.get("/metadata?_pretty=true")
 
     assert_expected_response(
         response,
@@ -130,12 +126,10 @@ def test_capability_statement_pretty(
     ids=["minified", "pretty"],
 )
 def test_capability_statement_xml(
-    client_create_and_read_fixture: TestClient, pretty: str
+    client_create_and_read: TestClient, pretty: str
 ) -> None:
     """Test the capability statement with an XML response."""
-    test_client = client_create_and_read_fixture
-
-    response = test_client.get(f"/metadata?_format=xml&_pretty={pretty}")
+    response = client_create_and_read.get(f"/metadata?_format=xml&_pretty={pretty}")
 
     assert_expected_response(
         response,
@@ -147,12 +141,9 @@ def test_capability_statement_xml(
     )
 
 
-def test_set_capability_statement_modifier(
-    client_create_and_read_fixture: TestClient,
-) -> None:
+def test_set_capability_statement_modifier(client_create_and_read: TestClient) -> None:
     """Test the set_capability_statement_modifier method."""
-    test_client = client_create_and_read_fixture
-    app = cast(FHIRStarter, test_client.app)
+    app = cast(FHIRStarter, client_create_and_read.app)
 
     def modify_capability_statement(
         capability_statement: MutableMapping[str, Any], *_: Any
@@ -162,7 +153,7 @@ def test_set_capability_statement_modifier(
 
     app.set_capability_statement_modifier(modify_capability_statement)
 
-    response = test_client.get("/metadata")
+    response = client_create_and_read.get("/metadata")
 
     assert_expected_response(
         response,
@@ -198,7 +189,6 @@ def _fhir_sequence_adjust(
 ) -> MutableMapping[str, Any]:
     """
     Adjust a capability statement for the purposes of comparison.
-
     Example: For R4, R4B, and R5, the "acceptUnknown" value is no longer present.
     """
     if FHIR_SEQUENCE != "STU3":

@@ -1,7 +1,7 @@
 """Test FHIRStarter error handling"""
 
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Coroutine, Mapping
 from typing import Any, cast
 
 import pytest
@@ -16,9 +16,10 @@ from .utils import assert_expected_response, generate_fhir_resource_id
 
 
 @pytest.mark.parametrize(
-    argnames="request_body,response_body",
+    argnames="client,request_body,response_body",
     argvalues=[
         (
+            ("create", "read", "search-type", "update"),
             " ",
             make_operation_outcome(
                 severity="error",
@@ -29,6 +30,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
+            ("create", "read", "search-type", "update"),
             {"extraField": []},
             make_operation_outcome(
                 severity="error",
@@ -38,6 +40,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
+            ("create", "read", "search-type", "update"),
             {"communication": [{}]},
             make_operation_outcome(
                 severity="error",
@@ -47,6 +50,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
+            ("create", "read", "search-type", "update"),
             {"id": ""},
             make_operation_outcome(
                 severity="error",
@@ -56,6 +60,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
+            ("create", "read", "search-type", "update"),
             {"name": 0},
             make_operation_outcome(
                 severity="error",
@@ -64,6 +69,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
+            ("create", "read", "search-type", "update"),
             {"extraField": [], "communication": [{}]},
             {
                 "resourceType": "OperationOutcome",
@@ -96,17 +102,16 @@ from .utils import assert_expected_response, generate_fhir_resource_id
         "type error",
         "multiple errors",
     ],
+    indirect=["client"],
 )
 def test_validation_error(
-    client_fixture: TestClient,
+    client: TestClient,
     request_body: Mapping[str, Any] | str,
     response_body: Mapping[str, Any],
 ) -> None:
     """
     Test FHIR create interaction that produces 400 bad request error due to a validation failure.
     """
-    client = client_fixture
-
     if isinstance(request_body, Mapping):
         request_body = json.dumps(request_body)
 
@@ -119,14 +124,35 @@ def test_validation_error(
     )
 
 
-def test_http_exception() -> None:
-    """Test exception handling for HTTP Exceptions."""
+def _handler_exception_async() -> Callable[..., Coroutine[None, None, Patient]]:
+    """Return an async Patient read handler."""
 
     async def patient_read(*_: Any) -> Patient:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
 
+    return patient_read
+
+
+def _handler_exception() -> Callable[..., Patient]:
+    """Return a Patient read handler."""
+
+    def patient_read(*_: Any) -> Patient:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+
+    return patient_read
+
+
+@pytest.mark.parametrize(
+    argnames="handler",
+    argvalues=[_handler_exception_async(), _handler_exception()],
+    ids=["async", "nonasync"],
+)
+def test_http_exception(
+    handler: Callable[..., Coroutine[None, None, Patient]] | Callable[..., Patient]
+) -> None:
+    """Test exception handling for HTTP Exceptions."""
     provider = FHIRProvider()
-    provider.read(Patient)(patient_read)
+    provider.read(Patient)(handler)
 
     client = app(provider)
 
@@ -148,9 +174,14 @@ def test_http_exception() -> None:
     )
 
 
-def test_set_exception_callback(client_fixture: TestClient) -> None:
+@pytest.mark.parametrize(
+    argnames="client",
+    argvalues=[("create", "read", "search-type", "update")],
+    ids=["all"],
+    indirect=True,
+)
+def test_set_exception_callback(client: TestClient) -> None:
     """Test set_exception_callback."""
-    client = client_fixture
     test_app = cast(FHIRStarter, client.app)
 
     async def callback(_: Request, response_: Response, __: Exception) -> Response:

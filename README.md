@@ -53,12 +53,12 @@ will be based on the business needs of Canvas Medical.
 
 ## Background
 
-FHIRStarter uses a provider-decorator pattern. Developers can write functions that implement FHIR
-interactions -- such as create, read, search-type, and update -- and plug them into the framework.
-FHIRStarter then automatically creates FHIR-compatible API routes from these developer-provided
-functions. FHIR interactions that are supplied must use the resource classes defined by the
-[FHIR Resources](https://pypi.org/project/fhir.resources/) Python package, which is a collection of
-Pydantic models for FHIR resources.
+FHIRStarter uses a provider-decorator pattern. Developers can write functions, or handlers, that
+implement FHIR interactions -- such as create, read, search-type, and update -- and plug them into
+the framework. FHIRStarter then automatically creates FHIR-compatible API routes from these
+developer-provided functions. FHIR interactions that are supplied must use the resource classes
+defined by the [FHIR Resources](https://pypi.org/project/fhir.resources/) Python package, which is a
+collection of Pydantic models for FHIR resources.
 
 In order to stand up a FHIR server, all that is required is to create a FHIRStarter and a
 FHIRProvider instance, register a FHIR interaction with the provider, add the provider to the
@@ -70,6 +70,9 @@ FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server.
 
 FHIRStarter supports create, read, search-type, and update endpoints across all FHIR resource
 types, and will automatically generate the `/metadata` capabilities statement endpoint.
+
+Handlers can be written as coroutines with `async/await` syntax, or as plain functions. FastAPI
+supports both, as does FHIRStarter.
 
 ### Configuration for specific FHIR sequences
 
