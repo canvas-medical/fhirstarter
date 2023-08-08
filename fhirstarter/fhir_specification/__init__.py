@@ -1,3 +1,3 @@
-from .utils import is_resource_type, load_example, load_search_parameters
+from .utils import FHIR_SEQUENCE, FHIR_VERSION
 
-__all__ = ["is_resource_type", "load_example", "load_search_parameters"]
+__all__ = ["FHIR_SEQUENCE", "FHIR_VERSION"]

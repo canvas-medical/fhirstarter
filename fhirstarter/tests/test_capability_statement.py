@@ -5,8 +5,9 @@ from typing import Any, cast
 import pytest
 
 from .. import status
+from ..fhir_specification import FHIR_SEQUENCE, FHIR_VERSION
 from ..fhirstarter import FHIRStarter
-from ..resources import FHIR_SEQUENCE, FHIR_VERSION, CapabilityStatement
+from ..resources import CapabilityStatement
 from ..testclient import TestClient
 from .config import client, client_create_and_read
 from .utils import assert_expected_response
