@@ -20,6 +20,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
+from .fhir_specification import FHIR_SEQUENCE, FHIR_VERSION
 from .fhir_specification.utils import (
     create_bundle_example,
     is_resource_type,
@@ -36,12 +37,7 @@ from .functions import (
 )
 from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
-from .resources import (
-    FHIR_SEQUENCE,
-    FHIR_VERSION,
-    CapabilityStatement,
-    OperationOutcome,
-)
+from .resources import CapabilityStatement, OperationOutcome
 from .search_parameters import (
     SearchParameters,
     search_parameter_sort_key,
