@@ -17,11 +17,10 @@ from zoneinfo import ZoneInfo
 import uvloop
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from fhir.resources.capabilitystatement import CapabilityStatement
-from fhir.resources.operationoutcome import OperationOutcome
 from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
+from .fhir_specification import FHIR_SEQUENCE, FHIR_VERSION
 from .fhir_specification.utils import (
     create_bundle_example,
     is_resource_type,
@@ -38,6 +37,7 @@ from .functions import (
 )
 from .interactions import ResourceType, TypeInteraction
 from .providers import FHIRProvider
+from .resources import CapabilityStatement, OperationOutcome
 from .search_parameters import (
     SearchParameters,
     search_parameter_sort_key,
@@ -318,7 +318,8 @@ class FHIRStarter(FastAPI):
             "status": "active",
             "date": self._created,
             "kind": "instance",
-            "fhirVersion": "4.0.1",
+            "fhirVersion": FHIR_VERSION,
+            "acceptUnknown": "no",
             "format": ["json"],
             "rest": [
                 {
@@ -327,6 +328,9 @@ class FHIRStarter(FastAPI):
                 }
             ],
         }
+
+        if FHIR_SEQUENCE != "STU3":
+            del capability_statement["acceptUnknown"]
 
         if self._capability_statement_modifier:
             capability_statement = self._capability_statement_modifier(
@@ -420,10 +424,12 @@ class FHIRStarter(FastAPI):
                         response["content"]["application/fhir+json"] = schema
 
                     # Add specialized OperationOutcome responses if available for the status code
-                    if example := operation_outcome_examples.get(status_code):
+                    if operation_outcome_example := operation_outcome_examples.get(
+                        status_code
+                    ):
                         response["content"]["application/fhir+json"][
                             "example"
-                        ] = example
+                        ] = operation_outcome_example
 
                 # For search operations, provide a bundle example that contains the correct resource
                 # type

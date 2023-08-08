@@ -1,27 +1,38 @@
 """FHIRStarter test fixtures"""
 
 import pytest
-from requests.models import Response
+from _pytest.fixtures import FixtureRequest
 
 from ..testclient import TestClient
-from .config import client, client_create_and_read
-from .utils import resource
+from .config import create_test_client
+
+
+@pytest.fixture(scope="session", params=[True, False], ids=["async", "nonasync"])
+def async_endpoints(request: FixtureRequest) -> bool:
+    """Parametrized fixture to ensure that all tests are tested in both async and nonasync modes."""
+    return request.param
 
 
 @pytest.fixture
-def client_fixture() -> TestClient:
-    """Test fixture that creates an app that provides all FHIR interactions."""
-    return client()
+def client(request: FixtureRequest, async_endpoints: bool) -> TestClient:
+    """Return a test client with specified interactions enabled."""
+    return create_test_client(
+        interactions=request.param, async_endpoints=async_endpoints
+    )
 
 
 @pytest.fixture
-def client_create_and_read_fixture() -> TestClient:
-    """Test fixture that creates an app that only provides FHIR create and read interactions."""
-    return client_create_and_read()
+def client_all(async_endpoints: bool) -> TestClient:
+    """Return a test client with all interactions enabled."""
+    return create_test_client(
+        interactions=("create", "read", "search-type", "update"),
+        async_endpoints=async_endpoints,
+    )
 
 
 @pytest.fixture
-def create_response_fixture(client_fixture: TestClient) -> Response:
-    """Test fixture that provides a response from a FHIR create interaction."""
-    test_client = client_fixture
-    return test_client.post("/Patient", json=resource())
+def client_create_and_read(async_endpoints: bool) -> TestClient:
+    """Return a test client with the create and read interactions enabled."""
+    return create_test_client(
+        interactions=("create", "read"), async_endpoints=async_endpoints
+    )

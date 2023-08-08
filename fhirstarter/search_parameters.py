@@ -6,68 +6,17 @@ specification.
 import inspect
 import re
 from collections.abc import Callable, Mapping
-from copy import deepcopy
 from dataclasses import dataclass
 from functools import cache
 from typing import Any
 
 from fastapi import Request, Response
 
-from .fhir_specification.utils import load_search_parameters
+from .fhir_specification.utils import (
+    load_extra_search_parameters,
+    load_search_parameters,
+)
 from .interactions import InteractionContext
-
-_EXTRA_SEARCH_PARAMETERS = {
-    "Resource": {
-        "_list": {
-            "type": "string",
-            "description": "All resources in nominated list (by id, Type/id, url or one of the "
-            "magic List types)",
-            "uri": "http://hl7.org/fhir/SearchParameter/Resource-list",
-            "include-in-capability-statement": True,
-        },
-        "_sort": {
-            "type": "string",
-            "description": "Order to sort results in (can repeat for inner sort "
-            "orders)\r\n\r\nAllowable Content: Name of a valid search parameter",
-            "include-in-capability-statement": False,
-        },
-        "_count": {
-            "type": "number",
-            "description": "Number of results per page\r\n\r\nAllowable Content: Whole number",
-            "include-in-capability-statement": False,
-        },
-        "_include": {
-            "type": "string",
-            "description": "Other resources to include in the search results that search matches "
-            "point to\r\n\r\nAllowable Content: SourceType:searchParam(:targetType)",
-            "include-in-capability-statement": False,
-        },
-        "_revinclude": {
-            "type": "string",
-            "description": "Other resources to include in the search results when they refer to "
-            "search matches\r\n\r\nAllowable Content: SourceType:searchParam(:targetType)",
-            "include-in-capability-statement": False,
-        },
-        "_summary": {
-            "type": "string",
-            "description": "Just return the summary elements (for resources where this is "
-            "defined)\r\n\r\nAllowable Content: true | false (false is default)",
-            "include-in-capability-statement": False,
-        },
-        "_contained": {
-            "type": "string",
-            "description": "Whether to return resources contained in other resources in the search "
-            "matches\r\n\r\nAllowable Content: true | false | both (false is default)",
-            "include-in-capability-statement": False,
-        },
-        "_containedType": {
-            "type": "string",
-            "description": "If returning contained resources, whether to return the contained or "
-            "container resources\r\n\r\nAllowable Content: container | contained",
-            "include-in-capability-statement": False,
-        },
-    }
-}
 
 
 class SearchParameters:
@@ -175,14 +124,14 @@ def search_parameter_sort_key(
 
 
 @cache
-def _load_search_parameters_file() -> dict[str, dict[str, dict[str, str]]]:
+def _load_search_parameters_file() -> dict[str, dict[str, dict[str, str | bool]]]:
     """
     Load the search parameters JSON file.
 
     Organize the search parameter file by resource type and return a dict with the data. Initialize
     the search parameters dict with values that aren't present in the JSON file.
     """
-    search_parameters: dict = deepcopy(_EXTRA_SEARCH_PARAMETERS)
+    search_parameters = {"Resource": load_extra_search_parameters()}
 
     bundle = load_search_parameters()
 
@@ -211,7 +160,7 @@ def _transform_description(description: str, resource_type: str) -> str:
     if description.startswith("Multiple Resources:"):
         for description_for_resource_type in description.split("\n"):
             if description_for_resource_type.startswith(f"* [{resource_type}]"):
-                _, description = description_for_resource_type.split(": ")
+                _, description = description_for_resource_type.split(": ", maxsplit=1)
                 return description.removesuffix("\r")
         else:
             raise AssertionError("Resource type must exist in the description")

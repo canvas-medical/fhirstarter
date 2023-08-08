@@ -4,21 +4,26 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import Any, Protocol, TypeVar
 
 from fastapi import params
-from fhir.resources.resource import Resource
 
+from .fhir_specification import FHIR_SEQUENCE
 from .interactions import (
     CreateInteraction,
+    CreateInteractionAsyncHandler,
     CreateInteractionHandler,
     InteractionHandler,
     ReadInteraction,
+    ReadInteractionAsyncHandler,
     ReadInteractionHandler,
     ResourceType,
     SearchTypeInteraction,
+    SearchTypeInteractionAsyncHandler,
     SearchTypeInteractionHandler,
     TypeInteraction,
     UpdateInteraction,
+    UpdateInteractionAsyncHandler,
     UpdateInteractionHandler,
 )
+from .resources import Resource
 
 C = TypeVar("C", bound=Callable[..., Any])
 
@@ -56,11 +61,17 @@ class FHIRProvider:
         resource_type: type[ResourceType],
         *,
         dependencies: Sequence[params.Depends] | None = None,
-        include_in_schema: bool = True
-    ) -> Callable[
-        [CreateInteractionHandler[ResourceType]],
-        CreateInteractionHandler[ResourceType],
-    ]:
+        include_in_schema: bool = True,
+    ) -> (
+        Callable[
+            [CreateInteractionAsyncHandler[ResourceType]],
+            CreateInteractionAsyncHandler[ResourceType],
+        ]
+        | Callable[
+            [CreateInteractionHandler[ResourceType]],
+            CreateInteractionHandler[ResourceType],
+        ]
+    ):
         """Register a FHIR create interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -74,11 +85,16 @@ class FHIRProvider:
         resource_type: type[ResourceType],
         *,
         dependencies: Sequence[params.Depends] | None = None,
-        include_in_schema: bool = True
-    ) -> Callable[
-        [ReadInteractionHandler[ResourceType]],
-        ReadInteractionHandler[ResourceType],
-    ]:
+        include_in_schema: bool = True,
+    ) -> (
+        Callable[
+            [ReadInteractionAsyncHandler[ResourceType]],
+            ReadInteractionAsyncHandler[ResourceType],
+        ]
+        | Callable[
+            [ReadInteractionHandler[ResourceType]], ReadInteractionHandler[ResourceType]
+        ]
+    ):
         """Register a FHIR read interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -92,8 +108,11 @@ class FHIRProvider:
         resource_type: type[ResourceType],
         *,
         dependencies: Sequence[params.Depends] | None = None,
-        include_in_schema: bool = True
-    ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
+        include_in_schema: bool = True,
+    ) -> (
+        Callable[[SearchTypeInteractionAsyncHandler], SearchTypeInteractionAsyncHandler]
+        | Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]
+    ):
         """Register a FHIR search-type interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -107,11 +126,17 @@ class FHIRProvider:
         resource_type: type[ResourceType],
         *,
         dependencies: Sequence[params.Depends] | None = None,
-        include_in_schema: bool = True
-    ) -> Callable[
-        [UpdateInteractionHandler[ResourceType]],
-        UpdateInteractionHandler[ResourceType],
-    ]:
+        include_in_schema: bool = True,
+    ) -> (
+        Callable[
+            [UpdateInteractionAsyncHandler[ResourceType]],
+            UpdateInteractionAsyncHandler[ResourceType],
+        ]
+        | Callable[
+            [UpdateInteractionHandler[ResourceType]],
+            UpdateInteractionHandler[ResourceType],
+        ]
+    ):
         """Register a FHIR update interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -127,6 +152,8 @@ class FHIRProvider:
         dependencies: Sequence[params.Depends] | None,
         include_in_schema: bool,
     ) -> Callable[[C], C]:
+        _check_resource_type_module(resource_type)
+
         def decorator(handler: C) -> C:
             self._interactions.append(
                 type_interaction_cls(
@@ -141,3 +168,23 @@ class FHIRProvider:
             return handler
 
         return decorator
+
+
+def _check_resource_type_module(resource_type: type[Resource]) -> None:
+    """Ensure that the resource type is compatible with the server's defined FHIR sequence."""
+
+    module = resource_type.__module__
+
+    match FHIR_SEQUENCE:
+        case "R4" | "R5":
+            assert not module.startswith(
+                ("fhir.resources.STU3", "fhir.resources.R4B")
+            ), f"Resources types from {module} cannot be used with FHIR sequence {FHIR_SEQUENCE}"
+        case "STU3":
+            assert module.startswith(
+                "fhir.resources.STU3"
+            ), "Only resource types from fhir.resources.STU3 can be used with FHIR sequence STU3"
+        case "R4B":
+            assert module.startswith(
+                "fhir.resources.R4B"
+            ), "Only resource types from fhir.resources.R4B can be used with FHIR sequence R4B"

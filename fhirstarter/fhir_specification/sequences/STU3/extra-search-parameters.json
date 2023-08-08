@@ -1,0 +1,71 @@
+{
+    "_list":
+    {
+        "type": "string",
+        "description": "\t\n_list\tstring\tAll resources in nominated list (by id, not a full URL)",
+        "uri": "http://hl7.org/fhir/SearchParameter/Resource-list",
+        "include-in-capability-statement": true
+    },
+    "_has":
+    {
+        "type": "string",
+        "description": "Provides limited support for reverse chaining - that is, selecting resources based on the properties of resources that refer to them (instead of chaining where resources can be selected based on the properties of resources that they refer to)",
+        "uri": "http://hl7.org/fhir/SearchParameter/Resource-has",
+        "include-in-capability-statement": true
+    },
+    "_type":
+    {
+        "type": "token",
+        "description": "Used when a search is performed in a context which doesn't limit the search to indicate which types are being searched",
+        "uri": "http://hl7.org/fhir/SearchParameter/Resource-type",
+        "include-in-capability-statement": true
+    },
+    "_sort":
+    {
+        "type": "string",
+        "description": "Order to sort results in (can repeat for inner sort orders)",
+        "include-in-capability-statement": false
+    },
+    "_count":
+    {
+        "type": "number",
+        "description": "Number of results per page",
+        "include-in-capability-statement": false
+    },
+    "_include":
+    {
+        "type": "string",
+        "description": "Other resources to include in the search results that search matches point to",
+        "include-in-capability-statement": false
+    },
+    "_revinclude":
+    {
+        "type": "string",
+        "description": "Other resources to include in the search results when they refer to search matches",
+        "include-in-capability-statement": false
+    },
+    "_summary":
+    {
+        "type": "string",
+        "description": "Just return the summary elements (for resources where this is defined)",
+        "include-in-capability-statement": false
+    },
+    "_elements":
+    {
+        "type": "token",
+        "description": "Request that only a specific set of elements be returned for resources\t",
+        "include-in-capability-statement": false
+    },
+    "_contained":
+    {
+        "type": "string",
+        "description": "Whether to return resources contained in other resources in the search matches",
+        "include-in-capability-statement": false
+    },
+    "_containedType":
+    {
+        "type": "string",
+        "description": "If returning contained resources, whether to return the contained or container resources",
+        "include-in-capability-statement": false
+    }
+}
