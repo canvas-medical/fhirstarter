@@ -1,0 +1,74 @@
+{
+    "_contained":
+    {
+        "type": "string",
+        "description": "Whether to return resources contained in other resources in the search matches",
+        "include-in-capability-statement": false
+    },
+    "_containedType":
+    {
+        "type": "string",
+        "description": "If returning contained resources, whether to return the contained or container resources",
+        "include-in-capability-statement": false
+    },
+    "_count":
+    {
+        "type": "number",
+        "description": "Number of results per page",
+        "include-in-capability-statement": false
+    },
+    "_elements":
+    {
+        "type": "token",
+        "description": "Request that only a specific set of elements be returned for resources",
+        "include-in-capability-statement": false
+    },
+    "_graph":
+    {
+        "type": "reference",
+        "description": "Include additional resources according to a GraphDefinition",
+        "include-in-capability-statement": false
+    },
+    "_include":
+    {
+        "type": "string",
+        "description": "Other resources to include in the search results that search matches point to",
+        "include-in-capability-statement": false
+    },
+    "_maxresults":
+    {
+        "type": "number",
+        "description": "Hint to a server that only the first 'n' results will ever be processed",
+        "include-in-capability-statement": false
+    },
+    "_revinclude":
+    {
+        "type": "string",
+        "description": "Other resources to include in the search results when they refer to search matches",
+        "include-in-capability-statement": false
+    },
+    "_score":
+    {
+        "type": "token",
+        "description": "Request match relevance in results",
+        "include-in-capability-statement": false
+    },
+    "_sort":
+    {
+        "type": "string",
+        "description": "Order to sort results in (can repeat for inner sort orders)",
+        "include-in-capability-statement": false
+    },
+    "_summary":
+    {
+        "type": "string",
+        "description": "Just return the summary elements (for resources where this is defined)",
+        "include-in-capability-statement": false
+    },
+    "_total":
+    {
+        "type": "token",
+        "description": "Request a precision of the total number of results for a request",
+        "include-in-capability-statement": false
+    }
+}

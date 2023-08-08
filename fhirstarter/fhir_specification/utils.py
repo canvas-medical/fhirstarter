@@ -60,11 +60,11 @@ else:
 
 def is_resource_type(resource_type: str) -> bool:
     """Return True or False depending on whether the given string is a recognized resource type."""
-    return resource_type in _load_resources_file()
+    return resource_type in _load_resources_list()
 
 
 @cache
-def _load_resources_file() -> set[str]:
+def _load_resources_list() -> set[str]:
     """Load the list of resources from the JSON file."""
     with open(FHIR_DIR / "resources.json") as file_:
         return set(json.load(file_))
@@ -123,8 +123,13 @@ def make_operation_outcome_example(
     }
 
 
-@cache
 def load_search_parameters() -> dict[str, Any]:
     """Load the search parameters file."""
     with zipfile.ZipFile(FHIR_DIR / "search-parameters.zip") as file_:
         return json.loads(file_.read("search-parameters.json"))
+
+
+def load_extra_search_parameters() -> dict[str, dict[str, str | bool]]:
+    """Load the extra search parameters file."""
+    with open(FHIR_DIR / "extra-search-parameters.json") as file_:
+        return json.load(file_)
