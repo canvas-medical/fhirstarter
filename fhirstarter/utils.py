@@ -231,7 +231,12 @@ def format_response(
     if format_parameters.format == "application/fhir+json":
         if format_parameters.pretty:
             return Response(
-                content=resource.json(indent=2, separators=(", ", ": ")),
+                content=resource.json(
+                    ensure_ascii=False,
+                    allow_nan=False,
+                    indent=2,
+                    separators=(", ", ": "),
+                ),
                 status_code=status_code or status.HTTP_200_OK,
                 media_type=format_parameters.format,
             )
