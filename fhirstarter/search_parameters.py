@@ -160,7 +160,12 @@ def _transform_description(description: str, resource_type: str) -> str:
     if description.startswith("Multiple Resources:"):
         for description_for_resource_type in description.split("\n"):
             if description_for_resource_type.startswith(f"* [{resource_type}]"):
-                _, description = description_for_resource_type.split(": ")
+                try:
+                    _, description = description_for_resource_type.split(
+                        ": ", maxsplit=1
+                    )
+                except Exception as e:
+                    pass
                 return description.removesuffix("\r")
         else:
             raise AssertionError("Resource type must exist in the description")
