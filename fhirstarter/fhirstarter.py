@@ -93,7 +93,7 @@ class FHIRStarter(FastAPI):
 
         if config_file_name:
             logging.warning(
-                "The config_file_name argument to FHIRStarter.__init__ has been deprecated and will be removed in a future release."
+                "The config_file_name parameter to FHIRStarter.__init__ has been deprecated and will be removed in a future release."
             )
             if not config_file:
                 config_file = config_file_name
