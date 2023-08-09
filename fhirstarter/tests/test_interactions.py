@@ -14,13 +14,7 @@ from ..providers import FHIRProvider
 from ..resources import Bundle
 from ..testclient import TestClient
 from ..utils import make_operation_outcome
-from .config import (
-    DATABASE,
-    app,
-    create_test_client,
-    patient_create,
-    patient_create_async,
-)
+from .config import DATABASE, app, patient_create, patient_create_async
 from .resources import HumanName, Patient
 from .utils import (
     assert_expected_response,
@@ -32,12 +26,11 @@ from .utils import (
 
 
 @pytest.fixture(scope="module")
-def client(async_endpoints: bool) -> TestClient:
+def client(
+    create_test_client_func: Callable[[tuple[str, ...]], TestClient]
+) -> TestClient:
     """Return a module-scoped test client with all interactions enabled."""
-    return create_test_client(
-        interactions=("create", "read", "search-type", "update"),
-        async_endpoints=async_endpoints,
-    )
+    return create_test_client_func(("create", "read", "search-type", "update"))
 
 
 @pytest.fixture(scope="module")
