@@ -80,7 +80,7 @@ FHIRStarter will work out of the box as an R5 server. If a different sequence is
 specified with an environment variable:
 
 ```shell
-FHIR_SEQUENCE="R4B"
+FHIR_SEQUENCE=R4B
 ```
 
 The latest version of the [FHIR Resources](https://pypi.org/project/fhir.resources/) package only
