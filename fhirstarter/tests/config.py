@@ -117,7 +117,7 @@ include-in-capability-statement = true
     with NamedTemporaryFile("w") as config_file:
         config_file.write(config_file_contents)
         config_file.seek(0)
-        app = FHIRStarter(config_file_name=config_file.name)
+        app = FHIRStarter(config_file=config_file.name)
 
     app.add_providers(provider)
 

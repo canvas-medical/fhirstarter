@@ -9,6 +9,7 @@ from collections import defaultdict
 from collections.abc import Callable, Coroutine, MutableMapping
 from copy import deepcopy
 from datetime import datetime
+from io import IOBase
 from os import PathLike
 from typing import Any, TypeAlias, cast
 from urllib.parse import parse_qs, urlencode
@@ -76,8 +77,9 @@ class FHIRStarter(FastAPI):
     def __init__(
         self,
         *,
-        config_file_name: str | PathLike[str] | None = None,
+        config_file: str | PathLike[str] | IOBase | None = None,
         title: str = "FHIRStarter",
+        config_file_name: str | PathLike[str] | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -90,11 +92,21 @@ class FHIRStarter(FastAPI):
         super().__init__(title=title, **kwargs)
 
         if config_file_name:
-            with open(config_file_name, "rb") as file_:
-                config = tomllib.load(file_)
-                self._search_parameters = SearchParameters(
-                    config.get("search-parameters")
-                )
+            logging.warning(
+                "The config_file_name argument to FHIRStarter.__init__ has been deprecated and will be removed in a future release."
+            )
+            if not config_file:
+                config_file = config_file_name
+
+        if config_file:
+            if isinstance(config_file, IOBase):
+                config_file.seek(0)
+                config = tomllib.load(config_file)
+            else:
+                with open(config_file, "rb") as file_:
+                    config = tomllib.load(file_)
+
+            self._search_parameters = SearchParameters(config.get("search-parameters"))
         else:
             self._search_parameters = SearchParameters()
 
