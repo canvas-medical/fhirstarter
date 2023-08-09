@@ -100,10 +100,10 @@ class FHIRStarter(FastAPI):
                 config_file = config_file_name
 
         if config_file:
-            if isinstance(config_file, IOBase):
-                config_file.seek(0)
+            try:
+                cast(IOBase, config_file).seek(0)
                 config = tomllib.load(config_file)
-            else:
+            except AttributeError:
                 with open(config_file, "rb") as file_:
                     config = tomllib.load(file_)
 
