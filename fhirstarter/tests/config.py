@@ -117,7 +117,7 @@ include-in-capability-statement = true
     with NamedTemporaryFile("w") as config_file:
         config_file.write(config_file_contents)
         config_file.seek(0)
-        app = FHIRStarter(config_file_name=config_file.name)
+        app = FHIRStarter(config_file=config_file.name)
 
     app.add_providers(provider)
 
@@ -126,29 +126,37 @@ include-in-capability-statement = true
     return TestClient(app)
 
 
-def create_test_client(
-    interactions: tuple[str, ...], async_endpoints: bool
-) -> TestClient:
-    """Given a list of interactions and an async flag, create an app and return a test client."""
+def create_test_client_async(interactions: tuple[str, ...]) -> TestClient:
+    """Given a list of interactions, create an app with async handlers and return a test client."""
     provider = FHIRProvider()
 
     for interaction in interactions:
-        match interaction, async_endpoints:
-            case "create", True:
+        match interaction:
+            case "create":
                 provider.create(Patient)(patient_create_async)
-            case "create", False:
-                provider.create(Patient)(patient_create)
-            case "read", True:
+            case "read":
                 provider.read(Patient)(patient_read_async)
-            case "read", False:
-                provider.read(Patient)(patient_read)
-            case "search-type", True:
+            case "search-type":
                 provider.search_type(Patient)(patient_search_type_async)
-            case "search-type", False:
-                provider.search_type(Patient)(patient_search_type)
-            case "update", True:
+            case "update":
                 provider.update(Patient)(patient_update_async)
-            case "update", False:
+
+    return app(provider)
+
+
+def create_test_client(interactions: tuple[str, ...]) -> TestClient:
+    """Given a list of interactions, create an app and return a test client."""
+    provider = FHIRProvider()
+
+    for interaction in interactions:
+        match interaction:
+            case "create":
+                provider.create(Patient)(patient_create)
+            case "read":
+                provider.read(Patient)(patient_read)
+            case "search-type":
+                provider.search_type(Patient)(patient_search_type)
+            case "update":
                 provider.update(Patient)(patient_update)
 
     return app(provider)

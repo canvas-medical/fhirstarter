@@ -22,7 +22,7 @@ from fhirstarter.exceptions import FHIRResourceNotFoundError
 # Create the app with the provided config file
 app = FHIRStarter(
     title="FHIRStarter Example Implementation",
-    config_file_name=Path(__file__).parent / "config.toml",
+    config_file=Path(__file__).parent / "config.toml",
 )
 
 # Create a "database"
