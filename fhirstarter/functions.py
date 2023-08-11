@@ -165,7 +165,6 @@ def make_read_function(
             request: Request,
             response: Response,
             id_: Id = Path(
-                None,
                 alias="id",
                 description=Resource.schema()["properties"]["id"]["title"],
             ),
@@ -192,7 +191,6 @@ def make_read_function(
             request: Request,
             response: Response,
             id_: Id = Path(
-                None,
                 alias="id",
                 description=Resource.schema()["properties"]["id"]["title"],
             ),
@@ -318,7 +316,6 @@ def make_update_function(
             request: Request,
             response: Response,
             id_: Id = Path(
-                None,
                 alias="id",
                 description=Resource.schema()["properties"]["id"]["title"],
             ),
@@ -360,7 +357,6 @@ def make_update_function(
             request: Request,
             response: Response,
             id_: Id = Path(
-                None,
                 alias="id",
                 description=Resource.schema()["properties"]["id"]["title"],
             ),
