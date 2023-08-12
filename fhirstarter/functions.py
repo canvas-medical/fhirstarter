@@ -27,16 +27,12 @@ from fastapi import Body, Form, Path, Query, Request, Response
 
 from .exceptions import FHIRBadRequestError
 from .interactions import (
-    CreateInteractionAsyncHandler,
     CreateInteractionHandler,
     InteractionContext,
-    ReadInteractionAsyncHandler,
     ReadInteractionHandler,
     ResourceType,
-    SearchTypeInteractionAsyncHandler,
     SearchTypeInteractionHandler,
     TypeInteraction,
-    UpdateInteractionAsyncHandler,
     UpdateInteractionHandler,
 )
 from .resources import Bundle, Id, Resource
@@ -93,9 +89,7 @@ def make_create_function(
 
             Calls the handler, and sets the Location header based on the Id of the created resource.
             """
-            handler = cast(
-                CreateInteractionAsyncHandler[ResourceType], interaction.handler
-            )
+            handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
             result = await handler(InteractionContext(request, response), resource)  # type: ignore
             id_, result_resource = _result_to_id_resource_tuple(result)
 
@@ -172,9 +166,7 @@ def make_read_function(
             _pretty: str = PRETTY_QP,
         ) -> ResourceType | Response:
             """Function for read interaction."""
-            handler = cast(
-                ReadInteractionAsyncHandler[ResourceType], interaction.handler
-            )
+            handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
             result_resource = await handler(InteractionContext(request, response), id_)  # type: ignore
 
             return format_response(
@@ -261,7 +253,7 @@ def make_search_type_function(
             **kwargs: str,
         ) -> Bundle | Response:
             """Function for search-type interaction."""
-            handler = cast(SearchTypeInteractionAsyncHandler, interaction.handler)
+            handler = cast(SearchTypeInteractionHandler, interaction.handler)
             bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore
 
             return format_response(
@@ -334,9 +326,7 @@ def make_update_function(
                     details_text="Logical Id in URL must match logical Id in resource",
                 )
 
-            handler = cast(
-                UpdateInteractionAsyncHandler[ResourceType], interaction.handler
-            )
+            handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
             result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore
             _, result_resource = _result_to_id_resource_tuple(result)
 
@@ -446,8 +436,7 @@ def _is_valid_parameter_name(name: str) -> bool:
 
 def _set_search_type_function_signature(
     search_type_function: Callable[
-        [Request, Response, str, str],
-        Coroutine[None, None, Bundle | Response] | Bundle | Response,
+        ..., Coroutine[None, None, Bundle | Response] | Bundle | Response
     ],
     search_parameters: tuple[Parameter, ...],
     search_parameter_metadata: dict[str, dict[str, str]],
