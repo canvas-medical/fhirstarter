@@ -24,9 +24,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="structure",
-                details_text="body -> 1 — Expecting value: line 1 column 2 (char 1) "
-                "(type=value_error.jsondecode; msg=Expecting value; doc= ; pos=1; lineno=1; "
-                "colno=2)",
+                details_text="body -> 1 — JSON decode error (type=json_invalid; error=Expecting value)",
             ),
         ),
         (

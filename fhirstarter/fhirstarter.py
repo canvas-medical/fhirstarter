@@ -632,7 +632,7 @@ def _pydantic_error_to_fhir_issue_type(error: str) -> str:
     error_code = rest[0] if rest else None
 
     match error_type, error_code:
-        case ("value_error", "jsondecode") | ("value_error", "extra"):
+        case ("json_invalid", _) | ("value_error", "extra"):
             return "structure"
         case ("value_error", "missing"):
             return "required"
