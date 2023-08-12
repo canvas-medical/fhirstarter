@@ -8,19 +8,15 @@ from fastapi import params
 from .fhir_specification import FHIR_SEQUENCE
 from .interactions import (
     CreateInteraction,
-    CreateInteractionAsyncHandler,
     CreateInteractionHandler,
     InteractionHandler,
     ReadInteraction,
-    ReadInteractionAsyncHandler,
     ReadInteractionHandler,
     ResourceType,
     SearchTypeInteraction,
-    SearchTypeInteractionAsyncHandler,
     SearchTypeInteractionHandler,
     TypeInteraction,
     UpdateInteraction,
-    UpdateInteractionAsyncHandler,
     UpdateInteractionHandler,
 )
 from .resources import Resource
@@ -62,16 +58,9 @@ class FHIRProvider:
         *,
         dependencies: Sequence[params.Depends] | None = None,
         include_in_schema: bool = True,
-    ) -> (
-        Callable[
-            [CreateInteractionAsyncHandler[ResourceType]],
-            CreateInteractionAsyncHandler[ResourceType],
-        ]
-        | Callable[
-            [CreateInteractionHandler[ResourceType]],
-            CreateInteractionHandler[ResourceType],
-        ]
-    ):
+    ) -> Callable[
+        [CreateInteractionHandler[ResourceType]], CreateInteractionHandler[ResourceType]
+    ]:
         """Register a FHIR create interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -86,15 +75,10 @@ class FHIRProvider:
         *,
         dependencies: Sequence[params.Depends] | None = None,
         include_in_schema: bool = True,
-    ) -> (
-        Callable[
-            [ReadInteractionAsyncHandler[ResourceType]],
-            ReadInteractionAsyncHandler[ResourceType],
-        ]
-        | Callable[
-            [ReadInteractionHandler[ResourceType]], ReadInteractionHandler[ResourceType]
-        ]
-    ):
+    ) -> Callable[
+        [ReadInteractionHandler[ResourceType]],
+        ReadInteractionHandler[ResourceType],
+    ]:
         """Register a FHIR read interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -109,10 +93,7 @@ class FHIRProvider:
         *,
         dependencies: Sequence[params.Depends] | None = None,
         include_in_schema: bool = True,
-    ) -> (
-        Callable[[SearchTypeInteractionAsyncHandler], SearchTypeInteractionAsyncHandler]
-        | Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]
-    ):
+    ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
         """Register a FHIR search-type interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -127,16 +108,9 @@ class FHIRProvider:
         *,
         dependencies: Sequence[params.Depends] | None = None,
         include_in_schema: bool = True,
-    ) -> (
-        Callable[
-            [UpdateInteractionAsyncHandler[ResourceType]],
-            UpdateInteractionAsyncHandler[ResourceType],
-        ]
-        | Callable[
-            [UpdateInteractionHandler[ResourceType]],
-            UpdateInteractionHandler[ResourceType],
-        ]
-    ):
+    ) -> Callable[
+        [UpdateInteractionHandler[ResourceType]], UpdateInteractionHandler[ResourceType]
+    ]:
         """Register a FHIR update interaction."""
         return self._register_type_interaction(
             resource_type,
@@ -160,7 +134,7 @@ class FHIRProvider:
                     resource_type=resource_type,
                     handler=handler,
                     route_options={
-                        "dependencies": self._dependencies + list(dependencies or []),
+                        "dependencies": (*self._dependencies, *(dependencies or ())),
                         "include_in_schema": include_in_schema,
                     },
                 )
@@ -179,7 +153,7 @@ def _check_resource_type_module(resource_type: type[Resource]) -> None:
         case "R4" | "R5":
             assert not module.startswith(
                 ("fhir.resources.STU3", "fhir.resources.R4B")
-            ), f"Resources types from {module} cannot be used with FHIR sequence {FHIR_SEQUENCE}"
+            ), f"Resource types from {module} cannot be used with FHIR sequence {FHIR_SEQUENCE}"
         case "STU3":
             assert module.startswith(
                 "fhir.resources.STU3"

@@ -114,7 +114,7 @@ class FHIRStarter(FastAPI):
         self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
         self._created = datetime.now(ZoneInfo("UTC"))
 
-        self._capability_statement_modifier: CapabilityStatementModifier | None = None
+        self.set_capability_statement_modifier(lambda c, _, __: c)
 
         self._add_capabilities_route()
 
@@ -126,7 +126,9 @@ class FHIRStarter(FastAPI):
         ) -> Response:
             return response
 
-        self._exception_callback = default_exception_callback
+        self._exception_callback: Callable[
+            [Request, Response, Exception], Coroutine[None, None, Response]
+        ] = default_exception_callback
 
         self.add_exception_handler(
             RequestValidationError, self.validation_exception_handler
@@ -322,7 +324,7 @@ class FHIRStarter(FastAPI):
                 resource["searchParam"] = sorted(
                     supported_search_parameters_,
                     key=lambda p: search_parameter_sort_key(
-                        p["name"], search_parameter_metadata
+                        cast(dict[str, str], p)["name"], search_parameter_metadata
                     ),
                 )
             resources.append(resource)
@@ -345,12 +347,11 @@ class FHIRStarter(FastAPI):
         if FHIR_SEQUENCE != "STU3":
             del capability_statement["acceptUnknown"]
 
-        if self._capability_statement_modifier:
-            capability_statement = self._capability_statement_modifier(
+        return CapabilityStatement(
+            **self._capability_statement_modifier(
                 capability_statement, request, response
             )
-
-        return CapabilityStatement(**capability_statement)
+        )
 
     def openapi(self) -> dict[str, Any]:
         """

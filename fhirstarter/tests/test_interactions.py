@@ -198,7 +198,7 @@ def _search_type_handler_parameter_multiple_values() -> Callable[..., Bundle]:
         patients = []
         for patient in DATABASE.values():
             for name in patient.name:
-                if set(given).issubset(cast(HumanName, name).given):
+                if set(given or ()).issubset(cast(HumanName, name).given):
                     patients.append(patient)
 
         bundle = Bundle(
