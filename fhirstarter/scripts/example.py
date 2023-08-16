@@ -32,7 +32,7 @@ DATABASE: dict[str, Patient] = {}
 provider = FHIRProvider()
 
 # To register FHIR interactions with  a provider, the pieces of information the developer has to
-# provider are:
+# provide are:
 # * FHIR interaction type (this affects what the endpoint will look like)
 # * FHIR resource type (this affects validation of inputs and outputs, and what search parameters
 #   are valid)
