@@ -376,12 +376,12 @@ class FHIRStarter(FastAPI):
         # Make schema examples for different operation outcomes
         operation_outcome_examples = {}
         for status_code, code, details_text in (
-            ("400", "invalid", "Bad Request"),
+            ("400", "invalid", "Bad request"),
             ("401", "unknown", "Authentication failed"),
             ("403", "forbidden", "Authorization failed"),
-            ("404", "not-found", "Resource Not Found"),
-            ("422", "processing", "Unprocessable Entity"),
-            ("500", "exception", "Internal Server Error"),
+            ("404", "not-found", "Resource not found"),
+            ("422", "processing", "Unprocessable entity"),
+            ("500", "exception", "Internal server error"),
         ):
             operation_outcome_examples[status_code] = make_operation_outcome_example(
                 severity="error", code=code, details_text=details_text
