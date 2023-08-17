@@ -321,6 +321,13 @@ def test_update(client: TestClient, patient_id: str) -> None:
     )
 
 
+def test_update_no_body(client: TestClient) -> None:
+    """Test FHIR update interaction where there is no request body."""
+    put_response = client.put(f"/Patient/{generate_fhir_resource_id()}", data=None)
+
+    assert_expected_response(put_response, status.HTTP_404_NOT_FOUND)
+
+
 def test_update_not_found(client: TestClient) -> None:
     """Test FHIR update interaction that produces a 404 not found error."""
     id_ = generate_fhir_resource_id()
