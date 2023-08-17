@@ -182,7 +182,7 @@ app.set_capability_statement_modifier(amend_capability_statement)
 
 ### FastAPI dependency injection
 
-FastAPI's dependency injection is exposed at various levels:
+FastAPI's [dependency injection system](https://fastapi.tiangolo.com/tutorial/dependencies/) is exposed at various levels:
 
 * **application**: the `__init__` method on the FHIRStarter class
 * **provider**: the `__init__` method on the FHIRProvider class
