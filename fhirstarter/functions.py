@@ -320,7 +320,7 @@ def make_update_function(
             ),
         ) -> ResourceType | Response | None:
             """Function for update interaction."""
-            if resource.id and id_ != resource.id:
+            if resource and resource.id and id_ != resource.id:
                 raise FHIRBadRequestError(
                     code="invalid",
                     details_text="Logical Id in URL must match logical Id in resource",
@@ -359,7 +359,7 @@ def make_update_function(
             ),
         ) -> ResourceType | Response | None:
             """Function for update interaction."""
-            if resource.id and id_ != resource.id:
+            if resource and resource.id and id_ != resource.id:
                 raise FHIRBadRequestError(
                     code="invalid",
                     details_text="Logical Id in URL must match logical Id in resource",
