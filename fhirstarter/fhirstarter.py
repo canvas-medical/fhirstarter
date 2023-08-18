@@ -415,6 +415,19 @@ class FHIRStarter(FastAPI):
 
             # Iterate over all operations for a given path
             for operation_name, operation in path.items():
+                # Skip operations that weren't created by FHIRStarter
+                operation_id = operation.get("operationId", "")
+                if not operation_id.startswith("fhirstarter|"):
+                    continue
+
+                # For operations that take a request body, change the application/json content type
+                # to application/fhir+json
+                if content := operation.get("requestBody", {}).get("content"):
+                    if "application/json" in content:
+                        content["application/fhir+json"] = content.pop(
+                            "application/json"
+                        )
+
                 # For each possible response (i.e. status code), remove the default FastAPI response
                 # schema
                 responses = operation["responses"]
@@ -447,37 +460,32 @@ class FHIRStarter(FastAPI):
 
                 # For search operations, provide a bundle example that contains the correct resource
                 # type
-                if "|" in (
-                    operation_id := operation["operationId"]
-                ) and operation_id.startswith("fhirstarter|"):
-                    _, _, interaction_type, *rest = operation_id.split("|")
-                    if interaction_type == "search-type":
-                        resource_type = rest[1]
+                _, _, interaction_type, *rest = operation_id.split("|")
+                if interaction_type == "search-type":
+                    resource_type = rest[1]
 
-                        # Get the example for the resource. If a custom example is defined, it will
-                        # be used, otherwise an example will be loaded from the FHIR specification.
-                        try:
-                            example = self._capabilities[resource_type][
-                                "search-type"
-                            ].resource_type.Config.schema_extra["example"]
-                        except (AttributeError, KeyError):
-                            example = None
-                        if not example:
-                            if is_resource_type(resource_type):
-                                example = load_example(resource_type)
-                            else:
-                                example = {"resourceType": resource_type}
+                    # Get the example for the resource. If a custom example is defined, it will
+                    # be used, otherwise an example will be loaded from the FHIR specification.
+                    try:
+                        example = self._capabilities[resource_type][
+                            "search-type"
+                        ].resource_type.Config.schema_extra["example"]
+                    except (AttributeError, KeyError):
+                        example = None
+                    if not example:
+                        if is_resource_type(resource_type):
+                            example = load_example(resource_type)
+                        else:
+                            example = {"resourceType": resource_type}
 
-                        # For successful responses, copy the schema, and create and set a bundle
-                        # example that includes the example resource
-                        operation["responses"]["200"]["content"][
-                            "application/fhir+json"
-                        ]["schema"] = deepcopy(
-                            openapi_schema["components"]["schemas"]["Bundle"]
-                        )
-                        operation["responses"]["200"]["content"][
-                            "application/fhir+json"
-                        ]["schema"]["example"] = create_bundle_example(example)
+                    # For successful responses, copy the schema, and create and set a bundle
+                    # example that includes the example resource
+                    operation["responses"]["200"]["content"]["application/fhir+json"][
+                        "schema"
+                    ] = deepcopy(openapi_schema["components"]["schemas"]["Bundle"])
+                    operation["responses"]["200"]["content"]["application/fhir+json"][
+                        "schema"
+                    ]["example"] = create_bundle_example(example)
 
         return openapi_schema
 

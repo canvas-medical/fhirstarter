@@ -23,7 +23,7 @@ from collections.abc import Callable, Coroutine
 from inspect import Parameter, iscoroutinefunction, signature
 from typing import cast
 
-from fastapi import Body, Form, Path, Query, Request, Response
+from fastapi import Form, Path, Query, Request, Response
 
 from .exceptions import FHIRBadRequestError
 from .interactions import (
@@ -62,7 +62,7 @@ PRETTY_QP = Query(None, description=_PRETTY_PARAMETER_DESCRIPTION)
 def make_create_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, str, str, ResourceType],
+    [Request, Response, ResourceType, str, str],
     Coroutine[None, None, ResourceType | Response | None]
     | ResourceType
     | Response
@@ -76,13 +76,9 @@ def make_create_function(
         async def create_async(
             request: Request,
             response: Response,
+            resource: ResourceType,
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-            resource: ResourceType = Body(
-                None,
-                media_type="application/fhir+json",
-                alias=resource_type_str,
-            ),
         ) -> ResourceType | Response | None:
             """
             Function for create interaction.
@@ -113,11 +109,9 @@ def make_create_function(
         def create(
             request: Request,
             response: Response,
+            resource: ResourceType,
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-            resource: ResourceType = Body(
-                None, media_type="application/fhir+json", alias=resource_type_str
-            ),
         ) -> ResourceType | Response | None:
             """
             Function for create interaction.
@@ -294,7 +288,7 @@ def make_search_type_function(
 def make_update_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, Id, str, str, ResourceType],
+    [Request, Response, ResourceType, Id, str, str],
     Coroutine[None, None, ResourceType | Response | None]
     | ResourceType
     | Response
@@ -307,17 +301,13 @@ def make_update_function(
         async def update_async(
             request: Request,
             response: Response,
+            resource: ResourceType,
             id_: Id = Path(
                 alias="id",
                 description=Resource.schema()["properties"]["id"]["title"],
             ),
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-            resource: ResourceType = Body(
-                None,
-                media_type="application/fhir+json",
-                alias=interaction.resource_type.get_resource_type(),
-            ),
         ) -> ResourceType | Response | None:
             """Function for update interaction."""
             if resource and resource.id and id_ != resource.id:
@@ -346,17 +336,13 @@ def make_update_function(
         def update(
             request: Request,
             response: Response,
+            resource: ResourceType,
             id_: Id = Path(
                 alias="id",
                 description=Resource.schema()["properties"]["id"]["title"],
             ),
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-            resource: ResourceType = Body(
-                None,
-                media_type="application/fhir+json",
-                alias=interaction.resource_type.get_resource_type(),
-            ),
         ) -> ResourceType | Response | None:
             """Function for update interaction."""
             if resource and resource.id and id_ != resource.id:
