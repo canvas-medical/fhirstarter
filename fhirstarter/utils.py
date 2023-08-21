@@ -23,49 +23,6 @@ class InteractionInfo:
     resource_id: str | None
 
 
-def categorize_fhir_request(request: Request) -> InteractionInfo:
-    """
-    Return the resource type and interaction type for a request.
-
-    Note: This function is currently oriented around specific use cases for this framework.
-    Specifically, it will correctly categorize create, read, search-type, update, and capabilities
-    interactions. Further enhancement is needed to support more cases.
-    """
-    logging.warning(
-        "fhirstarter.utils.categorize_fhir_request has been deprecated and will be "
-        "removed in a future release"
-    )
-
-    _, first_part, *rest = request.url.path.split("/")
-
-    if request.method == "GET" and first_part == "metadata":
-        return InteractionInfo(resource_type=None, interaction_type="capabilities", resource_id=None)  # type: ignore
-
-    if not is_resource_type(first_part):
-        return InteractionInfo(resource_type=None, interaction_type=None, resource_id=None)  # type: ignore
-
-    resource_type = first_part
-    second_part = rest[0] if rest else None
-    id_ = second_part if request.method != "POST" else None
-
-    interaction_type = None
-    match request.method, second_part == "_search", not id_:
-        case "POST", False, True:
-            interaction_type = "create"
-        case "GET", _, False:
-            interaction_type = "read"
-        case "GET", False, True:
-            interaction_type = "search-type"
-        case "POST", True, True:
-            interaction_type = "search-type"
-        case "PUT", _, False:
-            interaction_type = "update"
-        case _:
-            assert "Unexpected request format"
-
-    return InteractionInfo(resource_type, interaction_type, resource_id=id_)  # type: ignore
-
-
 def parse_fhir_request(request: Request) -> InteractionInfo:
     """
     Parse a FHIR request into its component parts, and determine an interaction type.
