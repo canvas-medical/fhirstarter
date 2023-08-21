@@ -1,6 +1,5 @@
 """FHIRStarter class, exception handlers, and middleware."""
 
-import asyncio
 import itertools
 import logging
 import re

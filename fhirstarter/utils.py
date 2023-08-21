@@ -1,6 +1,5 @@
 """Utility functions for creation of routes and responses."""
 
-import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, ClassVar, Literal
