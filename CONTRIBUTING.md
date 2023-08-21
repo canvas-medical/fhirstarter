@@ -27,5 +27,5 @@ forward the requests on to the handlers provided by the developer.
 
 # Contributions
 
-If you would like to contribute to fhirstarter, consider discussing your contribution on GitHub, 
+If you would like to contribute to FHIRStarter, consider discussing your contribution on GitHub, 
 or simply fork the project and submit a pull request.
