@@ -14,12 +14,12 @@ jobs:
         include:
           - fhir-sequence: STU3
             fhir-resources-dependency: ^7.0.0
-          - fhir-sequence: R4
-            fhir-resources-dependency: ~6.4.0
           - fhir-sequence: R4B
             fhir-resources-dependency: ^7.0.0
           - fhir-sequence: R5
             fhir-resources-dependency: ^7.0.0
+          - fhir-sequence: R4
+            fhir-resources-dependency: ~6.4.0
     steps:
     - uses: actions/checkout@v3
     - name: Install Poetry
