@@ -37,7 +37,6 @@ fastapi = "^0.101.0"
 lxml = "^4.9.3"
 pydantic = ">=1.10.12,<2.0.0"
 python-multipart = "^0.0.6"
-uvloop = "^0.17.0"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
@@ -48,7 +47,6 @@ mypy = "^1.5.1"
 pytest = "^7.4.0"
 requests = "^2.31.0"
 types-requests = "^2.31.0.2"
-uvicorn = {version = "^0.23.2", extras = ["standard"]}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -74,6 +74,14 @@ types, and will automatically generate the `/metadata` capabilities statement en
 Handlers can be written as coroutines with `async/await` syntax, or as plain functions. FastAPI
 supports both, as does FHIRStarter.
 
+Using uvloop can improve performance of the underlying event loop on supported platforms. 
+FHIRStarter does not mandate the use of uvloop, but it may be enabled by importing uvloop and
+adding a snippet like this to your application startup script:
+
+```python
+asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+```
+
 ### Configuration for specific FHIR sequences
 
 FHIRStarter will work out of the box as an R5 server. If a different sequence is desired, it must be
