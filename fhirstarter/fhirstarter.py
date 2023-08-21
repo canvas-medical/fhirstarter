@@ -15,7 +15,6 @@ from typing import Any, TypeAlias, cast
 from urllib.parse import parse_qs, urlencode
 from zoneinfo import ZoneInfo
 
-import uvloop
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from pydantic.error_wrappers import display_errors
@@ -58,8 +57,6 @@ from .utils import (
 
 # Suppress warnings from base fhir.resources class
 logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
-
-asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 CapabilityStatementModifier: TypeAlias = Callable[
     [MutableMapping[str, Any], Request, Response], MutableMapping[str, Any]
