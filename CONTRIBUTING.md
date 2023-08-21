@@ -24,3 +24,8 @@ documentation generation, and in the search use case, the function signature its
 
 The resultant wrapper functions have signatures that adhere to the FHIR specification, and they
 forward the requests on to the handlers provided by the developer.
+
+# Contributions
+
+If you would like to contribute to FHIRStarter, consider discussing your contribution on GitHub, 
+or simply fork the project and submit a pull request.
