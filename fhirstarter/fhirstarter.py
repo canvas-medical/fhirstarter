@@ -76,7 +76,6 @@ class FHIRStarter(FastAPI):
         *,
         config_file: str | PathLike[str] | IOBase | None = None,
         title: str = "FHIRStarter",
-        config_file_name: str | PathLike[str] | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -87,14 +86,6 @@ class FHIRStarter(FastAPI):
         * Exception handling is added
         """
         super().__init__(title=title, **kwargs)
-
-        if config_file_name:
-            logging.warning(
-                "The config_file_name parameter to FHIRStarter.__init__ has been deprecated and "
-                "will be removed in a future release."
-            )
-            if not config_file:
-                config_file = config_file_name
 
         if config_file:
             try:
