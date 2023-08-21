@@ -10,16 +10,16 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        fhir-sequence: [STU3, R4, R4B, R5]
+        fhir-sequence: [STU3, R4B, R5, R4]
         include:
           - fhir-sequence: STU3
             fhir-resources-dependency: ^7.0.0
-          - fhir-sequence: R4
-            fhir-resources-dependency: ~6.4.0
           - fhir-sequence: R4B
             fhir-resources-dependency: ^7.0.0
           - fhir-sequence: R5
             fhir-resources-dependency: ^7.0.0
+          - fhir-sequence: R4
+            fhir-resources-dependency: ~6.4.0
     steps:
     - uses: actions/checkout@v3
     - name: Install Poetry
