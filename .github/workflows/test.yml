@@ -21,7 +21,7 @@ jobs:
         cache: 'poetry'
     - name: Install Python packages
       run: |
-        poetry add "fhir.resources"@$^7.0.2
+        poetry add "fhir.resources"@^7.0.2
         poetry install
     - name: Run tests
       env:
@@ -40,7 +40,7 @@ jobs:
         cache: 'poetry'
     - name: Install Python packages
       run: |
-        poetry add "fhir.resources"@$6.4.0
+        poetry add "fhir.resources"@6.4.0
         poetry install
     - name: Run tests
       env:
