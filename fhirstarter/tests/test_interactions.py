@@ -321,13 +321,6 @@ def test_update(client: TestClient, patient_id: str) -> None:
     )
 
 
-def test_update_no_body(client: TestClient) -> None:
-    """Test FHIR update interaction where there is no request body."""
-    put_response = client.put(f"/Patient/{generate_fhir_resource_id()}", data=None)
-
-    assert_expected_response(put_response, status.HTTP_404_NOT_FOUND)
-
-
 def test_update_not_found(client: TestClient) -> None:
     """Test FHIR update interaction that produces a 404 not found error."""
     id_ = generate_fhir_resource_id()
@@ -368,5 +361,35 @@ def test_update_id_mismatch(client: TestClient, patient_id: str) -> None:
                     },
                 }
             ],
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="interaction_func",
+    argvalues=(
+        lambda client: client.post("/Patient", data=None),
+        lambda client: client.put(f"/Patient/{generate_fhir_resource_id()}", data=None),
+    ),
+    ids=["create", "update"],
+)
+def test_no_body(
+    client: TestClient, interaction_func: Callable[[TestClient], Response]
+) -> None:
+    response = interaction_func(client)
+    assert_expected_response(
+        response,
+        status.HTTP_400_BAD_REQUEST,
+        content={
+            "issue": [
+                {
+                    "code": "required",
+                    "details": {
+                        "text": "body — field required (type=value_error.missing)"
+                    },
+                    "severity": "error",
+                }
+            ],
+            "resourceType": "OperationOutcome",
         },
     )
