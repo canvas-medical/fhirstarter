@@ -37,6 +37,7 @@ fastapi = "^0.101.0"
 lxml = "^4.9.3"
 pydantic = ">=1.10.12,<2.0.0"
 python-multipart = "^0.0.6"
+tzdata = "^2023.3"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
