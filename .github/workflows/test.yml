@@ -21,7 +21,7 @@ jobs:
           - fhir-sequence: R4
             fhir-resources-dependency: ~6.4.0
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install Poetry
       run: pipx install poetry
     - name: Install Python
