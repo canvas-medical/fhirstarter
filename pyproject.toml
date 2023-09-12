@@ -42,7 +42,7 @@ tzdata = "^2023.3"
 [tool.poetry.group.dev.dependencies]
 black = "^23.7.0"
 funcy = "^2.0"
-httpx = "^0.24.1"
+httpx = ">=0.24.1,<0.26.0"
 isort = "^5.12.0"
 mypy = "^1.5.1"
 pytest = "^7.4.0"
