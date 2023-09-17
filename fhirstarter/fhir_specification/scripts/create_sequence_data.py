@@ -141,10 +141,7 @@ ADVERSE_EVENT_R5_EXAMPLE = {
 
 
 def main() -> None:
-    # fhir_dir = Path(sys.argv[1])
-    fhir_dir = Path(
-        "/Users/christopher.sande/Projects/fhirstarter/fhirstarter/fhir_specification"
-    )
+    fhir_dir = Path(sys.argv[1])
 
     print("")
 
