@@ -109,7 +109,7 @@ class FHIRStarter(FastAPI):
             self._search_parameters = SearchParameters()
 
         self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
-        self._created = datetime.now(ZoneInfo("UTC"))
+        self._created = datetime.now(ZoneInfo("UTC")).isoformat()
 
         self.set_capability_statement_modifier(lambda c, _, __: c)
 
