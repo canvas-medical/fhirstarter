@@ -66,15 +66,14 @@ def is_resource_type(resource_type: str) -> bool:
 @cache
 def _load_resources_list() -> set[str]:
     """Load the list of resources from the JSON file."""
-    with open(FHIR_DIR / "resources.json") as file_:
+    with open(FHIR_DIR / "resource_types.json") as file_:
         return set(json.load(file_))
 
 
-@cache
-def load_example(resource_type: str) -> dict[str, Any]:
-    """Load the resource example JSON file from the examples zip file."""
+def load_examples(resource_type: str) -> dict[str, dict[str, str | dict[str, Any]]]:
+    """Return the examples for a specific resource type."""
     with zipfile.ZipFile(FHIR_DIR / "examples.zip") as file_:
-        return json.loads(file_.read(f"{resource_type.lower()}-example.json"))
+        return json.loads(file_.read(f"{resource_type.lower()}.json"))
 
 
 def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]:
@@ -84,7 +83,7 @@ def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]
     The standard bundle example is modified based on the given resource example.
     """
     resource_type = resource_example["resourceType"]
-    bundle_example = load_example("Bundle")
+    bundle_example = cast(dict[str, Any], load_examples("Bundle")["example"]["value"])
 
     bundle_example["link"][0] = {
         "relation": "self",
@@ -97,7 +96,7 @@ def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]
     }
     bundle_example["entry"] = [
         {
-            "fullUrl": f"https://example.com/base/{resource_type}/3123",
+            "fullUrl": f"https://example.com/base/{resource_type}/{resource_example['id']}",
             "resource": resource_example,
             "search": {"mode": "match", "score": 1},
         }

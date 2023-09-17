@@ -142,6 +142,8 @@ async def index() -> RedirectResponse:
 
 
 if __name__ == "__main__":
+    app.openapi()
+
     # Start the server
     uvicorn.run(
         "example:app",
