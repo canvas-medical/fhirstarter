@@ -154,13 +154,12 @@ def get_examples(sequence: str, resource_type: str) -> dict[str, Any]:
         description = cells[0].text
         id_ = cells[1].text
 
-        filename = ""
         for a in example.find_all("a"):
             if a.text.lower() == "json":
                 filename = a.attrs["href"].removesuffix(".html")
                 break
         else:
-            assert f"Unable to find JSON filename for {resource_type}"
+            raise AssertionError(f"Unable to find JSON filename for {resource_type}")
 
         examples[id_] = {
             "summary": description,

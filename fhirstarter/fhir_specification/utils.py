@@ -69,6 +69,7 @@ def _load_resources_list() -> set[str]:
     with open(FHIR_DIR / "resource_types.json") as file_:
         return set(json.load(file_))
 
+
 @cache
 def load_examples(resource_type: str) -> dict[str, dict[str, str | dict[str, Any]]]:
     """Return the examples for a specific resource type."""
