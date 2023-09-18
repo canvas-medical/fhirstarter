@@ -12,8 +12,8 @@ import requests
 from bs4 import BeautifulSoup
 
 ADVERSE_EVENT_R5_EXAMPLE = {
-    "summary": "Example of adverseevent	",
-    "description": "Example of adverseevent	",
+    "summary": "Example of adverseevent",
+    "description": "Example of adverseevent",
     "value": {
         "resourceType": "AdverseEvent",
         "id": "example",
