@@ -507,7 +507,8 @@ class FHIRStarter(FastAPI):
                         example = None
                     if not example:
                         if is_resource_type(resource_type):
-                            example = load_examples(resource_type)["example"]["value"]
+                            examples = load_examples(resource_type)
+                            example = next(iter(examples.values()))["value"]
                         else:
                             example = {"resourceType": resource_type}
 

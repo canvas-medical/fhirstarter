@@ -11,82 +11,6 @@ from typing import Any
 import requests
 from bs4 import BeautifulSoup
 
-DEFAULT_EXAMPLES: dict[str, dict[str, str | dict[str, Any]]] = {
-    "STU3": {
-        "BodySite": "skin-patch",
-        "Measure": "measure-exclusive-breastfeeding",
-        "MeasureReport": "measurereport-cms146-cat2-example",
-        "Medication": "medexample015",
-        "MedicationAdministration": "medadmin0302",
-        "MedicationDispense": "meddisp0302",
-        "MedicationRequest": "medrx0301",
-        "MedicationStatement": "example001",
-        "NutritionOrder": "renaldiet",
-        "SupplyRequest": "simpleorder",
-        "Task": "example1",
-    },
-    "R4": {
-        "BodyStructure": "skin-patch",
-        "ChargeItemDefinition": "device",
-        "Measure": "hiv-indicators",
-        "MeasureReport": "measurereport-cms146-cat2-example",
-        "Medication": "medexample015",
-        "MedicationAdministration": "medadmin0302",
-        "MedicationDispense": "meddisp0302",
-        "MedicationRequest": "medrx0301",
-        "MedicationStatement": "example001",
-        "NutritionOrder": "renaldiet",
-        "SpecimenDefinition": "2364",
-        "StructureDefinition": "example-section-library",
-        "SupplyRequest": "simpleorder",
-        "Task": "example1",
-    },
-    "R4B": {
-        "BodyStructure": "skin-patch",
-        "ChargeItemDefinition": "device",
-        "Evidence": "example-stroke-0-3-alteplase-vs-no-alteplase-mRS3-6",
-        "EvidenceVariable": "example-fatal-ICH-in-7-days",
-        "Measure": "hiv-indicators",
-        "MeasureReport": "measurereport-cms146-cat1-example",
-        "Medication": "medexample015",
-        "MedicationAdministration": "medadmin0302",
-        "MedicationDispense": "meddisp0302",
-        "MedicationRequest": "medrx0301",
-        "MedicationStatement": "example001",
-        "NutritionOrder": "renaldiet",
-        "SpecimenDefinition": "2364",
-        "StructureDefinition": "example-section-library",
-        "SubscriptionTopic": "admission",
-        "SupplyRequest": "simpleorder",
-        "Task": "example1",
-    },
-    "R5": {
-        "ActorDefinition": "server",
-        "ArtifactAssessment": "risk-of-bias-example",
-        "BodyStructure": "skin-patch",
-        "ChargeItemDefinition": "device",
-        "Citation": "citation-example-research-doi",
-        "Evidence": "example-stroke-0-3-alteplase-vs-no-alteplase-mRS3-6",
-        "EvidenceVariable": "example-fatal-ICH-in-7-days",
-        "FormularyItem": "formularyitemexample01",
-        "ImagingSelection": "example-3d-image-region-selection",
-        "Measure": "hiv-indicators",
-        "MeasureReport": "measurereport-cms146-cat1-example",
-        "Medication": "medexample015",
-        "MedicationAdministration": "medadmin0302",
-        "MedicationDispense": "meddisp0302",
-        "MedicationRequest": "medrx0301",
-        "MedicationStatement": "example001",
-        "NutritionOrder": "renaldiet",
-        "Requirements": "example2",
-        "ResearchStudy": "example-ctgov-study-record",
-        "ResearchSubject": "example-crossover-placebo-to-drug",
-        "StructureDefinition": "example-section-library",
-        "SupplyRequest": "simpleorder",
-        "Task": "example1",
-    },
-}
-
 ADVERSE_EVENT_R5_EXAMPLE = {
     "summary": "Example of adverseevent	",
     "description": "Example of adverseevent	",
@@ -244,28 +168,13 @@ def get_examples(sequence: str, resource_type: str) -> dict[str, Any]:
             "externalValue": f"https://hl7.org/fhir/{sequence}/{filename}",
         }
 
-    # Make sure there is a default examples under the "example" key for every resource
-    if "example" not in examples:
-        # If any of the examples have the expected default file name, use that one, otherwise use
-        # the specified default example
-        for example_name, example in examples.items():
-            if (
-                example["externalValue"]
-                == f"https://hl7.org/fhir/{sequence}/{resource_type.lower()}-example.json"
-            ):
-                default_example_name = example_name
-                break
-        else:
-            default_example_name = DEFAULT_EXAMPLES[sequence][resource_type]
-
-        examples["example"] = examples.pop(default_example_name)
-
-    # Download the default example and inline it
-    response = requests.get(examples["example"]["externalValue"])
+    # Inline the first example
+    first_example = examples[next(iter(examples.keys()))]
+    response = requests.get(first_example["externalValue"])
     if response.status_code != requests.codes.ok:
-        raise RuntimeError(f"Failed to get default example for {resource_type}")
-    examples["example"]["value"] = response.json()
-    del examples["example"]["externalValue"]
+        raise RuntimeError(f"Failed to download example for {resource_type}")
+    first_example["value"] = response.json()
+    del first_example["externalValue"]
 
     return examples
 

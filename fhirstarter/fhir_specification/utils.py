@@ -83,7 +83,8 @@ def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]
     The standard bundle example is modified based on the given resource example.
     """
     resource_type = resource_example["resourceType"]
-    bundle_example = cast(dict[str, Any], load_examples("Bundle")["example"]["value"])
+    bundle_examples = load_examples("Bundle")
+    bundle_example = cast(dict[str, Any], next(iter(bundle_examples.values()))["value"])
 
     bundle_example["link"][0] = {
         "relation": "self",
