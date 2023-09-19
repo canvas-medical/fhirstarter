@@ -6,10 +6,11 @@ import sys
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
+from uuid import uuid4
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 ADVERSE_EVENT_R5_EXAMPLE = {
     "summary": "Example of adverseevent",
@@ -93,11 +94,9 @@ def main() -> None:
         # Get the examples for all resource types
         examples = {}
         with ThreadPoolExecutor() as executor:
-            # TODO: StructureDefinition
             future_to_resource_type = {
                 executor.submit(get_examples, sequence, resource_type): resource_type
                 for resource_type in resource_types
-                if resource_type != "StructureDefinition"
             }
             for future in concurrent.futures.as_completed(future_to_resource_type):
                 resource_type = future_to_resource_type[future]
@@ -131,41 +130,20 @@ def get_examples(sequence: str, resource_type: str) -> dict[str, Any]:
             }
         }
 
-    # Download the examples page for the resource type
-    response = requests.get(
-        f"https://hl7.org/fhir/{sequence}/{resource_type.lower()}-examples.html"
-    )
-    if response.status_code != requests.codes.ok:
-        raise RuntimeError(f"Failed to get list of examples for {resource_type}")
+    if resource_type == "StructureDefinition":
+        # StructureDefinition is materially different than other resource types
+        examples = _get_structuredefinition_examples(sequence)
+    else:
+        # Download the examples page for the resource type
+        response = requests.get(
+            f"https://hl7.org/fhir/{sequence}/{resource_type.lower()}-examples.html"
+        )
+        if response.status_code != requests.codes.ok:
+            raise RuntimeError(f"Failed to get list of examples for {resource_type}")
 
-    # Get the parsed examples table
-    soup = BeautifulSoup(response.text, features="html.parser")
-    examples_table = soup.find_all("table")[-1]
-
-    # Iterate over the examples and extract the description, identifier, and JSON file URL
-    examples = {}
-    for example in examples_table.find_all("tr"):
-        # Skip any rows that don't have any URLs in them
-        if len(example.find_all("a")) == 0:
-            continue
-
-        cells = example.find_all("td")
-
-        description = cells[0].text
-        id_ = cells[1].text
-
-        for a in example.find_all("a"):
-            if a.text.lower() == "json":
-                filename = a.attrs["href"].removesuffix(".html")
-                break
-        else:
-            raise AssertionError(f"Unable to find JSON filename for {resource_type}")
-
-        examples[id_] = {
-            "summary": description,
-            "description": description,
-            "externalValue": f"https://hl7.org/fhir/{sequence}/{filename}",
-        }
+        # Extract the description, identifier, and JSON file URL for each example
+        soup = BeautifulSoup(response.text, features="html.parser")
+        examples = _get_examples(sequence, resource_type, soup.find_all("table")[-1])
 
     # Inline the first example
     first_example = examples[next(iter(examples.keys()))]
@@ -174,6 +152,117 @@ def get_examples(sequence: str, resource_type: str) -> dict[str, Any]:
         raise RuntimeError(f"Failed to download example for {resource_type}")
     first_example["value"] = response.json()
     del first_example["externalValue"]
+
+    return examples
+
+
+def _get_structuredefinition_examples(sequence: str) -> dict[str, Any]:
+    resource_type = "StructureDefinition"
+
+    # Download the examples page for the resource type
+    response = requests.get(
+        f"https://hl7.org/fhir/{sequence}/{resource_type.lower()}-examples.html"
+    )
+    if response.status_code != requests.codes.ok:
+        raise RuntimeError(f"Failed to get list of examples for {resource_type}")
+
+    # Extract the description, identifier, and JSON file URL for each example
+    soup = BeautifulSoup(response.text, features="html.parser")
+    examples = _get_examples(
+        sequence,
+        resource_type,
+        soup.find("div", attrs={"id": "tabs-1"}),
+        description_prefix="Base Type",
+        id_method="random",
+    )
+    examples |= _get_examples(
+        sequence,
+        resource_type,
+        soup.find("div", attrs={"id": "tabs-2"}),
+        description_prefix="Resource",
+        id_method="random",
+    )
+    examples |= _get_examples(
+        sequence,
+        resource_type,
+        soup.find("div", attrs={"id": "tabs-3"}),
+        description_prefix="Constraint",
+        id_method="random",
+    )
+    examples |= _get_examples(
+        sequence,
+        resource_type,
+        soup.find("div", attrs={"id": "tabs-4"}),
+        description_prefix="Extension",
+        id_method="description",
+    )
+    examples |= _get_examples(
+        sequence,
+        resource_type,
+        soup.find("div", attrs={"id": "tabs-5"}),
+        description_prefix="Example",
+        id_method="standard",
+    )
+
+    return examples
+
+
+def _get_examples(
+    sequence: str,
+    resource_type: str,
+    examples_table: Tag | None,
+    description_prefix: str = "",
+    id_method: Literal["standard", "random", "description"] = "standard",
+) -> dict[str, Any]:
+    examples: dict[str, Any] = {}
+
+    if not examples_table:
+        return examples
+
+    # Iterate over the examples and extract the description, identifier, and JSON file URL
+    for example in examples_table.find_all("tr"):
+        # Skip any rows that don't have any URLs in them
+        if len(example.find_all("a")) == 0:
+            continue
+
+        cells = example.find_all("td")
+
+        # Get the description and ID based on the specified method
+        match id_method:
+            case "standard":
+                description = cells[0].text
+                id_ = cells[1].text
+            case "random":
+                description = cells[0].text
+                id_ = uuid4().hex
+            case "description":
+                a = cells[0].find("a")
+                description = id_ = a.text
+            case _:
+                raise AssertionError(
+                    f"Unable to get description and ID for {resource_type} example"
+                )
+
+        # Add a description prefix if one is specified
+        if description_prefix:
+            description = f"{description_prefix}: {description}"
+
+        # Find the JSON filename
+        for a in example.find_all("a"):
+            if a.text.lower() == "json":
+                filename = a.attrs["href"].removesuffix(".html")
+                break
+        else:
+            raise AssertionError(
+                f"Unable to find JSON filename for {resource_type} example"
+            )
+
+        # Add the example in OpenAPI format
+        examples[id_] = {
+            "summary": description,
+            "description": description,
+            "externalValue": f"https://hl7.org/fhir/{sequence}/{filename}",
+        }
 
     return examples
 
