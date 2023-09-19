@@ -1,7 +1,8 @@
 """FHIRStarter test configuration"""
 
 from copy import deepcopy
-from tempfile import NamedTemporaryFile
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import cast
 
 from ..exceptions import FHIRResourceNotFoundError
@@ -114,16 +115,18 @@ uri = "https://hostname/nickname"
 include-in-capability-statement = true
     """
 
-    with NamedTemporaryFile("w") as config_file:
-        config_file.write(config_file_contents)
-        config_file.seek(0)
-        app = FHIRStarter(config_file=config_file.name)
+    with TemporaryDirectory() as path:
+        config_file = Path(path) / "config.toml"
+        with open(config_file, "w") as file_:
+            file_.write(config_file_contents)
 
-    app.add_providers(provider)
+        app_ = FHIRStarter(config_file=config_file)
+
+    app_.add_providers(provider)
 
     DATABASE.clear()
 
-    return TestClient(app)
+    return TestClient(app_)
 
 
 def create_test_client_async(interactions: tuple[str, ...]) -> TestClient:
