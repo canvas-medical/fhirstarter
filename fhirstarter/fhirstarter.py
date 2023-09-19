@@ -491,9 +491,9 @@ class FHIRStarter(FastAPI):
                 # For operations that handle search interactions, provide a bundle example that
                 # contains the correct resource type
                 if interaction_type == "search-type":
-                    if schema_examples := examples["examples"]:
+                    if schema_examples := examples.get("examples"):
                         example = next(iter(schema_examples.values()))["value"]
-                    elif schema_example := examples["example"]:
+                    elif schema_example := examples.get("example"):
                         example = schema_example
                     else:
                         example = {"resourceType": resource_type}
