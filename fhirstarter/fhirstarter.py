@@ -373,7 +373,7 @@ class FHIRStarter(FastAPI):
         # here for a given resource type:
         #
         # 1. Model has a dict of custom examples that is compatible with what OpenAPI expects
-        # 2. Model has a single custom examplethat is compatible with what OpenAPI expects
+        # 2. Model has a single custom example that is compatible with what OpenAPI expects
         # 3. No examples exist on the model, so examples from the FHIR specification are used.
         all_examples: dict[str, dict[str, Any]] = {}
         for schema_name, schema in openapi_schema["components"]["schemas"].items():
