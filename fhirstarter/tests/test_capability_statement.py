@@ -91,7 +91,7 @@ def test_capability_statement(
             {
                 "resourceType": "CapabilityStatement",
                 "status": "active",
-                "date": app._created.isoformat(),
+                "date": app._created,
                 "kind": "instance",
                 "fhirVersion": FHIR_VERSION,
                 "acceptUnknown": "no",
@@ -162,7 +162,7 @@ def test_set_capability_statement_modifier(client_create_and_read: TestClient) -
             {
                 "resourceType": "CapabilityStatement",
                 "status": "active",
-                "date": app._created.isoformat(),
+                "date": app._created,
                 "publisher": "Publisher",
                 "kind": "instance",
                 "fhirVersion": FHIR_VERSION,
