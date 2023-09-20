@@ -2,6 +2,7 @@
 An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR
 interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
 """
+import importlib.resources
 from collections.abc import MutableMapping
 from copy import deepcopy
 from pathlib import Path
@@ -16,13 +17,21 @@ from fhir.resources.patient import Patient
 from fhir.resources.practitioner import Practitioner
 from starlette.responses import RedirectResponse
 
-from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext, Request, Response
+import fhirstarter
+from fhirstarter import (
+    FHIRProvider,
+    FHIRStarter,
+    InteractionContext,
+    Request,
+    Response,
+    examples,
+)
 from fhirstarter.exceptions import FHIRResourceNotFoundError
 
 # Create the app with the provided config file
 app = FHIRStarter(
     title="FHIRStarter Example Implementation",
-    config_file=Path(__file__).parent / "config.toml",
+    config_file=cast(Path, importlib.resources.files(examples)) / "config.toml",
 )
 
 # Create a "database"
@@ -143,9 +152,10 @@ async def index() -> RedirectResponse:
 
 if __name__ == "__main__":
     # Start the server
+    fhirstarter_dir = cast(Path, importlib.resources.files(fhirstarter))
     uvicorn.run(
         "example:app",
         use_colors=True,
         reload=True,
-        reload_dirs=str(Path(__file__).parent.parent),
+        reload_dirs=str(fhirstarter_dir.parent),
     )
