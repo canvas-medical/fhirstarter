@@ -39,7 +39,7 @@ def generate_fhir_resource_id() -> Id:
 
 def id_from_create_response(response: Response) -> str:
     """Extract the resource identifier from a FHIR create interaction response."""
-    return response.headers["Location"].split("/")[4]
+    return response.headers["Location"].split("/")[2]
 
 
 def json_dumps_pretty(value: Any) -> str:

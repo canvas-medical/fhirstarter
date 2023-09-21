@@ -91,7 +91,7 @@ def make_create_function(
 
             response.headers[
                 "Location"
-            ] = f"{request.base_url}{resource_type_str}/{id_}/_history/1"
+            ] = f"/{resource_type_str}/{id_}"
 
             return format_response(
                 resource=result_resource,
@@ -124,7 +124,7 @@ def make_create_function(
 
             response.headers[
                 "Location"
-            ] = f"{request.base_url}{resource_type_str}/{id_}/_history/1"
+            ] = f"/{resource_type_str}/{id_}"
 
             return format_response(
                 resource=result_resource,
