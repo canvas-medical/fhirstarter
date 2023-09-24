@@ -19,7 +19,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "capabilitites",
                 "GET",
                 "/metadata",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None,
                     interaction_type="capabilities",
                     resource_id=None,
@@ -29,7 +29,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "create",
                 "POST",
                 "/Patient",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type="Patient", interaction_type="create", resource_id=None
                 ),
             ),
@@ -37,7 +37,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "read",
                 "GET",
                 f"/Patient/{(id_ := generate_fhir_resource_id())}",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type="Patient", interaction_type="read", resource_id=id_
                 ),
             ),
@@ -45,7 +45,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "search-type",
                 "GET",
                 "/Patient",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type="Patient",
                     interaction_type="search-type",
                     resource_id=None,
@@ -55,7 +55,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "search-type post",
                 "POST",
                 "/Patient/_search",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type="Patient",
                     interaction_type="search-type",
                     resource_id=None,
@@ -65,7 +65,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "update",
                 "PUT",
                 f"/Patient/{(id_ := generate_fhir_resource_id())}",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type="Patient", interaction_type="update", resource_id=id_
                 ),
             ),
@@ -73,7 +73,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "read unrecognized resource type",
                 "GET",
                 f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
@@ -81,7 +81,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "search unrecognized resource type",
                 "GET",
                 f"/FakeResource",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
@@ -89,7 +89,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "unrecognized GET path",
                 "GET",
                 f"/Patient/{(id_ := generate_fhir_resource_id())}/extra",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
@@ -97,7 +97,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "create unrecognized resource type",
                 "POST",
                 "/FakeResource",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
@@ -105,7 +105,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "search POST unrecognized resource type",
                 "POST",
                 "/FakeResource/_search",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
@@ -113,7 +113,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "unrecognized POST path",
                 "POST",
                 "/FakeResource/extra",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
@@ -121,7 +121,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "update unrecognized resource type",
                 "PUT",
                 f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
@@ -129,7 +129,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "unrecognized PUT path",
                 "PUT",
                 f"/FakeResource/{(id_ := generate_fhir_resource_id())}/extra",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
@@ -137,7 +137,7 @@ from .utils import generate_fhir_resource_id, make_request
                 "unsupported HTTP method",
                 "HEAD",
                 f"/Patient/{(id_ := generate_fhir_resource_id())}/extra",
-                InteractionInfo(  # type: ignore
+                InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),

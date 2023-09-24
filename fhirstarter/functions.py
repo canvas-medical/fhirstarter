@@ -86,7 +86,7 @@ def make_create_function(
             Calls the handler, and sets the Location header based on the Id of the created resource.
             """
             handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
-            result = await handler(InteractionContext(request, response), resource)  # type: ignore
+            result = await handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
             id_, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers[
@@ -119,7 +119,7 @@ def make_create_function(
             Calls the handler, and sets the Location header based on the Id of the created resource.
             """
             handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
-            result = handler(InteractionContext(request, response), resource)  # type: ignore
+            result = handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
             id_, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers[
@@ -161,7 +161,7 @@ def make_read_function(
         ) -> ResourceType | Response:
             """Function for read interaction."""
             handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
-            result_resource = await handler(InteractionContext(request, response), id_)  # type: ignore
+            result_resource = await handler(InteractionContext(request, response), id_)  # type: ignore[call-arg]
 
             return format_response(
                 resource=result_resource,
@@ -185,7 +185,7 @@ def make_read_function(
         ) -> ResourceType | Response:
             """Function for read interaction."""
             handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
-            result_resource = handler(InteractionContext(request, response), id_)  # type: ignore
+            result_resource = handler(InteractionContext(request, response), id_)  # type: ignore[call-arg]
 
             return format_response(
                 resource=result_resource,
@@ -248,7 +248,7 @@ def make_search_type_function(
         ) -> Bundle | Response:
             """Function for search-type interaction."""
             handler = cast(SearchTypeInteractionHandler, interaction.handler)
-            bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore
+            bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore[call-arg]
 
             return format_response(
                 resource=bundle,
@@ -272,7 +272,7 @@ def make_search_type_function(
         ) -> Bundle | Response:
             """Function for search-type interaction."""
             handler = cast(SearchTypeInteractionHandler, interaction.handler)
-            bundle = handler(InteractionContext(request, response), **kwargs)  # type: ignore
+            bundle = handler(InteractionContext(request, response), **kwargs)  # type: ignore[call-arg]
 
             return format_response(
                 resource=bundle,
@@ -317,7 +317,7 @@ def make_update_function(
                 )
 
             handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
-            result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore
+            result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore[call-arg]
             _, result_resource = _result_to_id_resource_tuple(result)
 
             return format_response(
@@ -352,7 +352,7 @@ def make_update_function(
                 )
 
             handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
-            result = handler(InteractionContext(request, response), id_, resource)  # type: ignore
+            result = handler(InteractionContext(request, response), id_, resource)  # type: ignore[call-arg]
             _, result_resource = _result_to_id_resource_tuple(result)
 
             return format_response(
