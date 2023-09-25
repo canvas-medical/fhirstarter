@@ -147,7 +147,19 @@ class FHIRProvider:
 def _check_resource_type_module(resource_type: type[Resource]) -> None:
     """Ensure that the resource type is compatible with the server's defined FHIR sequence."""
 
-    module = resource_type.__module__
+    # Get the module name of the resource's fhir.resources parent class. If a user is using a model
+    # with custom examples, then their model will inherit from something that this code will
+    # recognize.
+    #
+    # Note: This limitation currently disallows a deeper inheritance hierarchy.
+    module = ""
+    bases = resource_type.__bases__
+    for base in bases:
+        if base.__module__.startswith("fhir.resources"):
+            module = base.__module__
+    assert (
+        module
+    ), f"Unable to determine FHIR sequence of resource {resource_type.get_resource_type()}"
 
     match FHIR_SEQUENCE:
         case "R4" | "R5":
