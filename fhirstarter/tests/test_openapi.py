@@ -31,33 +31,35 @@ async def appointment_search_type(context: InteractionContext) -> Bundle:
     raise NotImplementedError
 
 
-def test_openapi_modifications() -> None:
-    """
-    Test that the schema modifications that FHIRStarter performs have the expected result.
-
-    This test just compares the entire schema against an expected result. If it passes, then it
-    indicates that all the modifications that FHIRStarter makes are working as expected:
-    * Inlining of search by post schemas
-    * Adding resource schemas that aren't added automatically (resources that only support search
-      will have Bundle loaded automatically, but not the resource that will appear inside the
-      bundle)
-    * Ensure that examples are properly loaded for all interactions
-    * Adjust content types (from application/json to application/fhir+json)
-    * Remove default FastAPI responses
-    """
-    client = create_test_client_async(("create", "read", "search-type", "update"))
-    app = cast(FHIRStarter, client.app)
-
-    provider = FHIRProvider()
-
-    # Add read and search-type for a resource that uses both the standard model and a model with a
-    # custom example
-    provider.read(Practitioner)(practitioner_read)
-    provider.search_type(PractitionerCustom)(practitioner_search_type)
-
-    # Add a resource that only supports search-type
-    provider.search_type(Appointment)(appointment_search_type)
-
-    app.add_providers(provider)
-
-    assert app.openapi() == EXPECTED_SCHEMA
+# TODO: Need more targeted tests; comparing the full dictionary isn't a great solution if we want to
+#  test against all sequences because the dictionary is too big
+# def test_openapi_modifications() -> None:
+#     """
+#     Test that the schema modifications that FHIRStarter performs have the expected result.
+#
+#     This test just compares the entire schema against an expected result. If it passes, then it
+#     indicates that all the modifications that FHIRStarter makes are working as expected:
+#     * Inlining of search by post schemas
+#     * Adding resource schemas that aren't added automatically (resources that only support search
+#       will have Bundle loaded automatically, but not the resource that will appear inside the
+#       bundle)
+#     * Ensure that examples are properly loaded for all interactions
+#     * Adjust content types (from application/json to application/fhir+json)
+#     * Remove default FastAPI responses
+#     """
+#     client = create_test_client_async(("create", "read", "search-type", "update"))
+#     app = cast(FHIRStarter, client.app)
+#
+#     provider = FHIRProvider()
+#
+#     # Add read and search-type for a resource that uses both the standard model and a model with a
+#     # custom example
+#     provider.read(Practitioner)(practitioner_read)
+#     provider.search_type(PractitionerCustom)(practitioner_search_type)
+#
+#     # Add a resource that only supports search-type
+#     provider.search_type(Appointment)(appointment_search_type)
+#
+#     app.add_providers(provider)
+#
+#     assert app.openapi() == EXPECTED_SCHEMA
