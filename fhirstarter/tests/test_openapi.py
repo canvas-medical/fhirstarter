@@ -12,7 +12,7 @@ from .resources import Appointment, Bundle, Id, Practitioner
 
 
 @pytest.fixture(scope="module", autouse=True)
-def check_token_endpoint() -> None:
+def check_fhir_sequence() -> None:
     """
     Only run tests in this module for FHIR sequence R5.
 
