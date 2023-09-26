@@ -2,11 +2,9 @@
 
 import itertools
 import logging
-import re
 import tomllib
 from collections import defaultdict
 from collections.abc import Callable, Coroutine, MutableMapping
-from copy import deepcopy
 from datetime import datetime
 from io import IOBase
 from os import PathLike
@@ -20,12 +18,6 @@ from pydantic.error_wrappers import display_errors
 
 from .exceptions import FHIRException
 from .fhir_specification import FHIR_SEQUENCE, FHIR_VERSION
-from .fhir_specification.utils import (
-    create_bundle_example,
-    is_resource_type,
-    load_examples,
-    make_operation_outcome_example,
-)
 from .functions import (
     FORMAT_QP,
     PRETTY_QP,
@@ -35,6 +27,7 @@ from .functions import (
     make_update_function,
 )
 from .interactions import ResourceType, TypeInteraction
+from .openapi import adjust_schema
 from .providers import FHIRProvider
 from .resources import CapabilityStatement, OperationOutcome
 from .search_parameters import (
@@ -350,164 +343,12 @@ class FHIRStarter(FastAPI):
         )
 
     def openapi(self) -> dict[str, Any]:
-        """
-        Adjust the OpenAPI schema to make it more FHIR-friendly.
-
-        Remove some default schemas that are not needed nor used, and change all content types that
-        are set to "application/json" to instead be "application/fhir+json". Make a few additional
-        aesthetic changes to clean up the auto-generated documentation.
-
-        This method is slightly hacky because it directly modifies the OpenAPI schema, however it
-        does make the generated documentation look nicer.
-
-        Because it directly modifies the OpenAPI schema, it is vulnerable to breakage from updates
-        to FastAPI. This is not a significant vulnerability because the core server functionality
-        will still work (i.e. this is just documentation).
-        """
+        """Adjust the OpenAPI schema to make it more FHIR-friendly."""
         if self.openapi_schema:
             return self.openapi_schema
 
         openapi_schema = super().openapi()
-
-        # Gather examples from the FHIR spec and any custom examples. There are three scenarios
-        # here for a given resource type:
-        #
-        # 1. Model has a dict of custom examples that is compatible with what OpenAPI expects
-        # 2. Model has a single custom example that is compatible with what OpenAPI expects
-        # 3. No examples exist on the model, so examples from the FHIR specification are used.
-        all_examples: dict[str, dict[str, Any]] = {}
-        for schema_name, schema in openapi_schema["components"]["schemas"].items():
-            properties = schema.get("properties", {})
-            if "resource_type" not in properties:
-                continue
-            resource_type = properties["resource_type"]["const"]
-
-            all_examples[resource_type] = {}
-            if schema_examples := schema.get("examples"):
-                all_examples[resource_type]["examples"] = schema_examples
-            elif schema_example := schema.get("example"):
-                all_examples[resource_type]["example"] = schema_example
-            elif is_resource_type(resource_type):
-                all_examples[resource_type]["examples"] = load_examples(resource_type)
-
-        # Make schema examples for different operation outcomes
-        operation_outcome_examples = {}
-        for status_code, code, details_text in (
-            (str(status.HTTP_400_BAD_REQUEST), "invalid", "Bad request"),
-            (str(status.HTTP_401_UNAUTHORIZED), "unknown", "Authentication failed"),
-            (str(status.HTTP_403_FORBIDDEN), "forbidden", "Authorization failed"),
-            (str(status.HTTP_404_NOT_FOUND), "not-found", "Resource not found"),
-            (
-                str(status.HTTP_422_UNPROCESSABLE_ENTITY),
-                "processing",
-                "Unprocessable entity",
-            ),
-            (
-                str(status.HTTP_500_INTERNAL_SERVER_ERROR),
-                "exception",
-                "Internal server error",
-            ),
-        ):
-            operation_outcome_examples[status_code] = make_operation_outcome_example(
-                severity="error", code=code, details_text=details_text
-            )
-
-        # Iterate over the documentation for all paths
-        for path_name, path in openapi_schema["paths"].items():
-            # Inline the schemas generated for search by POST. These schemas are only used in one
-            # place, so they don't need to exist in the schemas section.
-            if match := re.fullmatch("/(.*)/_search", path_name):
-                resource_type = match.group(1)
-                path["post"]["requestBody"]["content"][
-                    "application/x-www-form-urlencoded"
-                ]["schema"] = openapi_schema["components"]["schemas"].pop(
-                    f"Body_fhirstarter_type_search-type_post_{resource_type}"
-                )
-
-            # Iterate over all operations for a given path
-            for operation_name, operation in path.items():
-                # Skip operations that weren't created by FHIRStarter
-                operation_id = operation.get("operationId", "")
-                if not operation_id.startswith("fhirstarter|"):
-                    continue
-
-                # Get the interaction type and resource type
-                _, _, interaction_type, *rest = operation_id.split("|")
-                resource_type = rest[1] if interaction_type != "capabilities" else ""
-
-                # Get the examples
-                if interaction_type == "capabilities":
-                    examples = all_examples["CapabilityStatement"]
-                else:
-                    examples = all_examples[resource_type]
-
-                # For operations that take a request body, change the application/json content type
-                # to application/fhir+json and add request body examples
-                if content := operation.get("requestBody", {}).get("content"):
-                    if "application/json" in content:
-                        content["application/fhir+json"] = content.pop(
-                            "application/json"
-                        )
-
-                        content["application/fhir+json"] |= examples
-
-                # For each possible response (i.e. status code), remove the default FastAPI response
-                # schema
-                responses = operation["responses"]
-                status_codes: tuple[str, ...] = tuple(responses.keys())
-                for status_code in status_codes:
-                    if (
-                        responses[status_code]["content"]
-                        .get("application/json", {})
-                        .get("schema", {})
-                        .get("$ref")
-                        == "#/components/schemas/HTTPValidationError"
-                    ):
-                        responses.pop(status_code)
-
-                # For each response, change all instances of application/json to
-                # application/fhir+json and add response body examples
-                for status_code, response in responses.items():
-                    # Move the response for "application/json" to "application/fhir+json"
-                    schema = response["content"].pop("application/json", None)
-                    if schema:
-                        response["content"]["application/fhir+json"] = schema
-
-                    # Add examples for success responses
-                    if (
-                        200 <= int(status_code) <= 299
-                        and interaction_type != "search-type"
-                    ):
-                        response["content"]["application/fhir+json"] |= examples
-
-                    # Add specialized OperationOutcome responses if available for the status code
-                    if operation_outcome_example := operation_outcome_examples.get(
-                        status_code
-                    ):
-                        response["content"]["application/fhir+json"][
-                            "example"
-                        ] = operation_outcome_example
-
-                # For operations that handle search interactions, provide a bundle example that
-                # contains the correct resource type
-                if interaction_type == "search-type":
-                    if schema_examples := examples.get("examples"):
-                        example = next(iter(schema_examples.values()))["value"]
-                    elif schema_example := examples.get("example"):
-                        example = schema_example
-                    else:
-                        example = {"resourceType": resource_type}
-
-                    # For successful responses, copy the schema, and create and set a bundle
-                    # example that includes the example resource
-                    operation["responses"][str(status.HTTP_200_OK)]["content"][
-                        "application/fhir+json"
-                    ]["schema"] = deepcopy(
-                        openapi_schema["components"]["schemas"]["Bundle"]
-                    )
-                    operation["responses"][str(status.HTTP_200_OK)]["content"][
-                        "application/fhir+json"
-                    ]["schema"]["example"] = create_bundle_example(example)
+        adjust_schema(openapi_schema)
 
         return openapi_schema
 

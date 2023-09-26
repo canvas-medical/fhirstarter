@@ -84,7 +84,7 @@ def supported_search_parameters(
     #  annotation, but this is sufficient for now.
     return tuple(
         SupportedSearchParameter(
-            name=name, multiple="list[str]" in str(parameter.annotation)  # type: ignore
+            name=name, multiple="list[str]" in str(parameter.annotation)  # type: ignore[call-arg]
         )
         for name, parameter in inspect.signature(search_function).parameters.items()
         if parameter.annotation != InteractionContext
