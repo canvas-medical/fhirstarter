@@ -362,6 +362,7 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
             _bad_request,
             _unauthorized,
             _forbidden,
+            _not_found,
             _unprocessable_entity,
             _internal_server_error,
         ),
