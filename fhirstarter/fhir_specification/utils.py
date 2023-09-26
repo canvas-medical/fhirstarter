@@ -5,6 +5,7 @@ import importlib.resources
 import json
 import os
 import zipfile
+from copy import deepcopy
 from functools import cache
 from pathlib import Path
 from typing import Any, Mapping, cast
@@ -85,7 +86,9 @@ def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]
     """
     resource_type = resource_example["resourceType"]
     bundle_examples = load_examples("Bundle")
-    bundle_example = cast(dict[str, Any], next(iter(bundle_examples.values()))["value"])
+    bundle_example = deepcopy(
+        cast(dict[str, Any], next(iter(bundle_examples.values()))["value"])
+    )
 
     bundle_example["link"][0] = {
         "relation": "self",

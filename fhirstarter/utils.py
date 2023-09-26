@@ -39,10 +39,12 @@ def categorize_fhir_request(request: Request) -> InteractionInfo:
     _, first_part, *rest = request.url.path.split("/")
 
     if request.method == "GET" and first_part == "metadata":
-        return InteractionInfo(resource_type=None, interaction_type="capabilities", resource_id=None)  # type: ignore
+        return InteractionInfo(  # type: ignore[call-arg]
+            resource_type=None, interaction_type="capabilities", resource_id=None
+        )
 
     if not is_resource_type(first_part):
-        return InteractionInfo(resource_type=None, interaction_type=None, resource_id=None)  # type: ignore
+        return InteractionInfo(resource_type=None, interaction_type=None, resource_id=None)  # type: ignore[call-arg]
 
     resource_type = first_part
     second_part = rest[0] if rest else None
@@ -63,7 +65,7 @@ def categorize_fhir_request(request: Request) -> InteractionInfo:
         case _:
             assert "Unexpected request format"
 
-    return InteractionInfo(resource_type, interaction_type, resource_id=id_)  # type: ignore
+    return InteractionInfo(resource_type, interaction_type, resource_id=id_)  # type: ignore[call-arg]
 
 
 def parse_fhir_request(request: Request) -> InteractionInfo:
@@ -74,7 +76,7 @@ def parse_fhir_request(request: Request) -> InteractionInfo:
     Specifically, it will correctly categorize create, read, search-type, update, and capabilities
     interactions. Further enhancement is needed to support more use cases.
     """
-    no_info = InteractionInfo(  # type: ignore
+    no_info = InteractionInfo(  # type: ignore[call-arg]
         resource_type=None, interaction_type=None, resource_id=None
     )
 
@@ -86,7 +88,7 @@ def parse_fhir_request(request: Request) -> InteractionInfo:
 
     if request.method == "GET":
         if split_path[-1] == "metadata":
-            return InteractionInfo(  # type: ignore
+            return InteractionInfo(  # type: ignore[call-arg]
                 resource_type=None, interaction_type="capabilities", resource_id=None
             )
         elif is_resource_type(split_path[-1]):
@@ -118,7 +120,7 @@ def parse_fhir_request(request: Request) -> InteractionInfo:
     if not is_resource_type(resource_type):
         return no_info
 
-    return InteractionInfo(  # type: ignore
+    return InteractionInfo(  # type: ignore[call-arg]
         resource_type=resource_type,
         interaction_type=interaction_type,
         resource_id=resource_id,
@@ -187,8 +189,8 @@ class FormatParameters:
             else:
                 format_ = "application/fhir+json"
 
-        return cls(
-            format=format_,  # type: ignore
+        return cls(  # type: ignore[call-arg]
+            format=format_,
             pretty=request.query_params.get("_pretty", "false") == "true",
         )
 
@@ -269,7 +271,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
         "path": f"/{resource_type_str}",
         "response_model": interaction.resource_type | None,
         "status_code": status.HTTP_201_CREATED,
-        "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
+        "tags": [f"Type:{resource_type_str}"],
         "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} create interaction creates a new "
         f"{resource_type_str} resource in a server-assigned location.",
@@ -282,7 +284,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
             _unprocessable_entity,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|type|create|post|{resource_type_str}",
+        "operation_id": f"fhirstarter|type|create|post|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -296,7 +298,7 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any
         "path": f"/{resource_type_str}/{{id}}",
         "response_model": interaction.resource_type,
         "status_code": status.HTTP_200_OK,
-        "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
+        "tags": [f"Type:{resource_type_str}"],
         "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} read interaction accesses "
         f"the current contents of a {resource_type_str} resource.",
@@ -308,7 +310,7 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any
             _not_found,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|instance|read|get|{resource_type_str}",
+        "operation_id": f"fhirstarter|instance|read|get|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -324,7 +326,7 @@ def search_type_route_args(
         "path": f"/{resource_type_str}{'/_search' if post else ''}",
         "response_model": Bundle,
         "status_code": status.HTTP_200_OK,
-        "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
+        "tags": [f"Type:{resource_type_str}"],
         "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} search-type interaction searches a set of "
         "resources based on some filter criteria.",
@@ -336,7 +338,7 @@ def search_type_route_args(
             _forbidden,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|type|search-type|{'post' if post else 'get'}|{resource_type_str}",
+        "operation_id": f"fhirstarter|type|search-type|{'post' if post else 'get'}|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -350,7 +352,7 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
         "path": f"/{resource_type_str}/{{id}}",
         "response_model": interaction.resource_type | None,
         "status_code": status.HTTP_200_OK,
-        "tags": [f"Type:{interaction.resource_type.get_resource_type()}"],
+        "tags": [f"Type:{resource_type_str}"],
         "summary": f"{resource_type_str} {interaction.label()}",
         "description": f"The {resource_type_str} update interaction creates a new current version "
         f"for an existing {resource_type_str} resource.",
@@ -360,10 +362,11 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
             _bad_request,
             _unauthorized,
             _forbidden,
+            _not_found,
             _unprocessable_entity,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|instance|update|put|{resource_type_str}",
+        "operation_id": f"fhirstarter|instance|update|put|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
