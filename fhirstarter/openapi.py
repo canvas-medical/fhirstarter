@@ -1,3 +1,5 @@
+"""OpenAPI schema modifications"""
+
 from collections import defaultdict
 from collections.abc import Iterator, Mapping, MutableMapping
 from dataclasses import dataclass
