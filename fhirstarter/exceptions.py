@@ -117,3 +117,27 @@ class FHIRResourceNotFoundError(FHIRException):
                 f"Unknown {interaction_info.resource_type} resource "
                 f"'{interaction_info.resource_id}'",
             )
+
+
+class FHIRResourceConflictError(FHIRException):
+    """FHIR exception class for 409 not found errors."""
+
+    def __init__(self, details_text: str) -> None:
+        super().__init__(status.HTTP_409_CONFLICT, details_text)
+
+    def operation_outcome(self) -> OperationOutcome:
+        return make_operation_outcome(
+            severity="error", code="conflict", details_text=self.detail
+        )
+
+
+class FHIRUnprocessableEntityError(FHIRException):
+    """FHIR exception class for 422 unprocessable entity errors."""
+
+    def __init__(self, details_text: str) -> None:
+        super().__init__(status.HTTP_422_UNPROCESSABLE_ENTITY, details_text)
+
+    def operation_outcome(self) -> OperationOutcome:
+        return make_operation_outcome(
+            severity="error", code="unprocessable", details_text=self.detail
+        )
