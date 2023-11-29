@@ -38,8 +38,8 @@ class FHIRHTTPException(FHIRException):
     Abstract base class for FHIR errors that map neatly to OperationOutcome issue type codes.
     Example: HTTP status code 409 <-> OperationOutcome issue type code "conflict"
 
-    If these mappings are not desired, FHIRGeneralError can be used to create the exact response
-    required.
+    If these mappings are not desired, FHIRGeneralError can be used to create the exact desired
+    response.
     """
 
     _STATUS_CODE_MAPPINGS = {
