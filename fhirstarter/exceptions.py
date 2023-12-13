@@ -49,7 +49,7 @@ class FHIRHTTPException(FHIRException):
         406: "not-supported",
         409: "conflict",
         410: "deleted",
-        412: "processing",
+        412: "conflict",
         415: "not-supported",
     }
 

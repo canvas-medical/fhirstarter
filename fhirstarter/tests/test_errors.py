@@ -7,6 +7,18 @@ from typing import Any, cast
 import pytest
 from fastapi import HTTPException
 
+from ..exceptions import (
+    FHIRBadRequestError,
+    FHIRConflictError,
+    FHIRForbiddenError,
+    FHIRGoneError,
+    FHIRMethodNotAllowedError,
+    FHIRNotAcceptableError,
+    FHIRPreconditionFailedError,
+    FHIRUnauthorizedError,
+    FHIRUnprocessableEntityError,
+    FHIRUnsupportedMediaTypeError,
+)
 from ..fhirstarter import FHIRProvider, FHIRStarter, Request, Response, status
 from ..testclient import TestClient
 from ..utils import make_operation_outcome
@@ -122,33 +134,160 @@ def test_validation_error(
     )
 
 
-def _handler_exception_async() -> Callable[..., Coroutine[None, None, Patient]]:
+def _handler_exception_async(
+    exception: HTTPException,
+) -> Callable[..., Coroutine[None, None, Patient]]:
     """Return an async Patient read handler."""
 
     async def patient_read(*_: Any) -> Patient:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+        raise exception
 
     return patient_read
 
 
-def _handler_exception() -> Callable[..., Patient]:
+def _handler_exception(exception: HTTPException) -> Callable[..., Patient]:
     """Return a Patient read handler."""
 
     def patient_read(*_: Any) -> Patient:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST)
+        raise exception
 
     return patient_read
 
 
 @pytest.mark.parametrize(
-    argnames="handler",
-    argvalues=[_handler_exception_async(), _handler_exception()],
+    argnames="exception,status_code,issue",
+    argvalues=[
+        (
+            HTTPException(status_code=status.HTTP_400_BAD_REQUEST),
+            status.HTTP_400_BAD_REQUEST,
+            {
+                "severity": "error",
+                "code": "processing",
+                "details": {"text": "Bad Request"},
+            },
+        ),
+        (
+            FHIRBadRequestError(code="processing", details_text="Error"),
+            status.HTTP_400_BAD_REQUEST,
+            {
+                "severity": "error",
+                "code": "processing",
+                "details": {"text": "Error"},
+            },
+        ),
+        (
+            FHIRUnauthorizedError(details_text="Error"),
+            status.HTTP_401_UNAUTHORIZED,
+            {
+                "severity": "error",
+                "code": "unknown",
+                "details": {"text": "Error"},
+            },
+        ),
+        (
+            FHIRForbiddenError(details_text="Error"),
+            status.HTTP_403_FORBIDDEN,
+            {
+                "severity": "error",
+                "code": "forbidden",
+                "details": {"text": "Error"},
+            },
+        ),
+        (
+            FHIRMethodNotAllowedError(details_text="Error"),
+            status.HTTP_405_METHOD_NOT_ALLOWED,
+            {
+                "severity": "error",
+                "code": "not-supported",
+                "details": {"text": "Error"},
+            },
+        ),
+        (
+            FHIRNotAcceptableError(details_text="Error"),
+            status.HTTP_406_NOT_ACCEPTABLE,
+            {
+                "severity": "error",
+                "code": "not-supported",
+                "details": {"text": "Error"},
+            },
+        ),
+        (
+            FHIRConflictError(details_text="Error"),
+            status.HTTP_409_CONFLICT,
+            {
+                "severity": "error",
+                "code": "conflict",
+                "details": {"text": "Error"},
+            },
+        ),
+        (
+            FHIRGoneError(details_text="Error"),
+            status.HTTP_410_GONE,
+            {
+                "severity": "error",
+                "code": "deleted",
+                "details": {"text": "Error"},
+            },
+        ),
+        (
+            FHIRPreconditionFailedError(details_text="Error"),
+            status.HTTP_412_PRECONDITION_FAILED,
+            {
+                "severity": "error",
+                "code": "conflict",
+                "details": {"text": "Error"},
+            },
+        ),
+        (
+            FHIRUnsupportedMediaTypeError(details_text="Error"),
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            {
+                "severity": "error",
+                "code": "not-supported",
+                "details": {"text": "Error"},
+            },
+        ),
+        (
+            FHIRUnprocessableEntityError(code="invalid", details_text="Error"),
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            {
+                "severity": "error",
+                "code": "invalid",
+                "details": {"text": "Error"},
+            },
+        ),
+    ],
+    ids=[
+        "http",
+        "bad request",
+        "unauthorized",
+        "forbidden",
+        "method not allowed",
+        "not acceptable",
+        "conflict",
+        "gone",
+        "precondition failed",
+        "unsupported media type",
+        "unprocessable entity",
+    ],
+)
+@pytest.mark.parametrize(
+    argnames="handler_func",
+    argvalues=[_handler_exception_async, _handler_exception],
     ids=["async", "nonasync"],
 )
-def test_http_exception(
-    handler: Callable[..., Coroutine[None, None, Patient]] | Callable[..., Patient]
+def test_exception(
+    exception: HTTPException,
+    status_code: int,
+    issue: Mapping[str, Any],
+    handler_func: Callable[
+        [HTTPException],
+        Callable[..., Coroutine[None, None, Patient]] | Callable[..., Patient],
+    ],
 ) -> None:
-    """Test exception handling for HTTP Exceptions."""
+    """Test exception handling for HTTP and FHIR exceptions."""
+    handler = handler_func(exception)
+
     provider = FHIRProvider()
     provider.read(Patient)(handler)
 
@@ -158,16 +297,10 @@ def test_http_exception(
 
     assert_expected_response(
         response,
-        status.HTTP_400_BAD_REQUEST,
+        status_code,
         content={
             "resourceType": "OperationOutcome",
-            "issue": [
-                {
-                    "severity": "error",
-                    "code": "processing",
-                    "details": {"text": "Bad Request"},
-                }
-            ],
+            "issue": [issue],
         },
     )
 
