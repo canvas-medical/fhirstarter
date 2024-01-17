@@ -436,6 +436,8 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, != 3.4.*"
 files = [
     {file = "lxml-5.0.1-cp27-cp27m-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:1d78e91cbffe733ff325e0d258bb64702c8d91f8f652db088bd2989c6a8f90cc"},
     {file = "lxml-5.0.1-cp27-cp27m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:19251f782ea51a4841e747158195312ef63e06b47889e159dc5f1b2e5d668465"},
+    {file = "lxml-5.0.1-cp27-cp27m-win32.whl", hash = "sha256:8689c54483b1f16b577b8194a58fd6feab6b9d5699e297ffbc552acb0874dfe1"},
+    {file = "lxml-5.0.1-cp27-cp27m-win_amd64.whl", hash = "sha256:099eacbfdda668eda3e7e0705eced115a2e9425bb66cfce41a79fef1821a319c"},
     {file = "lxml-5.0.1-cp27-cp27mu-manylinux_2_5_i686.manylinux1_i686.whl", hash = "sha256:b6bb5a0a87ab1e01f086cbb418be9e409719cd216954aa38b1cceee36a561ce1"},
     {file = "lxml-5.0.1-cp27-cp27mu-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:4b49a1569ed6d05808f4d163a316e7bf4a230e0c36855b59f56020ae27ae586a"},
     {file = "lxml-5.0.1-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:dbff288e1869db78f8731ca257553dd699edef07e173b35e71b1122b630d6008"},
@@ -914,13 +916,13 @@ zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
 name = "uvicorn"
-version = "0.25.0"
+version = "0.26.0"
 description = "The lightning-fast ASGI server."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "uvicorn-0.25.0-py3-none-any.whl", hash = "sha256:ce107f5d9bd02b4636001a77a4e74aab5e1e2b146868ebbad565237145af444c"},
-    {file = "uvicorn-0.25.0.tar.gz", hash = "sha256:6dddbad1d7ee0f5140aba5ec138ddc9612c5109399903828b4874c9937f009c2"},
+    {file = "uvicorn-0.26.0-py3-none-any.whl", hash = "sha256:cdb58ef6b8188c6c174994b2b1ba2150a9a8ae7ea5fb2f1b856b94a815d6071d"},
+    {file = "uvicorn-0.26.0.tar.gz", hash = "sha256:48bfd350fce3c5c57af5fb4995fded8fb50da3b4feb543eb18ad7e0d54589602"},
 ]
 
 [package.dependencies]
@@ -1097,4 +1099,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "1a307401fcfeb002a613991f241b35446e6bab5cad10332d6227b51788e8296f"
+content-hash = "22b8cd418acef340763897b07de4090c4720d5c964d13c3733fa1c69d9708a57"
