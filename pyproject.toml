@@ -46,7 +46,7 @@ funcy = "^2.0"
 httpx = ">=0.24.1,<0.27.0"
 isort = "^5.12.0"
 mypy = "^1.5.1"
-pytest = "^7.4.0"
+pytest = ">=7.4,<9.0"
 requests = "^2.31.0"
 types-requests = "^2.31.0.2"
 uvicorn = { version = ">=0.23.2,<0.28.0", extras = ["standard"] }
