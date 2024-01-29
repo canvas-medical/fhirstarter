@@ -40,7 +40,7 @@ python-multipart = "^0.0.6"
 tzdata = "^2023.3"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.7.0"
+black = ">=23.7,<25.0"
 beautifulsoup4 = "^4.12.2"
 funcy = "^2.0"
 httpx = ">=0.24.1,<0.27.0"
