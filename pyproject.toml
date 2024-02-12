@@ -36,7 +36,7 @@ fastapi = ">=0.103.1,<0.110.0"
 "fhir.resources" = ">=6.4.0"
 lxml = ">=4.9.3,<6.0.0"
 pydantic = ">=1.10.12,<2.0.0"
-python-multipart = ">=0.0.6,<0.0.8"
+python-multipart = ">=0.0.6,<0.0.10"
 tzdata = "^2023.3"
 
 [tool.poetry.group.dev.dependencies]
