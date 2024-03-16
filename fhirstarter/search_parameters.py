@@ -22,8 +22,9 @@ from .interactions import InteractionContext
 class SearchParameters:
     def __init__(
         self,
-        custom_search_parameters: Mapping[str, Mapping[str, Mapping[str, str]]]
-        | None = None,
+        custom_search_parameters: (
+            Mapping[str, Mapping[str, Mapping[str, str]]] | None
+        ) = None,
     ):
         self._custom_search_parameters = custom_search_parameters or {}
 

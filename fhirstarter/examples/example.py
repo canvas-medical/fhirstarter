@@ -2,6 +2,7 @@
 An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR
 interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
 """
+
 import importlib.resources
 from collections.abc import MutableMapping
 from copy import deepcopy
