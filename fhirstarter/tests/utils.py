@@ -83,9 +83,9 @@ def assert_expected_response(
     """Assert the status code, content type header, and content of a response."""
     assert response.status_code == status_code
     assert (
-        response.headers["Content-Type"] == "0"
-        or response.headers["Content-Type"] == content_type
-    )
+        response.headers["Content-Length"] == "0"
+        and "Content-Type" not in response.headers
+    ) or response.headers["Content-Type"] == content_type
     if content:
         if isinstance(content, str):
             assert response.content.decode() == content
