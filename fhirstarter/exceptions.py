@@ -5,6 +5,7 @@ The exception classes defined here provide a method which will return an Operati
 """
 
 from abc import ABC, abstractmethod
+from typing import Self
 
 from fastapi import Request, status
 from fastapi.exceptions import HTTPException
@@ -85,7 +86,7 @@ class FHIRGeneralError(FHIRException):
     @classmethod
     def from_operation_outcome(
         cls, status_code: int, operation_outcome: OperationOutcome
-    ) -> "FHIRGeneralError":
+    ) -> Self:
         error = FHIRGeneralError(status_code, "severity", "code", "details")
         error._operation_outcome_ = operation_outcome
         return error
