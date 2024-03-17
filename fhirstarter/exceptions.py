@@ -6,6 +6,7 @@ The exception classes defined here provide a method which will return an Operati
 
 from abc import ABC, abstractmethod
 from typing import Self
+
 from fastapi import Request, status
 from fastapi.exceptions import HTTPException
 
