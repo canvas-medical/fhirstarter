@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fhirstarter"
-version = "1.4.2"
+version = "1.5.0"
 description = "An ASGI FHIR API framework built on top of FastAPI and FHIR Resources"
 authors = ["Christopher Sande <christopher.sande@canvasmedical.com>"]
 maintainers = ["Canvas Medical Engineering <engineering@canvasmedical.com>"]
@@ -32,24 +32,24 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fastapi = ">=0.103.1,<0.106.0"
+fastapi = ">=0.103.1,<0.111.0"
 "fhir.resources" = ">=6.4.0"
-lxml = "^4.9.3"
+lxml = ">=4.9.3,<6.0.0"
 pydantic = ">=1.10.12,<2.0.0"
-python-multipart = "^0.0.6"
-tzdata = "^2023.3"
+python-multipart = ">=0.0.6,<0.0.10"
+tzdata = ">=2023.3,<2025.0"
 
 [tool.poetry.group.dev.dependencies]
-black = "^23.7.0"
+black = ">=23.7,<25.0"
 beautifulsoup4 = "^4.12.2"
 funcy = "^2.0"
-httpx = ">=0.24.1,<0.26.0"
+httpx = ">=0.24.1,<0.28.0"
 isort = "^5.12.0"
 mypy = "^1.5.1"
-pytest = "^7.4.0"
+pytest = ">=7.4,<9.0"
 requests = "^2.31.0"
 types-requests = "^2.31.0.2"
-uvicorn = { version = ">=0.23.2,<0.25.0", extras = ["standard"] }
+uvicorn = { version = ">=0.23.2,<0.29.0", extras = ["standard"] }
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

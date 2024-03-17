@@ -16,9 +16,9 @@ from .resources import Bundle, OperationOutcome, Resource
 @dataclass
 class InteractionInfo:
     resource_type: str | None
-    interaction_type: Literal[
-        "create", "read", "update", "search-type", "capabilities"
-    ] | None
+    interaction_type: (
+        Literal["create", "read", "update", "search-type", "capabilities"] | None
+    )
     resource_id: str | None
 
 
@@ -344,9 +344,11 @@ def _ok(interaction: TypeInteraction[ResourceType]) -> _Responses:
     """Return documentation for an HTTP 200 OK response."""
     return {
         status.HTTP_200_OK: {
-            "model": interaction.resource_type
-            if not isinstance(interaction, SearchTypeInteraction)
-            else Bundle,
+            "model": (
+                interaction.resource_type
+                if not isinstance(interaction, SearchTypeInteraction)
+                else Bundle
+            ),
             "description": f"Successful {interaction.resource_type.get_resource_type()} "
             f"{interaction.label()}",
         }
