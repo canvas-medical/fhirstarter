@@ -99,6 +99,7 @@ class FHIRStarter(FastAPI):
         self._add_capabilities_route()
 
         self.middleware("http")(_transform_search_type_post_request)
+        self.middleware("http")(_transform_null_response_body)
         self.middleware("http")(_set_content_type_header)
 
         async def default_exception_callback(
@@ -414,7 +415,7 @@ async def _transform_search_type_post_request(
     request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
 ) -> Response:
     """
-    Middleware to transform a search POST request into a search GET request.
+    Middleware that transforms a search POST request into a search GET request.
 
     This is needed for a few reasons, and mainly to simplify how searches are handled later down the
     line. Due to this middleware, all search requests will arrive in the handlers as GET requests
@@ -447,6 +448,34 @@ async def _transform_search_type_post_request(
         return await call_next(Request(scope, request.receive))
 
     return await call_next(request)
+
+
+async def _transform_null_response_body(
+    request: Request, call_next: Callable[[Request], Coroutine[None, None, Response]]
+) -> Response:
+    """
+    Middleware that cleans up the response object when the response does not contain a response
+    body.
+
+    Create and update interactions are not required to return a response body. In this scenario,
+    FastAPI for some reason returns a response with a body containing the string "null", rather than
+    just an empty body. This middleware detects that scenario and cleans up the response body.
+    """
+    response = await call_next(request)
+
+    # This condition is probably too broad, but given that all FHIR responses should either have a
+    # body that is a resource (that must be more than 4 bytes by definition) or an empty response
+    # body, it is safe to assume that a 4-byte response contains the string "null" and needs to be
+    # transformed.
+    if (
+        "application/fhir+json" in response.headers.getlist("Content-Type")
+        and response.headers.get("Content-Length") == "4"
+    ):
+        response.headers["Content-Length"] = "0"
+        del response.headers["Content-Type"]
+        response = Response(status_code=response.status_code, headers=response.headers)
+
+    return response
 
 
 async def _merge_parameter_strings(request: Request) -> bytes:
