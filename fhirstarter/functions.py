@@ -90,7 +90,7 @@ def make_create_function(
             id_, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers["Location"] = (
-                f"{request.base_url}{resource_type_str}/{id_}/_history/1"
+                f"/{resource_type_str}/{id_}"
             )
 
             return format_response(
@@ -123,7 +123,7 @@ def make_create_function(
             id_, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers["Location"] = (
-                f"{request.base_url}{resource_type_str}/{id_}/_history/1"
+                f"/{resource_type_str}/{id_}"
             )
 
             return format_response(
