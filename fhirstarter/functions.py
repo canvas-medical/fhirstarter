@@ -89,9 +89,9 @@ def make_create_function(
             result = await handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
             id_, result_resource = _result_to_id_resource_tuple(result)
 
-            response.headers[
-                "Location"
-            ] = f"/{resource_type_str}/{id_}"
+            response.headers["Location"] = (
+                f"/{resource_type_str}/{id_}"
+            )
 
             return format_response(
                 resource=result_resource,
@@ -122,9 +122,9 @@ def make_create_function(
             result = handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
             id_, result_resource = _result_to_id_resource_tuple(result)
 
-            response.headers[
-                "Location"
-            ] = f"/{resource_type_str}/{id_}"
+            response.headers["Location"] = (
+                f"/{resource_type_str}/{id_}"
+            )
 
             return format_response(
                 resource=result_resource,
@@ -398,9 +398,11 @@ def _make_search_parameter(
     return Parameter(
         name=name,
         kind=Parameter.KEYWORD_ONLY,
-        default=Form(None, alias=var_name_to_qp_name(name), description=description)
-        if post
-        else Query(None, alias=var_name_to_qp_name(name), description=description),
+        default=(
+            Form(None, alias=var_name_to_qp_name(name), description=description)
+            if post
+            else Query(None, alias=var_name_to_qp_name(name), description=description)
+        ),
         annotation=list[str] if multiple else str,
     )
 

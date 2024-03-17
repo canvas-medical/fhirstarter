@@ -1,11 +1,11 @@
 """
 Standard exception types for reporting errors.
 
-The exception classes defined here provide a response method which will return a Response
-containing an OperationOutcome and an HTTP status code.
+The exception classes defined here provide a method which will return an OperationOutcome.
 """
 
 from abc import ABC, abstractmethod
+from typing import Self
 
 from fastapi import Request, status
 from fastapi.exceptions import HTTPException
@@ -34,6 +34,42 @@ class FHIRException(HTTPException, ABC):
         raise NotImplementedError
 
 
+class FHIRHTTPException(FHIRException):
+    """
+    Abstract base class for FHIR errors that map neatly to OperationOutcome issue type codes.
+    Example: HTTP status code 409 <-> OperationOutcome issue type code "conflict"
+
+    If these mappings are not desired, FHIRGeneralError can be used to create the exact desired
+    response.
+    """
+
+    _STATUS_CODE_MAPPINGS = {
+        401: "unknown",
+        403: "forbidden",
+        405: "not-supported",
+        406: "not-supported",
+        409: "conflict",
+        410: "deleted",
+        412: "conflict",
+        415: "not-supported",
+    }
+
+    def __init__(self, details_text: str | None = None):
+        super().__init__(self._status_code(), details_text)
+
+    def operation_outcome(self) -> OperationOutcome:
+        return make_operation_outcome(
+            severity="error",
+            code=self._STATUS_CODE_MAPPINGS[self._status_code()],
+            details_text=self.detail,
+        )
+
+    @classmethod
+    @abstractmethod
+    def _status_code(cls) -> int:
+        raise NotImplementedError
+
+
 class FHIRGeneralError(FHIRException):
     """
     General FHIR exception class.
@@ -50,7 +86,7 @@ class FHIRGeneralError(FHIRException):
     @classmethod
     def from_operation_outcome(
         cls, status_code: int, operation_outcome: OperationOutcome
-    ) -> "FHIRGeneralError":
+    ) -> Self:
         error = FHIRGeneralError(status_code, "severity", "code", "details")
         error._operation_outcome_ = operation_outcome
         return error
@@ -72,28 +108,20 @@ class FHIRBadRequestError(FHIRException):
         )
 
 
-class FHIRUnauthorizedError(FHIRException):
-    """FHIR exception class for 401 authentication errors."""
+class FHIRUnauthorizedError(FHIRHTTPException):
+    """FHIR exception class for 401 unauthorized errors."""
 
-    def __init__(self, details_text: str) -> None:
-        super().__init__(status.HTTP_401_UNAUTHORIZED, details_text)
-
-    def operation_outcome(self) -> OperationOutcome:
-        return make_operation_outcome(
-            severity="error", code="unknown", details_text=self.detail
-        )
+    @classmethod
+    def _status_code(cls) -> int:
+        return status.HTTP_401_UNAUTHORIZED
 
 
-class FHIRForbiddenError(FHIRException):
+class FHIRForbiddenError(FHIRHTTPException):
     """FHIR exception class for 403 forbidden errors."""
 
-    def __init__(self, details_text: str) -> None:
-        super().__init__(status.HTTP_403_FORBIDDEN, details_text)
-
-    def operation_outcome(self) -> OperationOutcome:
-        return make_operation_outcome(
-            severity="error", code="forbidden", details_text=self.detail
-        )
+    @classmethod
+    def _status_code(cls) -> int:
+        return status.HTTP_403_FORBIDDEN
 
 
 class FHIRResourceNotFoundError(FHIRException):
@@ -117,3 +145,64 @@ class FHIRResourceNotFoundError(FHIRException):
                 f"Unknown {interaction_info.resource_type} resource "
                 f"'{interaction_info.resource_id}'",
             )
+
+
+class FHIRMethodNotAllowedError(FHIRHTTPException):
+    """FHIR exception class for 405 method not allowed errors."""
+
+    @classmethod
+    def _status_code(cls) -> int:
+        return status.HTTP_405_METHOD_NOT_ALLOWED
+
+
+class FHIRNotAcceptableError(FHIRHTTPException):
+    """FHIR exception class for 406 not acceptable errors."""
+
+    @classmethod
+    def _status_code(cls) -> int:
+        return status.HTTP_406_NOT_ACCEPTABLE
+
+
+class FHIRConflictError(FHIRHTTPException):
+    """FHIR exception class for 409 conflict errors."""
+
+    @classmethod
+    def _status_code(cls) -> int:
+        return status.HTTP_409_CONFLICT
+
+
+class FHIRGoneError(FHIRHTTPException):
+    """FHIR exception class for 410 gone errors."""
+
+    @classmethod
+    def _status_code(cls) -> int:
+        return status.HTTP_410_GONE
+
+
+class FHIRPreconditionFailedError(FHIRHTTPException):
+    """FHIR exception class for 412 precondition failed errors."""
+
+    @classmethod
+    def _status_code(cls) -> int:
+        return status.HTTP_412_PRECONDITION_FAILED
+
+
+class FHIRUnsupportedMediaTypeError(FHIRHTTPException):
+    """FHIR exception class for 415 unsupported media type errors."""
+
+    @classmethod
+    def _status_code(cls) -> int:
+        return status.HTTP_415_UNSUPPORTED_MEDIA_TYPE
+
+
+class FHIRUnprocessableEntityError(FHIRException):
+    """FHIR exception class for 422 unprocessable entity errors."""
+
+    def __init__(self, code: str, details_text: str) -> None:
+        super().__init__(status.HTTP_422_UNPROCESSABLE_ENTITY, details_text)
+        self._code = code
+
+    def operation_outcome(self) -> OperationOutcome:
+        return make_operation_outcome(
+            severity="error", code=self._code, details_text=self.detail
+        )

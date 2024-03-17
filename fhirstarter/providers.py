@@ -30,8 +30,7 @@ class TypeInteractionType(Protocol[ResourceType]):
         resource_type: type[ResourceType],
         handler: InteractionHandler[ResourceType],
         route_options: Mapping[str, Any],
-    ) -> TypeInteraction[ResourceType]:
-        ...
+    ) -> TypeInteraction[ResourceType]: ...
 
 
 class FHIRProvider:
