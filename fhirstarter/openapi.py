@@ -96,9 +96,9 @@ def _inline_search_post_schemas(openapi_schema: MutableMapping[str, Any]) -> Non
             schema_name = request_body["content"]["application/x-www-form-urlencoded"][
                 "schema"
             ]["$ref"].split("/")[-1]
-            request_body["content"]["application/x-www-form-urlencoded"][
-                "schema"
-            ] = openapi_schema["components"]["schemas"].pop(schema_name)
+            request_body["content"]["application/x-www-form-urlencoded"]["schema"] = (
+                openapi_schema["components"]["schemas"].pop(schema_name)
+            )
 
 
 def _add_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
