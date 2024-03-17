@@ -39,7 +39,7 @@ def generate_fhir_resource_id() -> Id:
 
 def id_from_create_response(response: Response) -> str:
     """Extract the resource identifier from a FHIR create interaction response."""
-    return response.headers["Location"].split("/")[4]
+    return response.headers["Location"].split("/")[2]
 
 
 def json_dumps_pretty(value: Any) -> str:
@@ -82,7 +82,14 @@ def assert_expected_response(
 ) -> None:
     """Assert the status code, content type header, and content of a response."""
     assert response.status_code == status_code
-    assert response.headers["Content-Type"] == content_type
+    assert (
+        (
+            response.headers["Content-Length"] == "0"
+            and "Content-Type" not in response.headers
+        )
+        or int(response.headers["Content-Length"]) > 0
+        and response.headers["Content-Type"] == content_type
+    )
     if content:
         if isinstance(content, str):
             assert response.content.decode() == content

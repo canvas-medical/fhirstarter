@@ -2,7 +2,7 @@
 Dynamic function creation for FHIR interactions.
 
 The callables passed to FastAPI by FHIRStarter are created using functional programming techniques.
-The create, read, and updates use cases are fairly straightforward -- these functions simply call a
+The create, read, and update use cases are fairly straightforward -- these functions simply call a
 developer-provided handler, perform some FHIR-related processing, and return the result up the
 chain.
 
@@ -90,7 +90,7 @@ def make_create_function(
             id_, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers["Location"] = (
-                f"{request.base_url}{resource_type_str}/{id_}/_history/1"
+                f"/{resource_type_str}/{id_}"
             )
 
             return format_response(
@@ -123,7 +123,7 @@ def make_create_function(
             id_, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers["Location"] = (
-                f"{request.base_url}{resource_type_str}/{id_}/_history/1"
+                f"/{resource_type_str}/{id_}"
             )
 
             return format_response(
