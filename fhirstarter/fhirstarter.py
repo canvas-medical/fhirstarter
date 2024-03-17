@@ -472,8 +472,8 @@ async def _transform_null_response_body(
     """
     response = await call_next(request)
 
-    # This condition is probably too broad, but given that all FHIR responses contain bodies that
-    # are either resources (that must be more than 4 bytes by definition), or an empty response
+    # This condition is probably too broad, but given that all FHIR responses should either have a
+    # body that is a resource (that must be more than 4 bytes by definition) or an empty response
     # body, it is safe to assume that a 4-byte response contains the string "null" and needs to be
     # transformed.
     if (
