@@ -2,7 +2,12 @@
 
 import itertools
 import logging
-import tomllib
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
 from collections import defaultdict
 from collections.abc import Callable, Coroutine, MutableMapping
 from datetime import datetime
@@ -86,6 +91,8 @@ class FHIRStarter(FastAPI):
             except AttributeError:
                 with open(config_file, "rb") as file_:
                     config = tomllib.load(file_)
+            except Exception as e:
+                pass
 
             self._search_parameters = SearchParameters(config.get("search-parameters"))
         else:
@@ -378,37 +385,34 @@ class FHIRStarter(FastAPI):
         FHIR search-type routes must support both GET and POST, so two routes are added for
         search-type interactions.
         """
-        match interaction.label():
-            case "create":
-                self.post(**create_route_args(interaction))(
-                    make_create_function(interaction)
+        if interaction.label() == "create":
+            self.post(**create_route_args(interaction))(
+                make_create_function(interaction)
+            )
+        elif interaction.label() == "read":
+            self.get(**read_route_args(interaction))(make_read_function(interaction))
+        elif interaction.label() == "search-type":
+            search_parameter_metadata = self._search_parameters.get_metadata(
+                interaction.resource_type.get_resource_type()
+            )
+            self.get(**search_type_route_args(interaction, post=False))(
+                make_search_type_function(
+                    interaction,
+                    search_parameter_metadata=search_parameter_metadata,
+                    post=False,
                 )
-            case "read":
-                self.get(**read_route_args(interaction))(
-                    make_read_function(interaction)
+            )
+            self.post(**search_type_route_args(interaction, post=True))(
+                make_search_type_function(
+                    interaction,
+                    search_parameter_metadata=search_parameter_metadata,
+                    post=True,
                 )
-            case "search-type":
-                search_parameter_metadata = self._search_parameters.get_metadata(
-                    interaction.resource_type.get_resource_type()
-                )
-                self.get(**search_type_route_args(interaction, post=False))(
-                    make_search_type_function(
-                        interaction,
-                        search_parameter_metadata=search_parameter_metadata,
-                        post=False,
-                    )
-                )
-                self.post(**search_type_route_args(interaction, post=True))(
-                    make_search_type_function(
-                        interaction,
-                        search_parameter_metadata=search_parameter_metadata,
-                        post=True,
-                    )
-                )
-            case "update":
-                self.put(**update_route_args(interaction))(
-                    make_update_function(interaction)
-                )
+            )
+        elif interaction.label() == "update":
+            self.put(**update_route_args(interaction))(
+                make_update_function(interaction)
+            )
 
 
 async def _transform_search_type_post_request(
@@ -523,15 +527,19 @@ def _pydantic_error_to_fhir_issue_type(error: str) -> str:
     error_type, *rest = error.split(".")
     error_code = rest[0] if rest else None
 
-    match error_type, error_code:
-        case ("json_invalid", _) | ("value_error", "extra"):
+    if error_type == "json_invalid":
+        return "structure"
+    elif error_type == "type_error":
+        return "value"
+    elif error_type == "value_error":
+        if error_code == "extra":
             return "structure"
-        case ("value_error", "missing"):
+        elif error_code == "missing":
             return "required"
-        case ("value_error", _) | ("type_error", _):
+        else:
             return "value"
-        case _:
-            return "invalid"
+    else:
+        return "invalid"
 
 
 def _exception_response(

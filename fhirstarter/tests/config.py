@@ -134,15 +134,14 @@ def create_test_client_async(interactions: tuple[str, ...]) -> TestClient:
     provider = FHIRProvider()
 
     for interaction in interactions:
-        match interaction:
-            case "create":
-                provider.create(Patient)(patient_create_async)
-            case "read":
-                provider.read(Patient)(patient_read_async)
-            case "search-type":
-                provider.search_type(Patient)(patient_search_type_async)
-            case "update":
-                provider.update(Patient)(patient_update_async)
+        if interaction == "create":
+            provider.create(Patient)(patient_create_async)
+        elif interaction == "read":
+            provider.read(Patient)(patient_read_async)
+        elif interaction == "search-type":
+            provider.search_type(Patient)(patient_search_type_async)
+        elif interaction == "update":
+            provider.update(Patient)(patient_update_async)
 
     return app(provider)
 
@@ -152,14 +151,13 @@ def create_test_client(interactions: tuple[str, ...]) -> TestClient:
     provider = FHIRProvider()
 
     for interaction in interactions:
-        match interaction:
-            case "create":
-                provider.create(Patient)(patient_create)
-            case "read":
-                provider.read(Patient)(patient_read)
-            case "search-type":
-                provider.search_type(Patient)(patient_search_type)
-            case "update":
-                provider.update(Patient)(patient_update)
+        if interaction == "create":
+            provider.create(Patient)(patient_create)
+        elif interaction == "read":
+            provider.read(Patient)(patient_read)
+        elif interaction == "search-type":
+            provider.search_type(Patient)(patient_search_type)
+        elif interaction == "update":
+            provider.update(Patient)(patient_update)
 
     return app(provider)

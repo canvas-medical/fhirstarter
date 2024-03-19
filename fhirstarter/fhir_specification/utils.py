@@ -18,27 +18,24 @@ FHIR_SEQUENCE = os.getenv("FHIR_SEQUENCE", "R5")
 
 # Set the FHIR version and the FHIR data directory location, and ensure that the specified FHIR
 # sequence is supported by FHIRStarter
-match FHIR_SEQUENCE:
-    case "STU3":
-        import fhir.resources.STU3
+if FHIR_SEQUENCE == "STU3":
+    import fhir.resources.STU3
 
-        FHIR_VERSION = fhir.resources.STU3.__fhir_version__
-        FHIR_DIR = cast(Path, importlib.resources.files(sequences.STU3))
-    case "R4":
-        FHIR_VERSION = fhir.resources.__fhir_version__
-        FHIR_DIR = cast(Path, importlib.resources.files(sequences.R4))
-    case "R4B":
-        import fhir.resources.R4B
+    FHIR_VERSION = fhir.resources.STU3.__fhir_version__
+    FHIR_DIR = cast(Path, importlib.resources.files(sequences.STU3))
+elif FHIR_SEQUENCE == "R4":
+    FHIR_VERSION = fhir.resources.__fhir_version__
+    FHIR_DIR = cast(Path, importlib.resources.files(sequences.R4))
+elif FHIR_SEQUENCE == "R4B":
+    import fhir.resources.R4B
 
-        FHIR_VERSION = fhir.resources.R4B.__fhir_version__
-        FHIR_DIR = cast(Path, importlib.resources.files(sequences.R4B))
-    case "R5":
-        FHIR_VERSION = fhir.resources.__fhir_version__
-        FHIR_DIR = cast(Path, importlib.resources.files(sequences.R5))
-    case _:
-        raise AssertionError(
-            f"Specified FHIR sequence must be one of: STU3, R4, R4B, R5"
-        )
+    FHIR_VERSION = fhir.resources.R4B.__fhir_version__
+    FHIR_DIR = cast(Path, importlib.resources.files(sequences.R4B))
+elif FHIR_SEQUENCE == "R5":
+    FHIR_VERSION = fhir.resources.__fhir_version__
+    FHIR_DIR = cast(Path, importlib.resources.files(sequences.R5))
+else:
+    raise AssertionError(f"Specified FHIR sequence must be one of: STU3, R4, R4B, R5")
 
 
 # Ensure that a compatible version of fhir.resources is installed

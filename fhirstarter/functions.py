@@ -89,9 +89,7 @@ def make_create_function(
             result = await handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
             id_, result_resource = _result_to_id_resource_tuple(result)
 
-            response.headers["Location"] = (
-                f"/{resource_type_str}/{id_}"
-            )
+            response.headers["Location"] = f"/{resource_type_str}/{id_}"
 
             return format_response(
                 resource=result_resource,
@@ -122,9 +120,7 @@ def make_create_function(
             result = handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
             id_, result_resource = _result_to_id_resource_tuple(result)
 
-            response.headers["Location"] = (
-                f"/{resource_type_str}/{id_}"
-            )
+            response.headers["Location"] = f"/{resource_type_str}/{id_}"
 
             return format_response(
                 resource=result_resource,

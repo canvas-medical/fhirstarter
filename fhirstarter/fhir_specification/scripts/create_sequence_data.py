@@ -228,20 +228,19 @@ def _get_examples(
         cells = example.find_all("td")
 
         # Get the description and ID based on the specified method
-        match id_method:
-            case "standard":
-                description = cells[0].text
-                id_ = cells[1].text
-            case "random":
-                description = cells[0].text
-                id_ = uuid4().hex
-            case "description":
-                a = cells[0].find("a")
-                description = id_ = a.text
-            case _:
-                raise AssertionError(
-                    f"Unable to get description and ID for {resource_type} example"
-                )
+        if id_method == "standard":
+            description = cells[0].text
+            id_ = cells[1].text
+        elif id_method == "random":
+            description = cells[0].text
+            id_ = uuid4().hex
+        elif id_method == "description":
+            a = cells[0].find("a")
+            description = id_ = a.text
+        else:
+            raise AssertionError(
+                f"Unable to get description and ID for {resource_type} example"
+            )
 
         # Add a description prefix if one is specified
         if description_prefix:
