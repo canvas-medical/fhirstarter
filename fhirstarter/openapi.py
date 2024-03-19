@@ -144,9 +144,9 @@ def _get_examples(
         if "resource_type" not in properties:
             continue
 
-        # Bundle and OperationOutcome are handled differently
+        # Bundle, OperationOutcome, and Parameters are handled differently
         resource_type = properties["resource_type"]["const"]
-        if resource_type in {"Bundle", "OperationOutcome"}:
+        if resource_type in {"Bundle", "OperationOutcome", "Parameters"}:
             continue
 
         # If there is a custom example on the model, use it. Otherwise, get examples from the FHIR
