@@ -3,7 +3,7 @@
 from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import cast
+from typing import Union, cast
 
 from ..exceptions import FHIRResourceNotFoundError
 from ..fhirstarter import FHIRStarter
@@ -51,10 +51,10 @@ def patient_read(_: InteractionContext, id_: Id) -> Patient:
 
 async def patient_search_type_async(
     context: InteractionContext,
-    family: str | None,
-    general_practitioner: str | None,
-    nickname: str | None,
-    _last_updated: str | None,
+    family: Union[str, None],
+    general_practitioner: Union[str, None],
+    nickname: Union[str, None],
+    _last_updated: Union[str, None],
 ) -> Bundle:
     """Patient search-type FHIR interaction."""
     return patient_search_type(
@@ -64,10 +64,10 @@ async def patient_search_type_async(
 
 def patient_search_type(
     _: InteractionContext,
-    family: str | None,
-    general_practitioner: str | None,
-    nickname: str | None,
-    _last_updated: str | None,
+    family: Union[str, None],
+    general_practitioner: Union[str, None],
+    nickname: Union[str, None],
+    _last_updated: Union[str, None],
 ) -> Bundle:
     """Patient search-type FHIR interaction."""
     patients = []

@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, ClassVar, Literal
+from typing import Any, ClassVar, Union
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
@@ -15,11 +15,9 @@ from .resources import Bundle, OperationOutcome, Resource
 
 @dataclass
 class InteractionInfo:
-    resource_type: str | None
-    interaction_type: (
-        Literal["create", "read", "update", "search-type", "capabilities"] | None
-    )
-    resource_id: str | None
+    resource_type: Union[str, None]
+    interaction_type: Union[str, None]
+    resource_id: Union[str, None]
 
 
 def parse_fhir_request(request: Request) -> InteractionInfo:
@@ -149,7 +147,7 @@ class FormatParameters:
         )
 
     @classmethod
-    def format_from_accept_header(cls, request: Request) -> str | None:
+    def format_from_accept_header(cls, request: Request) -> Union[str, None]:
         if request.method == "POST":
             for content_type in request.headers.getlist("Accept"):
                 if content_type_normalized := cls._CONTENT_TYPES.get(content_type):
@@ -159,11 +157,11 @@ class FormatParameters:
 
 
 def format_response(
-    resource: Resource | None,
-    response: Response | None = None,
-    status_code: int | None = None,
+    resource: Union[Resource, None],
+    response: Union[Response, None] = None,
+    status_code: Union[int, None] = None,
     format_parameters: FormatParameters = FormatParameters(),
-) -> Resource | Response:
+) -> Union[Resource, Response]:
     """
     Return a response with the proper formatting applied.
 
@@ -223,7 +221,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
 
     return {
         "path": f"/{resource_type_str}",
-        "response_model": interaction.resource_type | None,
+        "response_model": Union[interaction.resource_type, None],
         "status_code": status.HTTP_201_CREATED,
         "tags": [f"Type:{resource_type_str}"],
         "summary": f"{resource_type_str} {interaction.label()}",
@@ -304,7 +302,7 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
 
     return {
         "path": f"/{resource_type_str}/{{id}}",
-        "response_model": interaction.resource_type | None,
+        "response_model": Union[interaction.resource_type, None],
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{resource_type_str}"],
         "summary": f"{resource_type_str} {interaction.label()}",

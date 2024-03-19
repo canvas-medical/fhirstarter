@@ -4,7 +4,7 @@ from collections import defaultdict
 from collections.abc import Iterator, Mapping, MutableMapping
 from dataclasses import dataclass
 from importlib import import_module
-from typing import Any, cast
+from typing import Any, Union, cast
 
 from .fhir_specification.utils import (
     create_bundle_example,
@@ -21,8 +21,8 @@ __all__ = ["adjust_schema"]
 class _OperationId:
     interaction_type: str
     method: str
-    module_name: str | None
-    model_name: str | None
+    module_name: Union[str, None]
+    model_name: Union[str, None]
 
 
 def _parse_operation_id(operation_id: str) -> _OperationId:

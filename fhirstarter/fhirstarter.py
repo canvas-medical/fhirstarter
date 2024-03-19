@@ -13,7 +13,7 @@ from collections.abc import Callable, Coroutine, MutableMapping
 from datetime import datetime
 from io import IOBase
 from os import PathLike
-from typing import Any, TypeAlias, cast
+from typing import Any, Union, cast
 from urllib.parse import parse_qs, urlencode
 from zoneinfo import ZoneInfo
 
@@ -55,7 +55,7 @@ from .utils import (
 # Suppress warnings from base fhir.resources class
 logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
 
-CapabilityStatementModifier: TypeAlias = Callable[
+CapabilityStatementModifier = Callable[
     [MutableMapping[str, Any], Request, Response], MutableMapping[str, Any]
 ]
 
@@ -71,7 +71,7 @@ class FHIRStarter(FastAPI):
     def __init__(
         self,
         *,
-        config_file: str | PathLike[str] | IOBase | None = None,
+        config_file: Union[str, PathLike[str], IOBase, None] = None,
         title: str = "FHIRStarter",
         **kwargs: Any,
     ) -> None:
@@ -357,7 +357,7 @@ class FHIRStarter(FastAPI):
             response: Response,
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-        ) -> CapabilityStatement | Response:
+        ) -> Union[CapabilityStatement, Response]:
             return format_response(
                 resource=self.capability_statement(request, response),
                 response=response,

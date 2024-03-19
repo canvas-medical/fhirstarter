@@ -6,7 +6,7 @@ import sys
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Union
 from uuid import uuid4
 
 import requests
@@ -210,7 +210,7 @@ def _get_structuredefinition_examples(sequence: str) -> dict[str, Any]:
 def _get_examples(
     sequence: str,
     resource_type: str,
-    examples_table: Tag | None,
+    examples_table: Union[Tag, None],
     description_prefix: str = "",
     id_method: Literal["standard", "random", "description"] = "standard",
 ) -> dict[str, Any]:

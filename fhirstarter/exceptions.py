@@ -5,6 +5,7 @@ The exception classes defined here provide a method which will return an Operati
 """
 
 from abc import ABC, abstractmethod
+from typing import Union
 
 from fastapi import Request, status
 from fastapi.exceptions import HTTPException
@@ -21,9 +22,9 @@ class FHIRException(HTTPException, ABC):
     object for additional context.
     """
 
-    def __init__(self, status_code: int, details_text: str | None = None) -> None:
+    def __init__(self, status_code: int, details_text: Union[str, None] = None) -> None:
         super().__init__(status_code, detail=details_text)
-        self._request: Request | None = None
+        self._request: Union[Request, None] = None
 
     def set_request(self, request: Request) -> None:
         self._request = request
@@ -53,7 +54,7 @@ class FHIRHTTPException(FHIRException):
         415: "not-supported",
     }
 
-    def __init__(self, details_text: str | None = None):
+    def __init__(self, details_text: Union[str, None] = None):
         super().__init__(self._status_code(), details_text)
 
     def operation_outcome(self) -> OperationOutcome:

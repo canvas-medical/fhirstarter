@@ -8,7 +8,7 @@ import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from functools import cache
-from typing import Any
+from typing import Any, Union
 
 from fastapi import Request, Response
 
@@ -22,9 +22,9 @@ from .interactions import InteractionContext
 class SearchParameters:
     def __init__(
         self,
-        custom_search_parameters: (
-            Mapping[str, Mapping[str, Mapping[str, str]]] | None
-        ) = None,
+        custom_search_parameters: Union[
+            Mapping[str, Mapping[str, Mapping[str, str]]], None
+        ] = None,
     ):
         self._custom_search_parameters = custom_search_parameters or {}
 
@@ -95,7 +95,7 @@ def supported_search_parameters(
 def search_parameter_sort_key(
     name: str,
     search_parameter_metadata: dict[str, dict[str, str]],
-    parameter_annotation: type | None = None,
+    parameter_annotation: Union[type, None] = None,
 ) -> tuple[bool, bool, bool, bool, bool, str]:
     """
     Return a sort key for a search parameter.
@@ -125,7 +125,7 @@ def search_parameter_sort_key(
 
 
 @cache
-def _load_search_parameters_file() -> dict[str, dict[str, dict[str, str | bool]]]:
+def _load_search_parameters_file() -> dict[str, dict[str, dict[str, Union[str, bool]]]]:
     """
     Load the search parameters JSON file.
 

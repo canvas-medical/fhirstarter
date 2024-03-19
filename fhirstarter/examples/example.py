@@ -7,7 +7,7 @@ import importlib.resources
 from collections.abc import MutableMapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Union, cast
 from uuid import uuid4
 
 import uvicorn
@@ -74,11 +74,11 @@ async def patient_read(context: InteractionContext, id_: Id) -> Patient:
 @provider.search_type(Patient)
 async def patient_search_type(
     context: InteractionContext,
-    birthdate: list[str] | None,
-    general_practitioner: str | None,
-    family: str | None,
-    nickname: str | None,
-    _last_updated: str | None,
+    birthdate: Union[list[str], None],
+    general_practitioner: Union[str, None],
+    family: Union[str, None],
+    nickname: Union[str, None],
+    _last_updated: Union[str, None],
 ) -> Bundle:
     patients = []
     for patient in DATABASE.values():

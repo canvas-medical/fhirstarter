@@ -2,7 +2,7 @@
 
 import json
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, Union
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -19,7 +19,7 @@ _RESOURCE = {
 }
 
 
-def resource(id_: str | None = None) -> dict[str, Any]:
+def resource(id_: Union[str, None] = None) -> dict[str, Any]:
     """
     Return a test patient resource.
 
@@ -78,7 +78,7 @@ def assert_expected_response(
     response: Response,
     status_code: int,
     content_type: str = "application/fhir+json",
-    content: Mapping[str, Any] | str | None = None,
+    content: Union[Mapping[str, Any], str, None] = None,
 ) -> None:
     """Assert the status code, content type header, and content of a response."""
     assert response.status_code == status_code

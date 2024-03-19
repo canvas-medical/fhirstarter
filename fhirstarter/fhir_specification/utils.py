@@ -8,7 +8,7 @@ import zipfile
 from copy import deepcopy
 from functools import cache
 from pathlib import Path
-from typing import Any, Mapping, cast
+from typing import Any, Mapping, Union, cast
 
 import fhir.resources
 
@@ -69,7 +69,9 @@ def _load_resources_list() -> set[str]:
 
 
 @cache
-def load_examples(resource_type: str) -> dict[str, dict[str, str | dict[str, Any]]]:
+def load_examples(
+    resource_type: str,
+) -> dict[str, dict[str, Union[str, dict[str, Any]]]]:
     """Return the examples for a specific resource type."""
     with zipfile.ZipFile(FHIR_DIR / "examples.zip") as file_:
         return json.loads(file_.read(f"{resource_type.lower()}.json"))
@@ -130,7 +132,7 @@ def load_search_parameters() -> dict[str, Any]:
         return json.loads(file_.read("search-parameters.json"))
 
 
-def load_extra_search_parameters() -> dict[str, dict[str, str | bool]]:
+def load_extra_search_parameters() -> dict[str, dict[str, Union[str, bool]]]:
     """Load the extra search parameters file."""
     with open(FHIR_DIR / "extra-search-parameters.json") as file_:
         return json.load(file_)

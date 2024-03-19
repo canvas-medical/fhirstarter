@@ -3,7 +3,7 @@
 from abc import abstractmethod
 from collections.abc import Callable, Coroutine, Mapping
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypeVar
+from typing import Any, Generic, Literal, TypeVar, Union
 
 from fastapi import Request, Response
 
@@ -20,23 +20,25 @@ class InteractionContext:
 
 CreateInteractionHandler = Callable[
     [InteractionContext, ResourceType],
-    Coroutine[None, None, Id | ResourceType] | Id | ResourceType,
+    Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
 ]
 ReadInteractionHandler = Callable[
-    [InteractionContext, Id], Coroutine[None, None, ResourceType] | ResourceType
+    [InteractionContext, Id], Union[Coroutine[None, None, ResourceType], ResourceType]
 ]
 UpdateInteractionHandler = Callable[
     [InteractionContext, Id, ResourceType],
-    Coroutine[None, None, Id | ResourceType] | Id | ResourceType,
+    Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
 ]
-SearchTypeInteractionHandler = Callable[..., Coroutine[None, None, Bundle] | Bundle]
+SearchTypeInteractionHandler = Callable[
+    ..., Union[Coroutine[None, None, Bundle], Bundle]
+]
 
-InteractionHandler = (
-    CreateInteractionHandler[ResourceType]
-    | ReadInteractionHandler[ResourceType]
-    | SearchTypeInteractionHandler
-    | UpdateInteractionHandler[ResourceType]
-)
+InteractionHandler = Union[
+    CreateInteractionHandler[ResourceType],
+    ReadInteractionHandler[ResourceType],
+    SearchTypeInteractionHandler,
+    UpdateInteractionHandler[ResourceType],
+]
 
 
 class TypeInteraction(Generic[ResourceType]):

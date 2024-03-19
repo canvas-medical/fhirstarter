@@ -1,7 +1,7 @@
 """FHIRProvider class, for registering FHIR interactions with a FHIRStarter app."""
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import Any, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar, Union
 
 from fastapi import params
 
@@ -43,7 +43,9 @@ class FHIRProvider:
     functions that perform FHIR interactions.
     """
 
-    def __init__(self, *, dependencies: Sequence[params.Depends] | None = None) -> None:
+    def __init__(
+        self, *, dependencies: Union[Sequence[params.Depends], None] = None
+    ) -> None:
         self._dependencies = dependencies or []
         self._interactions: list[TypeInteraction[Resource]] = []
 
@@ -55,7 +57,7 @@ class FHIRProvider:
         self,
         resource_type: type[ResourceType],
         *,
-        dependencies: Sequence[params.Depends] | None = None,
+        dependencies: Union[Sequence[params.Depends], None] = None,
         include_in_schema: bool = True,
     ) -> Callable[
         [CreateInteractionHandler[ResourceType]], CreateInteractionHandler[ResourceType]
@@ -72,7 +74,7 @@ class FHIRProvider:
         self,
         resource_type: type[ResourceType],
         *,
-        dependencies: Sequence[params.Depends] | None = None,
+        dependencies: Union[Sequence[params.Depends], None] = None,
         include_in_schema: bool = True,
     ) -> Callable[
         [ReadInteractionHandler[ResourceType]],
@@ -90,7 +92,7 @@ class FHIRProvider:
         self,
         resource_type: type[ResourceType],
         *,
-        dependencies: Sequence[params.Depends] | None = None,
+        dependencies: Union[Sequence[params.Depends], None] = None,
         include_in_schema: bool = True,
     ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
         """Register a FHIR search-type interaction."""
@@ -105,7 +107,7 @@ class FHIRProvider:
         self,
         resource_type: type[ResourceType],
         *,
-        dependencies: Sequence[params.Depends] | None = None,
+        dependencies: Union[Sequence[params.Depends], None] = None,
         include_in_schema: bool = True,
     ) -> Callable[
         [UpdateInteractionHandler[ResourceType]], UpdateInteractionHandler[ResourceType]
@@ -122,7 +124,7 @@ class FHIRProvider:
         self,
         resource_type: type[ResourceType],
         type_interaction_cls: TypeInteractionType[ResourceType],
-        dependencies: Sequence[params.Depends] | None,
+        dependencies: Union[Sequence[params.Depends], None],
         include_in_schema: bool,
     ) -> Callable[[C], C]:
         _check_resource_type_module(resource_type)

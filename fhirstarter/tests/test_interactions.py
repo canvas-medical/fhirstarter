@@ -3,7 +3,7 @@
 from collections.abc import Callable, Coroutine
 from functools import partial
 from inspect import iscoroutinefunction
-from typing import cast
+from typing import Union, cast
 
 import pytest
 from requests.models import Response
@@ -184,7 +184,7 @@ def _search_type_handler_parameter_multiple_values_async() -> (
     """Return an async Patient search-type handler that can test repeated query parameters."""
 
     async def patient_search_type(
-        context: InteractionContext, given: list[str] | None
+        context: InteractionContext, given: Union[list[str], None]
     ) -> Bundle:
         return _search_type_handler_parameter_multiple_values()(context, given)
 
@@ -194,7 +194,9 @@ def _search_type_handler_parameter_multiple_values_async() -> (
 def _search_type_handler_parameter_multiple_values() -> Callable[..., Bundle]:
     """Return a Patient search-type handler that can test repeated query parameters."""
 
-    def patient_search_type(_: InteractionContext, given: list[str] | None) -> Bundle:
+    def patient_search_type(
+        _: InteractionContext, given: Union[list[str], None]
+    ) -> Bundle:
         patients = []
         for patient in DATABASE.values():
             for name in patient.name:
@@ -239,7 +241,7 @@ def _search_type_handler_parameter_multiple_values() -> Callable[..., Bundle]:
     ids=["async", "nonasync"],
 )
 def test_search_type_parameter_multiple_values(
-    handler: Callable[..., Coroutine[None, None, Bundle]] | Callable[..., Bundle],
+    handler: Union[Callable[..., Coroutine[None, None, Bundle]], Callable[..., Bundle]],
     search_type_func: Callable[[TestClient], Callable[..., Response]],
     search_type_func_kwargs: dict[str, str],
     search_type_func_kwargs_zero_results: dict[str, str],
