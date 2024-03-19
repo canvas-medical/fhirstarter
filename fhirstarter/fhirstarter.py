@@ -91,8 +91,6 @@ class FHIRStarter(FastAPI):
             except AttributeError:
                 with open(config_file, "rb") as file_:
                     config = tomllib.load(file_)
-            except Exception as e:
-                pass
 
             self._search_parameters = SearchParameters(config.get("search-parameters"))
         else:
