@@ -6,7 +6,7 @@ import sys
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Dict, Literal, Union
 from uuid import uuid4
 
 import requests
@@ -120,7 +120,7 @@ def main() -> None:
     print("\nDone")
 
 
-def get_examples(sequence: str, resource_type: str) -> dict[str, Any]:
+def get_examples(sequence: str, resource_type: str) -> Dict[str, Any]:
     if sequence == "R5" and resource_type == "AdverseEvent":
         return {
             "example": {
@@ -156,7 +156,7 @@ def get_examples(sequence: str, resource_type: str) -> dict[str, Any]:
     return examples
 
 
-def _get_structuredefinition_examples(sequence: str) -> dict[str, Any]:
+def _get_structuredefinition_examples(sequence: str) -> Dict[str, Any]:
     resource_type = "StructureDefinition"
 
     # Download the examples page for the resource type
@@ -175,33 +175,41 @@ def _get_structuredefinition_examples(sequence: str) -> dict[str, Any]:
         description_prefix="Base Type",
         id_method="random",
     )
-    examples |= _get_examples(
-        sequence,
-        resource_type,
-        soup.find("div", attrs={"id": "tabs-2"}),
-        description_prefix="Resource",
-        id_method="random",
+    examples.update(
+        _get_examples(
+            sequence,
+            resource_type,
+            soup.find("div", attrs={"id": "tabs-2"}),
+            description_prefix="Resource",
+            id_method="random",
+        )
     )
-    examples |= _get_examples(
-        sequence,
-        resource_type,
-        soup.find("div", attrs={"id": "tabs-3"}),
-        description_prefix="Constraint",
-        id_method="random",
+    examples.update(
+        _get_examples(
+            sequence,
+            resource_type,
+            soup.find("div", attrs={"id": "tabs-3"}),
+            description_prefix="Constraint",
+            id_method="random",
+        )
     )
-    examples |= _get_examples(
-        sequence,
-        resource_type,
-        soup.find("div", attrs={"id": "tabs-4"}),
-        description_prefix="Extension",
-        id_method="description",
+    examples.update(
+        _get_examples(
+            sequence,
+            resource_type,
+            soup.find("div", attrs={"id": "tabs-4"}),
+            description_prefix="Extension",
+            id_method="description",
+        )
     )
-    examples |= _get_examples(
-        sequence,
-        resource_type,
-        soup.find("div", attrs={"id": "tabs-5"}),
-        description_prefix="Example",
-        id_method="standard",
+    examples.update(
+        _get_examples(
+            sequence,
+            resource_type,
+            soup.find("div", attrs={"id": "tabs-5"}),
+            description_prefix="Example",
+            id_method="standard",
+        )
     )
 
     return examples
@@ -210,11 +218,11 @@ def _get_structuredefinition_examples(sequence: str) -> dict[str, Any]:
 def _get_examples(
     sequence: str,
     resource_type: str,
-    examples_table: Tag | None,
+    examples_table: Union[Tag, None],
     description_prefix: str = "",
     id_method: Literal["standard", "random", "description"] = "standard",
-) -> dict[str, Any]:
-    examples: dict[str, Any] = {}
+) -> Dict[str, Any]:
+    examples: Dict[str, Any] = {}
 
     if not examples_table:
         return examples
@@ -228,20 +236,19 @@ def _get_examples(
         cells = example.find_all("td")
 
         # Get the description and ID based on the specified method
-        match id_method:
-            case "standard":
-                description = cells[0].text
-                id_ = cells[1].text
-            case "random":
-                description = cells[0].text
-                id_ = uuid4().hex
-            case "description":
-                a = cells[0].find("a")
-                description = id_ = a.text
-            case _:
-                raise AssertionError(
-                    f"Unable to get description and ID for {resource_type} example"
-                )
+        if id_method == "standard":
+            description = cells[0].text
+            id_ = cells[1].text
+        elif id_method == "random":
+            description = cells[0].text
+            id_ = uuid4().hex
+        elif id_method == "description":
+            a = cells[0].find("a")
+            description = id_ = a.text
+        else:
+            raise AssertionError(
+                f"Unable to get description and ID for {resource_type} example"
+            )
 
         # Add a description prefix if one is specified
         if description_prefix:
@@ -250,7 +257,9 @@ def _get_examples(
         # Find the JSON filename
         for a in example.find_all("a"):
             if a.text.lower() == "json":
-                filename = a.attrs["href"].removesuffix(".html")
+                filename = a.attrs["href"]
+                if filename.endswith(".html"):
+                    filename = filename[:-5]
                 break
         else:
             raise AssertionError(

@@ -1,8 +1,7 @@
 """Test FHIRStarter error handling"""
 
 import json
-from collections.abc import Callable, Coroutine, Mapping
-from typing import Any, cast
+from typing import Any, Callable, Coroutine, Mapping, Union, cast
 
 import pytest
 from fastapi import HTTPException
@@ -116,7 +115,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
 )
 def test_validation_error(
     client: TestClient,
-    request_body: Mapping[str, Any] | str,
+    request_body: Union[Mapping[str, Any], str],
     response_body: Mapping[str, Any],
 ) -> None:
     """
@@ -282,7 +281,7 @@ def test_exception(
     issue: Mapping[str, Any],
     handler_func: Callable[
         [HTTPException],
-        Callable[..., Coroutine[None, None, Patient]] | Callable[..., Patient],
+        Union[Callable[..., Coroutine[None, None, Patient]], Callable[..., Patient]],
     ],
 ) -> None:
     """Test exception handling for HTTP and FHIR exceptions."""

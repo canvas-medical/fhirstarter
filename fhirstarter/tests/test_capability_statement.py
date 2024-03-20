@@ -1,7 +1,6 @@
 """Test the capability statement"""
 
-from collections.abc import Mapping, MutableMapping, Sequence
-from typing import Any, cast
+from typing import Any, Mapping, MutableMapping, Sequence, cast
 
 import pytest
 

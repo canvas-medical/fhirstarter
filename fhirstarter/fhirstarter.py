@@ -2,15 +2,28 @@
 
 import itertools
 import logging
-import tomllib
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+import datetime
 from collections import defaultdict
-from collections.abc import Callable, Coroutine, MutableMapping
-from datetime import datetime
 from io import IOBase
 from os import PathLike
-from typing import Any, TypeAlias, cast
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    DefaultDict,
+    Dict,
+    List,
+    MutableMapping,
+    Union,
+    cast,
+)
 from urllib.parse import parse_qs, urlencode
-from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -50,7 +63,7 @@ from .utils import (
 # Suppress warnings from base fhir.resources class
 logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
 
-CapabilityStatementModifier: TypeAlias = Callable[
+CapabilityStatementModifier = Callable[
     [MutableMapping[str, Any], Request, Response], MutableMapping[str, Any]
 ]
 
@@ -66,7 +79,7 @@ class FHIRStarter(FastAPI):
     def __init__(
         self,
         *,
-        config_file: str | PathLike[str] | IOBase | None = None,
+        config_file: Union[str, PathLike, IOBase, None] = None,
         title: str = "FHIRStarter",
         **kwargs: Any,
     ) -> None:
@@ -91,8 +104,12 @@ class FHIRStarter(FastAPI):
         else:
             self._search_parameters = SearchParameters()
 
-        self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
-        self._created = datetime.now(ZoneInfo("UTC")).isoformat()
+        self._capabilities: DefaultDict[str, Dict[str, TypeInteraction]] = defaultdict(
+            dict
+        )
+        self._created = (
+            datetime.datetime.now().astimezone(datetime.timezone.utc).isoformat()
+        )
 
         self.set_capability_statement_modifier(lambda c, _, __: c)
 
@@ -305,7 +322,7 @@ class FHIRStarter(FastAPI):
                 resource["searchParam"] = sorted(
                     supported_search_parameters_,
                     key=lambda p: search_parameter_sort_key(
-                        cast(dict[str, str], p)["name"], search_parameter_metadata
+                        cast(Dict[str, str], p)["name"], search_parameter_metadata
                     ),
                 )
             resources.append(resource)
@@ -334,7 +351,7 @@ class FHIRStarter(FastAPI):
             )
         )
 
-    def openapi(self) -> dict[str, Any]:
+    def openapi(self) -> Dict[str, Any]:
         """Adjust the OpenAPI schema to make it more FHIR-friendly."""
         if self.openapi_schema:
             return self.openapi_schema
@@ -352,7 +369,7 @@ class FHIRStarter(FastAPI):
             response: Response,
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-        ) -> CapabilityStatement | Response:
+        ) -> Union[CapabilityStatement, Response]:
             return format_response(
                 resource=self.capability_statement(request, response),
                 response=response,
@@ -378,37 +395,34 @@ class FHIRStarter(FastAPI):
         FHIR search-type routes must support both GET and POST, so two routes are added for
         search-type interactions.
         """
-        match interaction.label():
-            case "create":
-                self.post(**create_route_args(interaction))(
-                    make_create_function(interaction)
+        if interaction.label() == "create":
+            self.post(**create_route_args(interaction))(
+                make_create_function(interaction)
+            )
+        elif interaction.label() == "read":
+            self.get(**read_route_args(interaction))(make_read_function(interaction))
+        elif interaction.label() == "search-type":
+            search_parameter_metadata = self._search_parameters.get_metadata(
+                interaction.resource_type.get_resource_type()
+            )
+            self.get(**search_type_route_args(interaction, post=False))(
+                make_search_type_function(
+                    interaction,
+                    search_parameter_metadata=search_parameter_metadata,
+                    post=False,
                 )
-            case "read":
-                self.get(**read_route_args(interaction))(
-                    make_read_function(interaction)
+            )
+            self.post(**search_type_route_args(interaction, post=True))(
+                make_search_type_function(
+                    interaction,
+                    search_parameter_metadata=search_parameter_metadata,
+                    post=True,
                 )
-            case "search-type":
-                search_parameter_metadata = self._search_parameters.get_metadata(
-                    interaction.resource_type.get_resource_type()
-                )
-                self.get(**search_type_route_args(interaction, post=False))(
-                    make_search_type_function(
-                        interaction,
-                        search_parameter_metadata=search_parameter_metadata,
-                        post=False,
-                    )
-                )
-                self.post(**search_type_route_args(interaction, post=True))(
-                    make_search_type_function(
-                        interaction,
-                        search_parameter_metadata=search_parameter_metadata,
-                        post=True,
-                    )
-                )
-            case "update":
-                self.put(**update_route_args(interaction))(
-                    make_update_function(interaction)
-                )
+            )
+        elif interaction.label() == "update":
+            self.put(**update_route_args(interaction))(
+                make_update_function(interaction)
+            )
 
 
 async def _transform_search_type_post_request(
@@ -436,8 +450,10 @@ async def _transform_search_type_post_request(
     ):
         scope = request.scope
         scope["method"] = "GET"
-        scope["path"] = scope["path"].removesuffix("/_search")
-        scope["raw_path"] = scope["raw_path"].removesuffix(b"/_search")
+        if scope["path"].endswith("/_search"):
+            scope["path"] = scope["path"][:-8]
+        if scope["raw_path"][-8:] == "/_search":
+            scope["raw_path"] = scope["raw_path"][:-8]
         scope["query_string"] = await _merge_parameter_strings(request)
         scope["headers"] = [
             (name, value)
@@ -485,7 +501,7 @@ async def _merge_parameter_strings(request: Request) -> bytes:
     If there is a header that specifies the requested format, then ignore the _format parameter(s)
     in the parameter strings.
     """
-    merged: defaultdict[bytes, list[bytes]] = defaultdict(list)
+    merged: DefaultDict[bytes, List[bytes]] = defaultdict(list)
 
     format_ = FormatParameters.format_from_accept_header(request)
     if format_:
@@ -523,15 +539,19 @@ def _pydantic_error_to_fhir_issue_type(error: str) -> str:
     error_type, *rest = error.split(".")
     error_code = rest[0] if rest else None
 
-    match error_type, error_code:
-        case ("json_invalid", _) | ("value_error", "extra"):
+    if error_type == "json_invalid":
+        return "structure"
+    elif error_type == "type_error":
+        return "value"
+    elif error_type == "value_error":
+        if error_code == "extra":
             return "structure"
-        case ("value_error", "missing"):
+        elif error_code == "missing":
             return "required"
-        case ("value_error", _) | ("type_error", _):
+        else:
             return "value"
-        case _:
-            return "invalid"
+    else:
+        return "invalid"
 
 
 def _exception_response(

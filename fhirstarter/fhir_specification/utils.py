@@ -1,14 +1,19 @@
 """Utilities for working with the FHIR specification."""
 
 import importlib.metadata
-import importlib.resources
 import json
 import os
 import zipfile
 from copy import deepcopy
-from functools import cache
+from typing import Dict, Set
+
+try:
+    from functools import cache
+except ImportError:
+    from functools import lru_cache as cache
+
 from pathlib import Path
-from typing import Any, Mapping, cast
+from typing import Any, Mapping, Union, cast
 
 import fhir.resources
 
@@ -18,27 +23,24 @@ FHIR_SEQUENCE = os.getenv("FHIR_SEQUENCE", "R5")
 
 # Set the FHIR version and the FHIR data directory location, and ensure that the specified FHIR
 # sequence is supported by FHIRStarter
-match FHIR_SEQUENCE:
-    case "STU3":
-        import fhir.resources.STU3
+if FHIR_SEQUENCE == "STU3":
+    import fhir.resources.STU3
 
-        FHIR_VERSION = fhir.resources.STU3.__fhir_version__
-        FHIR_DIR = cast(Path, importlib.resources.files(sequences.STU3))
-    case "R4":
-        FHIR_VERSION = fhir.resources.__fhir_version__
-        FHIR_DIR = cast(Path, importlib.resources.files(sequences.R4))
-    case "R4B":
-        import fhir.resources.R4B
+    FHIR_VERSION = fhir.resources.STU3.__fhir_version__
+    FHIR_DIR = Path(sequences.STU3.__file__).parent
+elif FHIR_SEQUENCE == "R4":
+    FHIR_VERSION = fhir.resources.__fhir_version__
+    FHIR_DIR = Path(sequences.R4.__file__).parent
+elif FHIR_SEQUENCE == "R4B":
+    import fhir.resources.R4B
 
-        FHIR_VERSION = fhir.resources.R4B.__fhir_version__
-        FHIR_DIR = cast(Path, importlib.resources.files(sequences.R4B))
-    case "R5":
-        FHIR_VERSION = fhir.resources.__fhir_version__
-        FHIR_DIR = cast(Path, importlib.resources.files(sequences.R5))
-    case _:
-        raise AssertionError(
-            f"Specified FHIR sequence must be one of: STU3, R4, R4B, R5"
-        )
+    FHIR_VERSION = fhir.resources.R4B.__fhir_version__
+    FHIR_DIR = Path(sequences.R4B.__file__).parent
+elif FHIR_SEQUENCE == "R5":
+    FHIR_VERSION = fhir.resources.__fhir_version__
+    FHIR_DIR = Path(sequences.R5.__file__).parent
+else:
+    raise AssertionError(f"Specified FHIR sequence must be one of: STU3, R4, R4B, R5")
 
 
 # Ensure that a compatible version of fhir.resources is installed
@@ -65,20 +67,22 @@ def is_resource_type(resource_type: str) -> bool:
 
 
 @cache
-def _load_resources_list() -> set[str]:
+def _load_resources_list() -> Set[str]:
     """Load the list of resources from the JSON file."""
     with open(FHIR_DIR / "resource_types.json") as file_:
         return set(json.load(file_))
 
 
 @cache
-def load_examples(resource_type: str) -> dict[str, dict[str, str | dict[str, Any]]]:
+def load_examples(
+    resource_type: str,
+) -> Dict[str, Dict[str, Union[str, Dict[str, Any]]]]:
     """Return the examples for a specific resource type."""
     with zipfile.ZipFile(FHIR_DIR / "examples.zip") as file_:
         return json.loads(file_.read(f"{resource_type.lower()}.json"))
 
 
-def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]:
+def create_bundle_example(resource_example: Mapping[str, Any]) -> Dict[str, Any]:
     """
     Create a bundle example for a specific resource type.
 
@@ -87,7 +91,7 @@ def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]
     resource_type = resource_example["resourceType"]
     bundle_examples = load_examples("Bundle")
     bundle_example = deepcopy(
-        cast(dict[str, Any], next(iter(bundle_examples.values()))["value"])
+        cast(Dict[str, Any], next(iter(bundle_examples.values()))["value"])
     )
 
     bundle_example["link"][0] = {
@@ -112,7 +116,7 @@ def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]
 
 def make_operation_outcome_example(
     severity: str, code: str, details_text: str
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Make an OperationOutcome example given a severity, code, and details text."""
     return {
         "resourceType": "OperationOutcome",
@@ -127,13 +131,13 @@ def make_operation_outcome_example(
     }
 
 
-def load_search_parameters() -> dict[str, Any]:
+def load_search_parameters() -> Dict[str, Any]:
     """Load the search parameters file."""
     with zipfile.ZipFile(FHIR_DIR / "search-parameters.zip") as file_:
         return json.loads(file_.read("search-parameters.json"))
 
 
-def load_extra_search_parameters() -> dict[str, dict[str, str | bool]]:
+def load_extra_search_parameters() -> Dict[str, Dict[str, Union[str, bool]]]:
     """Load the extra search parameters file."""
     with open(FHIR_DIR / "extra-search-parameters.json") as file_:
         return json.load(file_)

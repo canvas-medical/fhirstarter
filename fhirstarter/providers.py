@@ -1,7 +1,17 @@
 """FHIRProvider class, for registering FHIR interactions with a FHIRStarter app."""
 
-from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import Any, Protocol, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    List,
+    Mapping,
+    Protocol,
+    Sequence,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from fastapi import params
 
@@ -27,7 +37,7 @@ C = TypeVar("C", bound=Callable[..., Any])
 class TypeInteractionType(Protocol[ResourceType]):
     @staticmethod
     def __call__(
-        resource_type: type[ResourceType],
+        resource_type: Type[ResourceType],
         handler: InteractionHandler[ResourceType],
         route_options: Mapping[str, Any],
     ) -> TypeInteraction[ResourceType]: ...
@@ -43,9 +53,11 @@ class FHIRProvider:
     functions that perform FHIR interactions.
     """
 
-    def __init__(self, *, dependencies: Sequence[params.Depends] | None = None) -> None:
+    def __init__(
+        self, *, dependencies: Union[Sequence[params.Depends], None] = None
+    ) -> None:
         self._dependencies = dependencies or []
-        self._interactions: list[TypeInteraction[Resource]] = []
+        self._interactions: List[TypeInteraction[Resource]] = []
 
     @property
     def interactions(self) -> Iterable[TypeInteraction[Resource]]:
@@ -53,9 +65,9 @@ class FHIRProvider:
 
     def create(
         self,
-        resource_type: type[ResourceType],
+        resource_type: Type[ResourceType],
         *,
-        dependencies: Sequence[params.Depends] | None = None,
+        dependencies: Union[Sequence[params.Depends], None] = None,
         include_in_schema: bool = True,
     ) -> Callable[
         [CreateInteractionHandler[ResourceType]], CreateInteractionHandler[ResourceType]
@@ -70,9 +82,9 @@ class FHIRProvider:
 
     def read(
         self,
-        resource_type: type[ResourceType],
+        resource_type: Type[ResourceType],
         *,
-        dependencies: Sequence[params.Depends] | None = None,
+        dependencies: Union[Sequence[params.Depends], None] = None,
         include_in_schema: bool = True,
     ) -> Callable[
         [ReadInteractionHandler[ResourceType]],
@@ -88,9 +100,9 @@ class FHIRProvider:
 
     def search_type(
         self,
-        resource_type: type[ResourceType],
+        resource_type: Type[ResourceType],
         *,
-        dependencies: Sequence[params.Depends] | None = None,
+        dependencies: Union[Sequence[params.Depends], None] = None,
         include_in_schema: bool = True,
     ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
         """Register a FHIR search-type interaction."""
@@ -103,9 +115,9 @@ class FHIRProvider:
 
     def update(
         self,
-        resource_type: type[ResourceType],
+        resource_type: Type[ResourceType],
         *,
-        dependencies: Sequence[params.Depends] | None = None,
+        dependencies: Union[Sequence[params.Depends], None] = None,
         include_in_schema: bool = True,
     ) -> Callable[
         [UpdateInteractionHandler[ResourceType]], UpdateInteractionHandler[ResourceType]
@@ -120,9 +132,9 @@ class FHIRProvider:
 
     def _register_type_interaction(
         self,
-        resource_type: type[ResourceType],
+        resource_type: Type[ResourceType],
         type_interaction_cls: TypeInteractionType[ResourceType],
-        dependencies: Sequence[params.Depends] | None,
+        dependencies: Union[Sequence[params.Depends], None],
         include_in_schema: bool,
     ) -> Callable[[C], C]:
         _check_resource_type_module(resource_type)
@@ -143,7 +155,7 @@ class FHIRProvider:
         return decorator
 
 
-def _check_resource_type_module(resource_type: type[Resource]) -> None:
+def _check_resource_type_module(resource_type: Type[Resource]) -> None:
     """Ensure that the resource type is compatible with the server's defined FHIR sequence."""
 
     # Get the module name of the resource's fhir.resources parent class. If a user is using a model
@@ -160,16 +172,15 @@ def _check_resource_type_module(resource_type: type[Resource]) -> None:
         module
     ), f"Unable to determine FHIR sequence of resource {resource_type.get_resource_type()}"
 
-    match FHIR_SEQUENCE:
-        case "R4" | "R5":
-            assert not module.startswith(
-                ("fhir.resources.STU3", "fhir.resources.R4B")
-            ), f"Resource types from {module} cannot be used with FHIR sequence {FHIR_SEQUENCE}"
-        case "STU3":
-            assert module.startswith(
-                "fhir.resources.STU3"
-            ), "Only resource types from fhir.resources.STU3 can be used with FHIR sequence STU3"
-        case "R4B":
-            assert module.startswith(
-                "fhir.resources.R4B"
-            ), "Only resource types from fhir.resources.R4B can be used with FHIR sequence R4B"
+    if FHIR_SEQUENCE in ("R4", "R4"):
+        assert not module.startswith(
+            ("fhir.resources.STU3", "fhir.resources.R4B")
+        ), f"Resource types from {module} cannot be used with FHIR sequence {FHIR_SEQUENCE}"
+    elif FHIR_SEQUENCE == "STU3":
+        assert module.startswith(
+            "fhir.resources.STU3"
+        ), "Only resource types from fhir.resources.STU3 can be used with FHIR sequence STU3"
+    elif FHIR_SEQUENCE == "R4B":
+        assert module.startswith(
+            "fhir.resources.R4B"
+        ), "Only resource types from fhir.resources.R4B can be used with FHIR sequence R4B"

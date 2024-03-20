@@ -19,9 +19,8 @@ places.
 """
 
 import keyword
-from collections.abc import Callable, Coroutine
 from inspect import Parameter, iscoroutinefunction, signature
-from typing import cast
+from typing import Callable, Coroutine, Dict, List, Tuple, Union, cast
 
 from fastapi import Form, Path, Query, Request, Response
 
@@ -63,10 +62,12 @@ def make_create_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
     [Request, Response, ResourceType, str, str],
-    Coroutine[None, None, ResourceType | Response | None]
-    | ResourceType
-    | Response
-    | None,
+    Union[
+        Coroutine[None, None, Union[ResourceType, Response, None]],
+        ResourceType,
+        Response,
+        None,
+    ],
 ]:
     """Make a function suitable for creation of a FHIR create API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
@@ -79,7 +80,7 @@ def make_create_function(
             resource: ResourceType,
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-        ) -> ResourceType | Response | None:
+        ) -> Union[ResourceType, Response, None]:
             """
             Function for create interaction.
 
@@ -89,9 +90,7 @@ def make_create_function(
             result = await handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
             id_, result_resource = _result_to_id_resource_tuple(result)
 
-            response.headers["Location"] = (
-                f"/{resource_type_str}/{id_}"
-            )
+            response.headers["Location"] = f"/{resource_type_str}/{id_}"
 
             return format_response(
                 resource=result_resource,
@@ -99,9 +98,11 @@ def make_create_function(
                 format_parameters=FormatParameters.from_request(request),
             )
 
-        create_async.__annotations__ |= {
-            "resource": interaction.resource_type,
-        }
+        create_async.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
 
         return create_async
     else:
@@ -112,7 +113,7 @@ def make_create_function(
             resource: ResourceType,
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-        ) -> ResourceType | Response | None:
+        ) -> Union[ResourceType, Response, None]:
             """
             Function for create interaction.
 
@@ -122,9 +123,7 @@ def make_create_function(
             result = handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
             id_, result_resource = _result_to_id_resource_tuple(result)
 
-            response.headers["Location"] = (
-                f"/{resource_type_str}/{id_}"
-            )
+            response.headers["Location"] = f"/{resource_type_str}/{id_}"
 
             return format_response(
                 resource=result_resource,
@@ -132,9 +131,11 @@ def make_create_function(
                 format_parameters=FormatParameters.from_request(request),
             )
 
-        create.__annotations__ |= {
-            "resource": interaction.resource_type,
-        }
+        create.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
 
         return create
 
@@ -143,7 +144,7 @@ def make_read_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
     [Request, Response, Id, str, str],
-    Coroutine[None, None, ResourceType | Response] | ResourceType | Response,
+    Union[Coroutine[None, None, Union[ResourceType, Response]], ResourceType, Response],
 ]:
     """Make a function suitable for creation of a FHIR read API route."""
 
@@ -158,7 +159,7 @@ def make_read_function(
             ),
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-        ) -> ResourceType | Response:
+        ) -> Union[ResourceType, Response]:
             """Function for read interaction."""
             handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
             result_resource = await handler(InteractionContext(request, response), id_)  # type: ignore[call-arg]
@@ -182,7 +183,7 @@ def make_read_function(
             ),
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-        ) -> ResourceType | Response:
+        ) -> Union[ResourceType, Response]:
             """Function for read interaction."""
             handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
             result_resource = handler(InteractionContext(request, response), id_)  # type: ignore[call-arg]
@@ -199,11 +200,11 @@ def make_read_function(
 # TODO: If possible, map FHIR primitives to correct type annotations for better validation
 def make_search_type_function(
     interaction: TypeInteraction[ResourceType],
-    search_parameter_metadata: dict[str, dict[str, str]],
+    search_parameter_metadata: Dict[str, Dict[str, str]],
     post: bool,
 ) -> Callable[
     [Request, Response, str, str],
-    Coroutine[None, None, Bundle | Response] | Bundle | Response,
+    Union[Coroutine[None, None, Union[Bundle, Response]], Bundle, Response],
 ]:
     """
     Make a function suitable for creation of a FHIR search-type API route.
@@ -224,7 +225,7 @@ def make_search_type_function(
         format_annotation = FORMAT_QP
         pretty_annotation = PRETTY_QP
 
-    search_parameters: tuple[Parameter, ...] = tuple(
+    search_parameters: Tuple[Parameter, ...] = tuple(
         _make_search_parameter(
             name=search_parameter.name,
             description=search_parameter_metadata[
@@ -245,7 +246,7 @@ def make_search_type_function(
             _format: str = format_annotation,
             _pretty: str = pretty_annotation,
             **kwargs: str,
-        ) -> Bundle | Response:
+        ) -> Union[Bundle, Response]:
             """Function for search-type interaction."""
             handler = cast(SearchTypeInteractionHandler, interaction.handler)
             bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore[call-arg]
@@ -269,7 +270,7 @@ def make_search_type_function(
             _format: str = format_annotation,
             _pretty: str = pretty_annotation,
             **kwargs: str,
-        ) -> Bundle | Response:
+        ) -> Union[Bundle, Response]:
             """Function for search-type interaction."""
             handler = cast(SearchTypeInteractionHandler, interaction.handler)
             bundle = handler(InteractionContext(request, response), **kwargs)  # type: ignore[call-arg]
@@ -289,10 +290,12 @@ def make_update_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
     [Request, Response, ResourceType, Id, str, str],
-    Coroutine[None, None, ResourceType | Response | None]
-    | ResourceType
-    | Response
-    | None,
+    Union[
+        Coroutine[None, None, Union[ResourceType, Response, None]],
+        ResourceType,
+        Response,
+        None,
+    ],
 ]:
     """Make a function suitable for creation of a FHIR update API route."""
 
@@ -308,7 +311,7 @@ def make_update_function(
             ),
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-        ) -> ResourceType | Response | None:
+        ) -> Union[ResourceType, Response, None]:
             """Function for update interaction."""
             if resource and resource.id and id_ != resource.id:
                 raise FHIRBadRequestError(
@@ -326,9 +329,11 @@ def make_update_function(
                 format_parameters=FormatParameters.from_request(request),
             )
 
-        update_async.__annotations__ |= {
-            "resource": interaction.resource_type,
-        }
+        update_async.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
 
         return update_async
     else:
@@ -343,7 +348,7 @@ def make_update_function(
             ),
             _format: str = FORMAT_QP,
             _pretty: str = PRETTY_QP,
-        ) -> ResourceType | Response | None:
+        ) -> Union[ResourceType, Response, None]:
             """Function for update interaction."""
             if resource and resource.id and id_ != resource.id:
                 raise FHIRBadRequestError(
@@ -361,16 +366,18 @@ def make_update_function(
                 format_parameters=FormatParameters.from_request(request),
             )
 
-        update.__annotations__ |= {
-            "resource": interaction.resource_type,
-        }
+        update.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
 
         return update
 
 
 def _result_to_id_resource_tuple(
-    result: Id | ResourceType,
-) -> tuple[Id | None, ResourceType | None]:
+    result: Union[Id, ResourceType],
+) -> Tuple[Union[Id, None], Union[ResourceType, None]]:
     """
     Given an Id or a Resource, return an Id and a Resource.
 
@@ -403,7 +410,7 @@ def _make_search_parameter(
             if post
             else Query(None, alias=var_name_to_qp_name(name), description=description)
         ),
-        annotation=list[str] if multiple else str,
+        annotation=List[str] if multiple else str,
     )
 
 
@@ -424,22 +431,22 @@ def _is_valid_parameter_name(name: str) -> bool:
 
 def _set_search_type_function_signature(
     search_type_function: Callable[
-        ..., Coroutine[None, None, Bundle | Response] | Bundle | Response
+        ..., Union[Coroutine[None, None, Union[Bundle, Response]], Bundle, Response]
     ],
-    search_parameters: tuple[Parameter, ...],
-    search_parameter_metadata: dict[str, dict[str, str]],
+    search_parameters: Tuple[Parameter, ...],
+    search_parameter_metadata: Dict[str, Dict[str, str]],
 ) -> Callable[
     [Request, Response, str, str],
-    Coroutine[None, None, Bundle | Response] | Bundle | Response,
+    Union[Coroutine[None, None, Union[Bundle, Response]], Bundle, Response],
 ]:
     """
     Set the function signature of the search-type function so that it includes the search parameters
     that the handler supports.
     """
     sig = signature(search_type_function)
-    parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
+    parameters: Tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
 
-    sorted_search_parameters: list[Parameter] = sorted(
+    sorted_search_parameters: List[Parameter] = sorted(
         parameters + search_parameters,
         key=lambda p: search_parameter_sort_key(
             p.name, search_parameter_metadata, p.annotation
