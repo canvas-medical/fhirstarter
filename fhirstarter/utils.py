@@ -1,7 +1,7 @@
 """Utility functions for creation of routes and responses."""
 
 from dataclasses import dataclass
-from typing import Any, Callable, ClassVar, Dict, Union
+from typing import Any, Callable, ClassVar, Dict, Literal, Union
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
@@ -15,7 +15,9 @@ from .resources import Bundle, OperationOutcome, Resource
 @dataclass
 class InteractionInfo:
     resource_type: Union[str, None]
-    interaction_type: Union[str, None]
+    interaction_type: Union[
+        Literal["create", "read", "update", "search-type", "capabilities"], None
+    ]
     resource_id: Union[str, None]
 
 

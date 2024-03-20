@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from importlib import import_module
 from typing import (
     Any,
+    DefaultDict,
     Dict,
     Iterator,
     List,
@@ -145,7 +146,7 @@ def _get_examples(
     interactions; resource-specific Bundle examples for search interactions; and OperationOutcome
     examples for errors.
     """
-    examples: defaultdict[str, Any] = defaultdict(dict)
+    examples: DefaultDict[str, Any] = defaultdict(dict)
 
     # Get all resource examples from the models and the FHIR specification
     for schema_name, schema in openapi_schema["components"]["schemas"].items():
