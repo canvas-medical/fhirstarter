@@ -1,7 +1,6 @@
 """Test FHIRStarter dependency injection"""
 
-from collections.abc import Callable, Coroutine
-from typing import Union
+from typing import Callable, Coroutine, Union
 
 import pytest
 from _pytest.fixtures import FixtureRequest

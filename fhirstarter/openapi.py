@@ -1,10 +1,19 @@
 """OpenAPI schema modifications"""
 
 from collections import defaultdict
-from collections.abc import Iterator, Mapping, MutableMapping
 from dataclasses import dataclass
 from importlib import import_module
-from typing import Any, Union, cast
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Mapping,
+    MutableMapping,
+    Tuple,
+    Union,
+    cast,
+)
 
 from .fhir_specification.utils import (
     create_bundle_example,
@@ -27,7 +36,7 @@ class _OperationId:
 
 def _parse_operation_id(operation_id: str) -> _OperationId:
     """Return a parsed operation ID."""
-    tokens: list[str] = operation_id.split("|")
+    tokens: List[str] = operation_id.split("|")
 
     interaction_type = tokens[2]
     method = tokens[3]
@@ -39,7 +48,7 @@ def _parse_operation_id(operation_id: str) -> _OperationId:
 
 def _operations(
     openapi_schema: MutableMapping[str, Any]
-) -> Iterator[tuple[_OperationId, dict[str, Any]]]:
+) -> Iterator[Tuple[_OperationId, Dict[str, Any]]]:
     """Yield operations in the OpenAPI schema that were created by FHIRStarter."""
     for path_name, path in openapi_schema["paths"].items():
         for operation in path.values():
@@ -50,7 +59,7 @@ def _operations(
 
 def _search_type_operations(
     openapi_schema: MutableMapping[str, Any]
-) -> Iterator[tuple[_OperationId, dict[str, Any]]]:
+) -> Iterator[Tuple[_OperationId, Dict[str, Any]]]:
     """Yield search-type operations in the OpenAPI schema that were created by FHIRStarter."""
     for operation_id, operation in _operations(openapi_schema):
         if operation_id.interaction_type == "search-type":
@@ -130,7 +139,7 @@ def _add_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
 
 def _get_examples(
     openapi_schema: MutableMapping[str, Any]
-) -> dict[str, dict[str, Any]]:
+) -> Dict[str, Dict[str, Any]]:
     """
     Gather examples for all scenarios: request and response bodies for create, read, and update
     interactions; resource-specific Bundle examples for search interactions; and OperationOutcome
@@ -192,7 +201,7 @@ def _get_examples(
 def _adjust_operation(
     operation_id: _OperationId,
     operation: MutableMapping[str, Any],
-    examples: Mapping[str, dict[str, Any]],
+    examples: Mapping[str, Dict[str, Any]],
 ) -> None:
     """
     Make adjustments to an operation in the OpenAPI schema.
@@ -212,11 +221,11 @@ def _adjust_operation(
     if content := operation.get("requestBody", {}).get("content"):
         if "application/json" in content:
             content["application/fhir+json"] = content.pop("application/json")
-            content["application/fhir+json"] |= resource_examples
+            content["application/fhir+json"].update(resource_examples)
 
     # For each possible response (i.e. status code), remove the default FastAPI response schema
     responses = operation["responses"]
-    status_codes: tuple[str, ...] = tuple(responses.keys())
+    status_codes: Tuple[str, ...] = tuple(responses.keys())
     for status_code in status_codes:
         if (
             responses[status_code]["content"]
@@ -238,7 +247,7 @@ def _adjust_operation(
         # Add examples for success responses
         if 200 <= int(status_code) <= 299:
             if operation_id.interaction_type != "search-type":
-                response["content"]["application/fhir+json"] |= resource_examples
+                response["content"]["application/fhir+json"].update(resource_examples)
             elif operation_id.model_name:
                 response["content"]["application/fhir+json"]["example"] = examples[
                     "Bundle"

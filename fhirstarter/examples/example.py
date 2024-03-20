@@ -3,11 +3,9 @@ An example FHIR server implementation using FHIRStarter, with examples showing h
 interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
 """
 
-import importlib.resources
-from collections.abc import MutableMapping
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Union, cast
+from typing import Any, Dict, List, MutableMapping, Union, cast
 from uuid import uuid4
 
 import uvicorn
@@ -32,11 +30,11 @@ from fhirstarter.exceptions import FHIRResourceNotFoundError
 # Create the app with the provided config file
 app = FHIRStarter(
     title="FHIRStarter Example Implementation",
-    config_file=cast(Path, importlib.resources.files(examples)) / "config.toml",
+    config_file=Path(examples.__file__).parent / "config.toml",
 )
 
 # Create a "database"
-DATABASE: dict[str, Patient] = {}
+DATABASE: Dict[str, Patient] = {}
 
 # Create a provider
 provider = FHIRProvider()
@@ -74,7 +72,7 @@ async def patient_read(context: InteractionContext, id_: Id) -> Patient:
 @provider.search_type(Patient)
 async def patient_search_type(
     context: InteractionContext,
-    birthdate: Union[list[str], None],
+    birthdate: Union[List[str], None],
     general_practitioner: Union[str, None],
     family: Union[str, None],
     nickname: Union[str, None],
@@ -153,7 +151,7 @@ async def index() -> RedirectResponse:
 
 if __name__ == "__main__":
     # Start the server
-    fhirstarter_dir = cast(Path, importlib.resources.files(fhirstarter))
+    fhirstarter_dir = Path(fhirstarter.__file__).parent
     uvicorn.run(
         "example:app",
         use_colors=True,

@@ -8,14 +8,22 @@ try:
 except ImportError:
     import tomli as tomllib
 
+import datetime
 from collections import defaultdict
-from collections.abc import Callable, Coroutine, MutableMapping
-from datetime import datetime
 from io import IOBase
 from os import PathLike
-from typing import Any, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    DefaultDict,
+    Dict,
+    List,
+    MutableMapping,
+    Union,
+    cast,
+)
 from urllib.parse import parse_qs, urlencode
-from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
@@ -71,7 +79,7 @@ class FHIRStarter(FastAPI):
     def __init__(
         self,
         *,
-        config_file: Union[str, PathLike[str], IOBase, None] = None,
+        config_file: Union[str, PathLike, IOBase, None] = None,
         title: str = "FHIRStarter",
         **kwargs: Any,
     ) -> None:
@@ -96,8 +104,12 @@ class FHIRStarter(FastAPI):
         else:
             self._search_parameters = SearchParameters()
 
-        self._capabilities: dict[str, dict[str, TypeInteraction]] = defaultdict(dict)
-        self._created = datetime.now(ZoneInfo("UTC")).isoformat()
+        self._capabilities: DefaultDict[str, Dict[str, TypeInteraction]] = defaultdict(
+            dict
+        )
+        self._created = (
+            datetime.datetime.now().astimezone(datetime.timezone.utc).isoformat()
+        )
 
         self.set_capability_statement_modifier(lambda c, _, __: c)
 
@@ -310,7 +322,7 @@ class FHIRStarter(FastAPI):
                 resource["searchParam"] = sorted(
                     supported_search_parameters_,
                     key=lambda p: search_parameter_sort_key(
-                        cast(dict[str, str], p)["name"], search_parameter_metadata
+                        cast(Dict[str, str], p)["name"], search_parameter_metadata
                     ),
                 )
             resources.append(resource)
@@ -339,7 +351,7 @@ class FHIRStarter(FastAPI):
             )
         )
 
-    def openapi(self) -> dict[str, Any]:
+    def openapi(self) -> Dict[str, Any]:
         """Adjust the OpenAPI schema to make it more FHIR-friendly."""
         if self.openapi_schema:
             return self.openapi_schema
@@ -438,8 +450,10 @@ async def _transform_search_type_post_request(
     ):
         scope = request.scope
         scope["method"] = "GET"
-        scope["path"] = scope["path"].removesuffix("/_search")
-        scope["raw_path"] = scope["raw_path"].removesuffix(b"/_search")
+        if scope["path"].endswith("/_search"):
+            scope["path"] = scope["path"][:-8]
+        if scope["raw_path"][-8] == "/_search":
+            scope["raw_path"] = scope["raw_path"][:-8]
         scope["query_string"] = await _merge_parameter_strings(request)
         scope["headers"] = [
             (name, value)
@@ -487,7 +501,7 @@ async def _merge_parameter_strings(request: Request) -> bytes:
     If there is a header that specifies the requested format, then ignore the _format parameter(s)
     in the parameter strings.
     """
-    merged: defaultdict[bytes, list[bytes]] = defaultdict(list)
+    merged: DefaultDict[bytes, List[bytes]] = defaultdict(list)
 
     format_ = FormatParameters.format_from_accept_header(request)
     if format_:

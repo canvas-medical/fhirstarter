@@ -5,10 +5,15 @@ specification.
 
 import inspect
 import re
-from collections.abc import Callable, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
-from functools import cache
-from typing import Any, Union
+
+try:
+    from functools import cache
+except ImportError:
+    from functools import lru_cache as cache
+
+from typing import Any, Callable, Dict, Mapping, Tuple, Union
 
 from fastapi import Request, Response
 
@@ -28,7 +33,7 @@ class SearchParameters:
     ):
         self._custom_search_parameters = custom_search_parameters or {}
 
-    def get_metadata(self, resource_type: str) -> dict[str, dict[str, str]]:
+    def get_metadata(self, resource_type: str) -> Dict[str, Dict[str, str]]:
         """
         Return search parameter metadata for the given resource type.
 
@@ -36,13 +41,14 @@ class SearchParameters:
         parameter metadata for the resource type itself, DomainResource, Resource, and custom search
         parameter metadata.
         """
-        search_parameters = _load_search_parameters_file()
-        return (
-            search_parameters.get(resource_type, {})
-            | search_parameters["DomainResource"]
-            | search_parameters["Resource"]
-            | self._custom_search_parameters.get(resource_type, {})
-        )
+        all_search_parameters = _load_search_parameters_file()
+
+        search_parameters = deepcopy(all_search_parameters.get(resource_type, {}))
+        search_parameters.update(all_search_parameters["DomainResource"])
+        search_parameters.update(all_search_parameters["Resource"])
+        search_parameters.update(self._custom_search_parameters.get(resource_type, {}))
+
+        return search_parameters
 
 
 def var_name_to_qp_name(name: str) -> str:
@@ -73,7 +79,7 @@ class SupportedSearchParameter:
 
 def supported_search_parameters(
     search_function: Callable[..., Any]
-) -> tuple[SupportedSearchParameter, ...]:
+) -> Tuple[SupportedSearchParameter, ...]:
     """
     Given a callable, return a list of the parameter names in the function (excluding variadic
     keyword and variadic positional arguments).
@@ -85,7 +91,7 @@ def supported_search_parameters(
     #  annotation, but this is sufficient for now.
     return tuple(
         SupportedSearchParameter(
-            name=name, multiple="list[str]" in str(parameter.annotation)  # type: ignore[call-arg]
+            name=name, multiple="list[str]" in str(parameter.annotation).lower()  # type: ignore[call-arg]
         )
         for name, parameter in inspect.signature(search_function).parameters.items()
         if parameter.annotation != InteractionContext
@@ -94,9 +100,9 @@ def supported_search_parameters(
 
 def search_parameter_sort_key(
     name: str,
-    search_parameter_metadata: dict[str, dict[str, str]],
+    search_parameter_metadata: Dict[str, Dict[str, str]],
     parameter_annotation: Union[type, None] = None,
-) -> tuple[bool, bool, bool, bool, bool, str]:
+) -> Tuple[bool, bool, bool, bool, bool, str]:
     """
     Return a sort key for a search parameter.
 
@@ -125,7 +131,7 @@ def search_parameter_sort_key(
 
 
 @cache
-def _load_search_parameters_file() -> dict[str, dict[str, dict[str, Union[str, bool]]]]:
+def _load_search_parameters_file() -> Dict[str, Dict[str, Dict[str, Union[str, bool]]]]:
     """
     Load the search parameters JSON file.
 
@@ -162,7 +168,8 @@ def _transform_description(description: str, resource_type: str) -> str:
         for description_for_resource_type in description.split("\n"):
             if description_for_resource_type.startswith(f"* [{resource_type}]"):
                 _, description = description_for_resource_type.split(": ", maxsplit=1)
-                return description.removesuffix("\r")
+                if description.endswith("\r"):
+                    return description[:-1]
         else:
             raise AssertionError("Resource type must exist in the description")
 

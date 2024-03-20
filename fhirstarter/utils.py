@@ -1,8 +1,7 @@
 """Utility functions for creation of routes and responses."""
 
-from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, ClassVar, Union
+from typing import Any, Callable, ClassVar, Dict, Union
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
@@ -215,7 +214,7 @@ def format_response(
         )
 
 
-def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
+def create_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
     """Provide arguments for creation of a FHIR create API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -242,7 +241,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
     }
 
 
-def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
+def read_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
     """Provide arguments for creation of a FHIR read API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -270,7 +269,7 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any
 
 def search_type_route_args(
     interaction: TypeInteraction[ResourceType], post: bool
-) -> dict[str, Any]:
+) -> Dict[str, Any]:
     """Provide arguments for creation of a FHIR search-type API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -296,7 +295,7 @@ def search_type_route_args(
     }
 
 
-def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
+def update_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
     """Provide arguments for creation of a FHIR update API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -324,7 +323,7 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, A
     }
 
 
-_Responses = dict[int, dict[str, Any]]
+_Responses = Dict[int, Dict[str, Any]]
 
 
 def _responses(
@@ -334,7 +333,7 @@ def _responses(
     """Combine the responses documentation for a FHIR interaction into a single dictionary."""
     merged_responses: _Responses = {}
     for response in responses:
-        merged_responses |= response(interaction)
+        merged_responses.update(response(interaction))
     return merged_responses
 
 

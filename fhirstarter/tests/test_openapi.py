@@ -1,7 +1,6 @@
 """Test OpenAPI modifications"""
 
-from collections.abc import Callable, Mapping
-from typing import Any, cast
+from typing import Any, Callable, Dict, Mapping, Tuple, cast
 
 import pytest
 
@@ -49,7 +48,7 @@ async def appointment_search_type(context: InteractionContext) -> Bundle:
 
 
 @pytest.fixture(scope="module")
-def schema() -> dict[str, Any]:
+def schema() -> Dict[str, Any]:
     client = create_test_client_async(("create", "read", "search-type", "update"))
     app_ = cast(FHIRStarter, client.app)
 
@@ -236,8 +235,8 @@ def test_multiple_examples(
     schema: Mapping[str, Any],
     test_id: str,
     resource_type: str,
-    get_examples_func: Callable[[Mapping[str, Any]], dict[str, Any]],
-    expected_example_names: tuple[str, ...],
+    get_examples_func: Callable[[Mapping[str, Any]], Dict[str, Any]],
+    expected_example_names: Tuple[str, ...],
 ) -> None:
     """Test that the expected request or response body examples are present."""
     # Test that the expected example names are there
@@ -402,7 +401,7 @@ def test_error_examples(
     schema: Mapping[str, Any],
     path: str,
     method: str,
-    expected_status_codes: tuple[str, ...],
+    expected_status_codes: Tuple[str, ...],
 ) -> None:
     """Test that the expected error response body examples are present."""
     responses = schema["paths"][path][method]["responses"]

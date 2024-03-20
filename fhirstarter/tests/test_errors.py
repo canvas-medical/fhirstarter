@@ -1,8 +1,7 @@
 """Test FHIRStarter error handling"""
 
 import json
-from collections.abc import Callable, Coroutine, Mapping
-from typing import Any, Union, cast
+from typing import Any, Callable, Coroutine, Mapping, Union, cast
 
 import pytest
 from fastapi import HTTPException

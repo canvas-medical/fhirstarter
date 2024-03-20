@@ -6,7 +6,7 @@ import sys
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Literal, Union
+from typing import Any, Dict, Literal, Union
 from uuid import uuid4
 
 import requests
@@ -120,7 +120,7 @@ def main() -> None:
     print("\nDone")
 
 
-def get_examples(sequence: str, resource_type: str) -> dict[str, Any]:
+def get_examples(sequence: str, resource_type: str) -> Dict[str, Any]:
     if sequence == "R5" and resource_type == "AdverseEvent":
         return {
             "example": {
@@ -156,7 +156,7 @@ def get_examples(sequence: str, resource_type: str) -> dict[str, Any]:
     return examples
 
 
-def _get_structuredefinition_examples(sequence: str) -> dict[str, Any]:
+def _get_structuredefinition_examples(sequence: str) -> Dict[str, Any]:
     resource_type = "StructureDefinition"
 
     # Download the examples page for the resource type
@@ -175,33 +175,41 @@ def _get_structuredefinition_examples(sequence: str) -> dict[str, Any]:
         description_prefix="Base Type",
         id_method="random",
     )
-    examples |= _get_examples(
-        sequence,
-        resource_type,
-        soup.find("div", attrs={"id": "tabs-2"}),
-        description_prefix="Resource",
-        id_method="random",
+    examples.update(
+        _get_examples(
+            sequence,
+            resource_type,
+            soup.find("div", attrs={"id": "tabs-2"}),
+            description_prefix="Resource",
+            id_method="random",
+        )
     )
-    examples |= _get_examples(
-        sequence,
-        resource_type,
-        soup.find("div", attrs={"id": "tabs-3"}),
-        description_prefix="Constraint",
-        id_method="random",
+    examples.update(
+        _get_examples(
+            sequence,
+            resource_type,
+            soup.find("div", attrs={"id": "tabs-3"}),
+            description_prefix="Constraint",
+            id_method="random",
+        )
     )
-    examples |= _get_examples(
-        sequence,
-        resource_type,
-        soup.find("div", attrs={"id": "tabs-4"}),
-        description_prefix="Extension",
-        id_method="description",
+    examples.update(
+        _get_examples(
+            sequence,
+            resource_type,
+            soup.find("div", attrs={"id": "tabs-4"}),
+            description_prefix="Extension",
+            id_method="description",
+        )
     )
-    examples |= _get_examples(
-        sequence,
-        resource_type,
-        soup.find("div", attrs={"id": "tabs-5"}),
-        description_prefix="Example",
-        id_method="standard",
+    examples.update(
+        _get_examples(
+            sequence,
+            resource_type,
+            soup.find("div", attrs={"id": "tabs-5"}),
+            description_prefix="Example",
+            id_method="standard",
+        )
     )
 
     return examples
@@ -213,8 +221,8 @@ def _get_examples(
     examples_table: Union[Tag, None],
     description_prefix: str = "",
     id_method: Literal["standard", "random", "description"] = "standard",
-) -> dict[str, Any]:
-    examples: dict[str, Any] = {}
+) -> Dict[str, Any]:
+    examples: Dict[str, Any] = {}
 
     if not examples_table:
         return examples
@@ -249,7 +257,9 @@ def _get_examples(
         # Find the JSON filename
         for a in example.find_all("a"):
             if a.text.lower() == "json":
-                filename = a.attrs["href"].removesuffix(".html")
+                filename = a.attrs["href"]
+                if filename.endswith(".html"):
+                    filename = filename[:-5]
                 break
         else:
             raise AssertionError(

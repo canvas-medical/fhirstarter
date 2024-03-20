@@ -1,8 +1,7 @@
 """Test utilities"""
 
 import json
-from collections.abc import Mapping
-from typing import Any, Union
+from typing import Any, Dict, Mapping, Union
 from urllib.parse import urlparse
 from uuid import uuid4
 
@@ -19,7 +18,7 @@ _RESOURCE = {
 }
 
 
-def resource(id_: Union[str, None] = None) -> dict[str, Any]:
+def resource(id_: Union[str, None] = None) -> Dict[str, Any]:
     """
     Return a test patient resource.
 
@@ -27,7 +26,7 @@ def resource(id_: Union[str, None] = None) -> dict[str, Any]:
     ID.
     """
     if id_:
-        return _RESOURCE | {"id": id_}
+        return {**_RESOURCE, "id": id_}
     else:
         return omit(_RESOURCE, ["id"])
 

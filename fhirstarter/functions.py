@@ -19,9 +19,8 @@ places.
 """
 
 import keyword
-from collections.abc import Callable, Coroutine
 from inspect import Parameter, iscoroutinefunction, signature
-from typing import Union, cast
+from typing import Callable, Coroutine, Dict, List, Tuple, Union, cast
 
 from fastapi import Form, Path, Query, Request, Response
 
@@ -99,9 +98,11 @@ def make_create_function(
                 format_parameters=FormatParameters.from_request(request),
             )
 
-        create_async.__annotations__ |= {
-            "resource": interaction.resource_type,
-        }
+        create_async.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
 
         return create_async
     else:
@@ -130,9 +131,11 @@ def make_create_function(
                 format_parameters=FormatParameters.from_request(request),
             )
 
-        create.__annotations__ |= {
-            "resource": interaction.resource_type,
-        }
+        create.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
 
         return create
 
@@ -197,7 +200,7 @@ def make_read_function(
 # TODO: If possible, map FHIR primitives to correct type annotations for better validation
 def make_search_type_function(
     interaction: TypeInteraction[ResourceType],
-    search_parameter_metadata: dict[str, dict[str, str]],
+    search_parameter_metadata: Dict[str, Dict[str, str]],
     post: bool,
 ) -> Callable[
     [Request, Response, str, str],
@@ -222,7 +225,7 @@ def make_search_type_function(
         format_annotation = FORMAT_QP
         pretty_annotation = PRETTY_QP
 
-    search_parameters: tuple[Parameter, ...] = tuple(
+    search_parameters: Tuple[Parameter, ...] = tuple(
         _make_search_parameter(
             name=search_parameter.name,
             description=search_parameter_metadata[
@@ -326,9 +329,11 @@ def make_update_function(
                 format_parameters=FormatParameters.from_request(request),
             )
 
-        update_async.__annotations__ |= {
-            "resource": interaction.resource_type,
-        }
+        update_async.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
 
         return update_async
     else:
@@ -361,16 +366,18 @@ def make_update_function(
                 format_parameters=FormatParameters.from_request(request),
             )
 
-        update.__annotations__ |= {
-            "resource": interaction.resource_type,
-        }
+        update.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
 
         return update
 
 
 def _result_to_id_resource_tuple(
     result: Union[Id, ResourceType],
-) -> tuple[Union[Id, None], Union[ResourceType, None]]:
+) -> Tuple[Union[Id, None], Union[ResourceType, None]]:
     """
     Given an Id or a Resource, return an Id and a Resource.
 
@@ -403,7 +410,7 @@ def _make_search_parameter(
             if post
             else Query(None, alias=var_name_to_qp_name(name), description=description)
         ),
-        annotation=list[str] if multiple else str,
+        annotation=List[str] if multiple else str,
     )
 
 
@@ -426,8 +433,8 @@ def _set_search_type_function_signature(
     search_type_function: Callable[
         ..., Union[Coroutine[None, None, Union[Bundle, Response]], Bundle, Response]
     ],
-    search_parameters: tuple[Parameter, ...],
-    search_parameter_metadata: dict[str, dict[str, str]],
+    search_parameters: Tuple[Parameter, ...],
+    search_parameter_metadata: Dict[str, Dict[str, str]],
 ) -> Callable[
     [Request, Response, str, str],
     Union[Coroutine[None, None, Union[Bundle, Response]], Bundle, Response],
@@ -437,9 +444,9 @@ def _set_search_type_function_signature(
     that the handler supports.
     """
     sig = signature(search_type_function)
-    parameters: tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
+    parameters: Tuple[Parameter, ...] = tuple(sig.parameters.values())[:-1]
 
-    sorted_search_parameters: list[Parameter] = sorted(
+    sorted_search_parameters: List[Parameter] = sorted(
         parameters + search_parameters,
         key=lambda p: search_parameter_sort_key(
             p.name, search_parameter_metadata, p.annotation

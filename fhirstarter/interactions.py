@@ -1,9 +1,18 @@
 """Classes and types for handling and representing FHIR Interactions."""
 
 from abc import abstractmethod
-from collections.abc import Callable, Coroutine, Mapping
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Generic,
+    Literal,
+    Mapping,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from fastapi import Request, Response
 
@@ -54,7 +63,7 @@ class TypeInteraction(Generic[ResourceType]):
 
     def __init__(
         self,
-        resource_type: type[ResourceType],
+        resource_type: Type[ResourceType],
         handler: InteractionHandler[ResourceType],
         route_options: Mapping[str, Any],
     ):
