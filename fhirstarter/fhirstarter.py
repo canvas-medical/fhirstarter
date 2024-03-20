@@ -452,7 +452,7 @@ async def _transform_search_type_post_request(
         scope["method"] = "GET"
         if scope["path"].endswith("/_search"):
             scope["path"] = scope["path"][:-8]
-        if scope["raw_path"][-8] == "/_search":
+        if scope["raw_path"][-8:] == "/_search":
             scope["raw_path"] = scope["raw_path"][:-8]
         scope["query_string"] = await _merge_parameter_strings(request)
         scope["headers"] = [
