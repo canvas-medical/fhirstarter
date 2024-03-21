@@ -30,7 +30,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
     argnames="client,request_body,response_body",
     argvalues=[
         (
-            ("create", "read", "search-type", "update"),
+            ("read", "update", "create", "search-type"),
             " ",
             make_operation_outcome(
                 severity="error",
@@ -39,7 +39,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("create", "read", "search-type", "update"),
+            ("read", "update", "create", "search-type"),
             {"extraField": []},
             make_operation_outcome(
                 severity="error",
@@ -49,7 +49,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("create", "read", "search-type", "update"),
+            ("read", "update", "create", "search-type"),
             {"communication": [{}]},
             make_operation_outcome(
                 severity="error",
@@ -59,7 +59,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("create", "read", "search-type", "update"),
+            ("read", "update", "create", "search-type"),
             {"id": ""},
             make_operation_outcome(
                 severity="error",
@@ -69,7 +69,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("create", "read", "search-type", "update"),
+            ("read", "update", "create", "search-type"),
             {"name": 0},
             make_operation_outcome(
                 severity="error",
@@ -78,7 +78,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("create", "read", "search-type", "update"),
+            ("read", "update", "create", "search-type"),
             {"extraField": [], "communication": [{}]},
             {
                 "resourceType": "OperationOutcome",

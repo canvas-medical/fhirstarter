@@ -16,13 +16,27 @@ from .utils import generate_fhir_resource_id, make_request
     argvalues=(
         argvalues := [
             (
-                "capabilitites",
+                "read",
                 "GET",
-                "/metadata",
+                f"/Patient/{(id_ := generate_fhir_resource_id())}",
                 InteractionInfo(  # type: ignore[call-arg]
-                    resource_type=None,
-                    interaction_type="capabilities",
-                    resource_id=None,
+                    resource_type="Patient", interaction_type="read", resource_id=id_
+                ),
+            ),
+            (
+                "read unrecognized resource type",
+                "GET",
+                f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None, interaction_type=None, resource_id=None
+                ),
+            ),
+            (
+                "update",
+                "PUT",
+                f"/Patient/{(id_ := generate_fhir_resource_id())}",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type="Patient", interaction_type="update", resource_id=id_
                 ),
             ),
             (
@@ -34,11 +48,11 @@ from .utils import generate_fhir_resource_id, make_request
                 ),
             ),
             (
-                "read",
-                "GET",
-                f"/Patient/{(id_ := generate_fhir_resource_id())}",
+                "create unrecognized resource type",
+                "POST",
+                "/FakeResource",
                 InteractionInfo(  # type: ignore[call-arg]
-                    resource_type="Patient", interaction_type="read", resource_id=id_
+                    resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
             (
@@ -62,41 +76,9 @@ from .utils import generate_fhir_resource_id, make_request
                 ),
             ),
             (
-                "update",
-                "PUT",
-                f"/Patient/{(id_ := generate_fhir_resource_id())}",
-                InteractionInfo(  # type: ignore[call-arg]
-                    resource_type="Patient", interaction_type="update", resource_id=id_
-                ),
-            ),
-            (
-                "read unrecognized resource type",
-                "GET",
-                f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
-                InteractionInfo(  # type: ignore[call-arg]
-                    resource_type=None, interaction_type=None, resource_id=None
-                ),
-            ),
-            (
                 "search unrecognized resource type",
                 "GET",
                 f"/FakeResource",
-                InteractionInfo(  # type: ignore[call-arg]
-                    resource_type=None, interaction_type=None, resource_id=None
-                ),
-            ),
-            (
-                "unrecognized GET path",
-                "GET",
-                f"/Patient/{(id_ := generate_fhir_resource_id())}/extra",
-                InteractionInfo(  # type: ignore[call-arg]
-                    resource_type=None, interaction_type=None, resource_id=None
-                ),
-            ),
-            (
-                "create unrecognized resource type",
-                "POST",
-                "/FakeResource",
                 InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),
@@ -110,14 +92,6 @@ from .utils import generate_fhir_resource_id, make_request
                 ),
             ),
             (
-                "unrecognized POST path",
-                "POST",
-                "/FakeResource/extra",
-                InteractionInfo(  # type: ignore[call-arg]
-                    resource_type=None, interaction_type=None, resource_id=None
-                ),
-            ),
-            (
                 "update unrecognized resource type",
                 "PUT",
                 f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
@@ -126,9 +100,35 @@ from .utils import generate_fhir_resource_id, make_request
                 ),
             ),
             (
+                "capabilitites",
+                "GET",
+                "/metadata",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None,
+                    interaction_type="capabilities",
+                    resource_id=None,
+                ),
+            ),
+            (
+                "unrecognized GET path",
+                "GET",
+                f"/Patient/{(id_ := generate_fhir_resource_id())}/extra",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None, interaction_type=None, resource_id=None
+                ),
+            ),
+            (
                 "unrecognized PUT path",
                 "PUT",
                 f"/FakeResource/{(id_ := generate_fhir_resource_id())}/extra",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None, interaction_type=None, resource_id=None
+                ),
+            ),
+            (
+                "unrecognized POST path",
+                "POST",
+                "/FakeResource/extra",
                 InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),

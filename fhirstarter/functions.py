@@ -2,12 +2,12 @@
 Dynamic function creation for FHIR interactions.
 
 The callables passed to FastAPI by FHIRStarter are created using functional programming techniques.
-The create, read, and update use cases are fairly straightforward -- these functions simply call a
+The read, update, and create use cases are fairly straightforward -- these functions simply call a
 developer-provided handler, perform some FHIR-related processing, and return the result up the
 chain.
 
 The search use case is slightly more complicated. Because each FHIR resource type has a different
-set of search parameters (i.e. query parameters), the approach used for the create, read, and update
+set of search parameters (i.e. query parameters), the approach used for the read, update, and create
 use cases to create the callables does not work. Instead, a function that takes arbitrary kwargs is
 created, and the function signature is modified afterward to provide the information needed by
 FastAPI for documentation purposes: variable name, annotation, and default value.
@@ -56,88 +56,6 @@ PRETTY_QP = Query(None, description=_PRETTY_PARAMETER_DESCRIPTION)
 # Note: I'm not currently aware of a better way do support both async and non-async handlers than
 #       branching based on the result of the iscoroutinefunction function and duplicating most of
 #       the code. If there is a better way to do this, I will refactor later.
-
-
-def make_create_function(
-    interaction: TypeInteraction[ResourceType],
-) -> Callable[
-    [Request, Response, ResourceType, str, str],
-    Union[
-        Coroutine[None, None, Union[ResourceType, Response, None]],
-        ResourceType,
-        Response,
-        None,
-    ],
-]:
-    """Make a function suitable for creation of a FHIR create API route."""
-    resource_type_str = interaction.resource_type.get_resource_type()
-
-    if iscoroutinefunction(interaction.handler):
-
-        async def create_async(
-            request: Request,
-            response: Response,
-            resource: ResourceType,
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
-        ) -> Union[ResourceType, Response, None]:
-            """
-            Function for create interaction.
-
-            Calls the handler, and sets the Location header based on the Id of the created resource.
-            """
-            handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
-            result = await handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
-            id_, result_resource = _result_to_id_resource_tuple(result)
-
-            response.headers["Location"] = f"/{resource_type_str}/{id_}"
-
-            return format_response(
-                resource=result_resource,
-                response=response,
-                format_parameters=FormatParameters.from_request(request),
-            )
-
-        create_async.__annotations__.update(
-            {
-                "resource": interaction.resource_type,
-            }
-        )
-
-        return create_async
-    else:
-
-        def create(
-            request: Request,
-            response: Response,
-            resource: ResourceType,
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
-        ) -> Union[ResourceType, Response, None]:
-            """
-            Function for create interaction.
-
-            Calls the handler, and sets the Location header based on the Id of the created resource.
-            """
-            handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
-            result = handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
-            id_, result_resource = _result_to_id_resource_tuple(result)
-
-            response.headers["Location"] = f"/{resource_type_str}/{id_}"
-
-            return format_response(
-                resource=result_resource,
-                response=response,
-                format_parameters=FormatParameters.from_request(request),
-            )
-
-        create.__annotations__.update(
-            {
-                "resource": interaction.resource_type,
-            }
-        )
-
-        return create
 
 
 def make_read_function(
@@ -195,95 +113,6 @@ def make_read_function(
             )
 
         return read
-
-
-# TODO: If possible, map FHIR primitives to correct type annotations for better validation
-def make_search_type_function(
-    interaction: TypeInteraction[ResourceType],
-    search_parameter_metadata: Dict[str, Dict[str, str]],
-    post: bool,
-) -> Callable[
-    [Request, Response, str, str],
-    Union[Coroutine[None, None, Union[Bundle, Response]], Bundle, Response],
-]:
-    """
-    Make a function suitable for creation of a FHIR search-type API route.
-
-    Creation of a search-type function is more complex than creation of a create, read, or update
-    function due to the variability of search parameters, support for custom search parameters, and
-    due to the need to support GET and POST.
-
-    Search parameter descriptions are pulled from the FHIR specification.
-
-    After the function is created, the function signature is changed to account for what search
-    parameters are supported by the developer-defined handler.
-    """
-    if post:
-        format_annotation = Form(None, description=_FORMAT_PARAMETER_DESCRIPTION)
-        pretty_annotation = Form(None, description=_PRETTY_PARAMETER_DESCRIPTION)
-    else:
-        format_annotation = FORMAT_QP
-        pretty_annotation = PRETTY_QP
-
-    search_parameters: Tuple[Parameter, ...] = tuple(
-        _make_search_parameter(
-            name=search_parameter.name,
-            description=search_parameter_metadata[
-                var_name_to_qp_name(search_parameter.name)
-            ]["description"],
-            post=post,
-            multiple=search_parameter.multiple,
-        )
-        for search_parameter in supported_search_parameters(interaction.handler)
-    )
-
-    if iscoroutinefunction(interaction.handler):
-
-        async def search_type_async(
-            request: Request,
-            response: Response,
-            *,
-            _format: str = format_annotation,
-            _pretty: str = pretty_annotation,
-            **kwargs: str,
-        ) -> Union[Bundle, Response]:
-            """Function for search-type interaction."""
-            handler = cast(SearchTypeInteractionHandler, interaction.handler)
-            bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore[call-arg]
-
-            return format_response(
-                resource=bundle,
-                response=response,
-                format_parameters=FormatParameters.from_request(request),
-            )
-
-        return _set_search_type_function_signature(
-            search_type_async, search_parameters, search_parameter_metadata
-        )
-
-    else:
-
-        def search_type(
-            request: Request,
-            response: Response,
-            *,
-            _format: str = format_annotation,
-            _pretty: str = pretty_annotation,
-            **kwargs: str,
-        ) -> Union[Bundle, Response]:
-            """Function for search-type interaction."""
-            handler = cast(SearchTypeInteractionHandler, interaction.handler)
-            bundle = handler(InteractionContext(request, response), **kwargs)  # type: ignore[call-arg]
-
-            return format_response(
-                resource=bundle,
-                response=response,
-                format_parameters=FormatParameters.from_request(request),
-            )
-
-        return _set_search_type_function_signature(
-            search_type, search_parameters, search_parameter_metadata
-        )
 
 
 def make_update_function(
@@ -373,6 +202,177 @@ def make_update_function(
         )
 
         return update
+
+
+def make_create_function(
+    interaction: TypeInteraction[ResourceType],
+) -> Callable[
+    [Request, Response, ResourceType, str, str],
+    Union[
+        Coroutine[None, None, Union[ResourceType, Response, None]],
+        ResourceType,
+        Response,
+        None,
+    ],
+]:
+    """Make a function suitable for creation of a FHIR create API route."""
+    resource_type_str = interaction.resource_type.get_resource_type()
+
+    if iscoroutinefunction(interaction.handler):
+
+        async def create_async(
+            request: Request,
+            response: Response,
+            resource: ResourceType,
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
+        ) -> Union[ResourceType, Response, None]:
+            """
+            Function for create interaction.
+
+            Calls the handler, and sets the Location header based on the Id of the created resource.
+            """
+            handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
+            result = await handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
+            id_, result_resource = _result_to_id_resource_tuple(result)
+
+            response.headers["Location"] = f"/{resource_type_str}/{id_}"
+
+            return format_response(
+                resource=result_resource,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
+        create_async.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
+
+        return create_async
+    else:
+
+        def create(
+            request: Request,
+            response: Response,
+            resource: ResourceType,
+            _format: str = FORMAT_QP,
+            _pretty: str = PRETTY_QP,
+        ) -> Union[ResourceType, Response, None]:
+            """
+            Function for create interaction.
+
+            Calls the handler, and sets the Location header based on the Id of the created resource.
+            """
+            handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
+            result = handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
+            id_, result_resource = _result_to_id_resource_tuple(result)
+
+            response.headers["Location"] = f"/{resource_type_str}/{id_}"
+
+            return format_response(
+                resource=result_resource,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
+        create.__annotations__.update(
+            {
+                "resource": interaction.resource_type,
+            }
+        )
+
+        return create
+
+
+# TODO: If possible, map FHIR primitives to correct type annotations for better validation
+def make_search_type_function(
+    interaction: TypeInteraction[ResourceType],
+    search_parameter_metadata: Dict[str, Dict[str, str]],
+    post: bool,
+) -> Callable[
+    [Request, Response, str, str],
+    Union[Coroutine[None, None, Union[Bundle, Response]], Bundle, Response],
+]:
+    """
+    Make a function suitable for creation of a FHIR search-type API route.
+
+    Creation of a search-type function is more complex than creation of a create, read, or update
+    function due to the variability of search parameters, support for custom search parameters, and
+    due to the need to support GET and POST.
+
+    Search parameter descriptions are pulled from the FHIR specification.
+
+    After the function is created, the function signature is changed to account for what search
+    parameters are supported by the developer-defined handler.
+    """
+    if post:
+        format_annotation = Form(None, description=_FORMAT_PARAMETER_DESCRIPTION)
+        pretty_annotation = Form(None, description=_PRETTY_PARAMETER_DESCRIPTION)
+    else:
+        format_annotation = FORMAT_QP
+        pretty_annotation = PRETTY_QP
+
+    search_parameters: Tuple[Parameter, ...] = tuple(
+        _make_search_parameter(
+            name=search_parameter.name,
+            description=search_parameter_metadata[
+                var_name_to_qp_name(search_parameter.name)
+            ]["description"],
+            post=post,
+            multiple=search_parameter.multiple,
+        )
+        for search_parameter in supported_search_parameters(interaction.handler)
+    )
+
+    if iscoroutinefunction(interaction.handler):
+
+        async def search_type_async(
+            request: Request,
+            response: Response,
+            *,
+            _format: str = format_annotation,
+            _pretty: str = pretty_annotation,
+            **kwargs: str,
+        ) -> Union[Bundle, Response]:
+            """Function for search-type interaction."""
+            handler = cast(SearchTypeInteractionHandler, interaction.handler)
+            bundle = await handler(InteractionContext(request, response), **kwargs)  # type: ignore[call-arg]
+
+            return format_response(
+                resource=bundle,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
+        return _set_search_type_function_signature(
+            search_type_async, search_parameters, search_parameter_metadata
+        )
+
+    else:
+
+        def search_type(
+            request: Request,
+            response: Response,
+            *,
+            _format: str = format_annotation,
+            _pretty: str = pretty_annotation,
+            **kwargs: str,
+        ) -> Union[Bundle, Response]:
+            """Function for search-type interaction."""
+            handler = cast(SearchTypeInteractionHandler, interaction.handler)
+            bundle = handler(InteractionContext(request, response), **kwargs)  # type: ignore[call-arg]
+
+            return format_response(
+                resource=bundle,
+                response=response,
+                format_parameters=FormatParameters.from_request(request),
+            )
+
+        return _set_search_type_function_signature(
+            search_type, search_parameters, search_parameter_metadata
+        )
 
 
 def _result_to_id_resource_tuple(

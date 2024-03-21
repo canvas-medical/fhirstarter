@@ -44,11 +44,6 @@ def patient_id(create_response: Response) -> str:
     return id_from_create_response(create_response)
 
 
-def test_create(create_response: Response) -> None:
-    """Test FHIR create interaction."""
-    assert_expected_response(create_response, status.HTTP_201_CREATED)
-
-
 def test_read(client: TestClient, patient_id: str) -> None:
     """Test FHIR read interaction."""
     read_response = client.get(f"/Patient/{patient_id}")
@@ -139,6 +134,110 @@ def test_read_not_found_xml(client: TestClient, pretty: str) -> None:
             code="not-found",
             details_text=f"Unknown Patient resource '{id_}'",
         ).xml(pretty_print=(pretty == "true")),
+    )
+
+
+def test_update(client: TestClient, patient_id: str) -> None:
+    """Test FHIR update interaction."""
+    read_response = client.get(f"/Patient/{patient_id}")
+    content = read_response.json()
+    content["name"][0]["given"][0] = "Frodo"
+    put_response = client.put(f"/Patient/{patient_id}", json=content)
+
+    assert_expected_response(put_response, status.HTTP_200_OK)
+
+    read_response = client.get(f"/Patient/{patient_id}")
+
+    assert_expected_response(
+        read_response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "Patient",
+            "id": patient_id,
+            "name": [{"family": "Baggins", "given": ["Frodo"]}],
+        },
+    )
+
+    content["name"][0]["given"][0] = "Bilbo"
+    client.put(f"/Patient/{patient_id}", json=content)
+
+
+def test_update_not_found(client: TestClient) -> None:
+    """Test FHIR update interaction that produces a 404 not found error."""
+    id_ = generate_fhir_resource_id()
+    put_response = client.put(f"/Patient/{id_}", json=resource())
+
+    assert_expected_response(
+        put_response,
+        status.HTTP_404_NOT_FOUND,
+        content=make_operation_outcome(
+            severity="error",
+            code="not-found",
+            details_text=f"Unknown Patient resource '{id_}'",
+        ).dict(),
+    )
+
+
+def test_update_id_mismatch(client: TestClient, patient_id: str) -> None:
+    """
+    Test FHIR update interaction where the logical Id in the URL does not match the logical ID in
+    the resource.
+    """
+    read_response = client.get(f"/Patient/{patient_id}")
+    content = read_response.json()
+    content["id"] = generate_fhir_resource_id()
+    put_response = client.put(f"/Patient/{patient_id}", json=content)
+
+    assert_expected_response(
+        put_response,
+        status.HTTP_400_BAD_REQUEST,
+        content={
+            "resourceType": "OperationOutcome",
+            "issue": [
+                {
+                    "severity": "error",
+                    "code": "invalid",
+                    "details": {
+                        "text": "Logical Id in URL must match logical Id in resource"
+                    },
+                }
+            ],
+        },
+    )
+
+
+def test_create(create_response: Response) -> None:
+    """Test FHIR create interaction."""
+    assert_expected_response(create_response, status.HTTP_201_CREATED)
+
+
+@pytest.mark.parametrize(
+    argnames="interaction_func",
+    argvalues=(
+        lambda client: client.post("/Patient", data=None),
+        lambda client: client.put(f"/Patient/{generate_fhir_resource_id()}", data=None),
+    ),
+    ids=["create", "update"],
+)
+def test_no_body(
+    client: TestClient, interaction_func: Callable[[TestClient], Response]
+) -> None:
+    response = interaction_func(client)
+    assert_expected_response(
+        response,
+        status.HTTP_400_BAD_REQUEST,
+        content={
+            "issue": [
+                {
+                    "code": "required",
+                    "details": {
+                        "text": "body — field required (type=value_error.missing)"
+                    },
+                    "severity": "error",
+                }
+            ],
+            "resourceType": "OperationOutcome",
+        },
     )
 
 
@@ -296,101 +395,5 @@ def test_search_type_parameter_multiple_values(
             "resourceType": "Bundle",
             "type": "searchset",
             "total": 0,
-        },
-    )
-
-
-def test_update(client: TestClient, patient_id: str) -> None:
-    """Test FHIR update interaction."""
-    read_response = client.get(f"/Patient/{patient_id}")
-    content = read_response.json()
-    content["name"][0]["given"][0] = "Frodo"
-    put_response = client.put(f"/Patient/{patient_id}", json=content)
-
-    assert_expected_response(put_response, status.HTTP_200_OK)
-
-    read_response = client.get(f"/Patient/{patient_id}")
-
-    assert_expected_response(
-        read_response,
-        status.HTTP_200_OK,
-        content={
-            "resourceType": "Patient",
-            "id": patient_id,
-            "name": [{"family": "Baggins", "given": ["Frodo"]}],
-        },
-    )
-
-
-def test_update_not_found(client: TestClient) -> None:
-    """Test FHIR update interaction that produces a 404 not found error."""
-    id_ = generate_fhir_resource_id()
-    put_response = client.put(f"/Patient/{id_}", json=resource())
-
-    assert_expected_response(
-        put_response,
-        status.HTTP_404_NOT_FOUND,
-        content=make_operation_outcome(
-            severity="error",
-            code="not-found",
-            details_text=f"Unknown Patient resource '{id_}'",
-        ).dict(),
-    )
-
-
-def test_update_id_mismatch(client: TestClient, patient_id: str) -> None:
-    """
-    Test FHIR update interaction where the logical Id in the URL does not match the logical ID in
-    the resource.
-    """
-    read_response = client.get(f"/Patient/{patient_id}")
-    content = read_response.json()
-    content["id"] = generate_fhir_resource_id()
-    put_response = client.put(f"/Patient/{patient_id}", json=content)
-
-    assert_expected_response(
-        put_response,
-        status.HTTP_400_BAD_REQUEST,
-        content={
-            "resourceType": "OperationOutcome",
-            "issue": [
-                {
-                    "severity": "error",
-                    "code": "invalid",
-                    "details": {
-                        "text": "Logical Id in URL must match logical Id in resource"
-                    },
-                }
-            ],
-        },
-    )
-
-
-@pytest.mark.parametrize(
-    argnames="interaction_func",
-    argvalues=(
-        lambda client: client.post("/Patient", data=None),
-        lambda client: client.put(f"/Patient/{generate_fhir_resource_id()}", data=None),
-    ),
-    ids=["create", "update"],
-)
-def test_no_body(
-    client: TestClient, interaction_func: Callable[[TestClient], Response]
-) -> None:
-    response = interaction_func(client)
-    assert_expected_response(
-        response,
-        status.HTTP_400_BAD_REQUEST,
-        content={
-            "issue": [
-                {
-                    "code": "required",
-                    "details": {
-                        "text": "body — field required (type=value_error.missing)"
-                    },
-                    "severity": "error",
-                }
-            ],
-            "resourceType": "OperationOutcome",
         },
     )
