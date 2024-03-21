@@ -67,6 +67,17 @@ CapabilityStatementModifier = Callable[
     [MutableMapping[str, Any], Request, Response], MutableMapping[str, Any]
 ]
 
+_INTERACTION_ORDER = {
+    "read": 1,
+    "vread": 2,
+    "update": 3,
+    "patch": 4,
+    "delete": 5,
+    "history-instance": 6,
+    "history-type": 7,
+    "create": 8,
+    "search-type": 9
+}
 
 class FHIRStarter(FastAPI):
     """
@@ -119,13 +130,6 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_transform_null_response_body)
         self.middleware("http")(_set_content_type_header)
 
-        self._interaction_order = {
-            "read": 1,
-            "update": 2,
-            "create": 3,
-            "search-type": 4,
-        }
-
         async def default_exception_callback(
             _: Request, response: Response, __: Exception
         ) -> Response:
@@ -158,7 +162,7 @@ class FHIRStarter(FastAPI):
                 provider_interactions,
                 key=lambda i: cast(str, i.resource_type.get_resource_type()),
             ),
-            key=lambda i: self._interaction_order[i.label()],
+            key=lambda i: _INTERACTION_ORDER[i.label()],
         ):
             resource_type = interaction.resource_type.get_resource_type()
             label = interaction.label()
@@ -313,7 +317,7 @@ class FHIRStarter(FastAPI):
                 "interaction": [
                     {"code": label}
                     for label in sorted(
-                        interactions.keys(), key=lambda l: self._interaction_order[l]
+                        interactions.keys(), key=lambda l: _INTERACTION_ORDER[l]
                     )
                 ],
             }
