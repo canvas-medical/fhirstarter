@@ -127,6 +127,7 @@ def make_update_function(
     ],
 ]:
     """Make a function suitable for creation of a FHIR update API route."""
+    resource_type_str = interaction.resource_type.get_resource_type()
 
     if iscoroutinefunction(interaction.handler):
 
@@ -151,6 +152,8 @@ def make_update_function(
             handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
             result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore[call-arg]
             _, result_resource = _result_to_id_resource_tuple(result)
+
+            response.headers["Location"] = f"/{resource_type_str}/{id_}"
 
             return format_response(
                 resource=result_resource,
@@ -188,6 +191,8 @@ def make_update_function(
             handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
             result = handler(InteractionContext(request, response), id_, resource)  # type: ignore[call-arg]
             _, result_resource = _result_to_id_resource_tuple(result)
+
+            response.headers["Location"] = f"/{resource_type_str}/{id_}"
 
             return format_response(
                 resource=result_resource,

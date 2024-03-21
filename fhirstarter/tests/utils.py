@@ -36,7 +36,7 @@ def generate_fhir_resource_id() -> Id:
     return Id(str(uuid4()))
 
 
-def id_from_create_response(response: Response) -> str:
+def id_from_location_header(response: Response) -> str:
     """Extract the resource identifier from a FHIR create interaction response."""
     return response.headers["Location"].split("/")[2]
 

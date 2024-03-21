@@ -18,7 +18,7 @@ from .resources import HumanName, Patient
 from .utils import (
     assert_expected_response,
     generate_fhir_resource_id,
-    id_from_create_response,
+    id_from_location_header,
     json_dumps_pretty,
     resource,
 )
@@ -41,7 +41,7 @@ def create_response(client: TestClient) -> Response:
 @pytest.fixture(scope="module")
 def patient_id(create_response: Response) -> str:
     """Return the patient ID from a Patient create interaction."""
-    return id_from_create_response(create_response)
+    return id_from_location_header(create_response)
 
 
 def test_read(client: TestClient, patient_id: str) -> None:
@@ -157,6 +157,7 @@ def test_update(client: TestClient, patient_id: str) -> None:
             "name": [{"family": "Baggins", "given": ["Frodo"]}],
         },
     )
+    assert id_from_location_header(put_response)
 
     content["name"][0]["given"][0] = "Bilbo"
     client.put(f"/Patient/{patient_id}", json=content)
@@ -209,6 +210,7 @@ def test_update_id_mismatch(client: TestClient, patient_id: str) -> None:
 def test_create(create_response: Response) -> None:
     """Test FHIR create interaction."""
     assert_expected_response(create_response, status.HTTP_201_CREATED)
+    assert id_from_location_header(create_response)
 
 
 @pytest.mark.parametrize(
@@ -363,7 +365,7 @@ def test_search_type_parameter_multiple_values(
             "name": [{"family": "Gamgee", "given": ["Samwise", "Sam"]}],
         },
     )
-    id_ = id_from_create_response(create_response)
+    id_ = id_from_location_header(create_response)
 
     search_type_response = search_type_func(client)(**search_type_func_kwargs)
     assert_expected_response(
