@@ -119,6 +119,13 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_transform_null_response_body)
         self.middleware("http")(_set_content_type_header)
 
+        self._interaction_order = {
+            "read": 1,
+            "update": 2,
+            "create": 3,
+            "search-type": 4,
+        }
+
         async def default_exception_callback(
             _: Request, response: Response, __: Exception
         ) -> Response:
@@ -145,9 +152,13 @@ class FHIRStarter(FastAPI):
         provider_interactions = itertools.chain.from_iterable(
             provider.interactions for provider in providers
         )
+
         for interaction in sorted(
-            provider_interactions,
-            key=lambda i: cast(str, i.resource_type.get_resource_type()),
+            sorted(
+                provider_interactions,
+                key=lambda i: cast(str, i.resource_type.get_resource_type()),
+            ),
+            key=lambda i: self._interaction_order[i.label()],
         ):
             resource_type = interaction.resource_type.get_resource_type()
             label = interaction.label()
@@ -288,7 +299,7 @@ class FHIRStarter(FastAPI):
         """
         Generate the capability statement for the instance based on the FHIR interactions provided.
 
-        In addition to declaring the interactions (e.g. create, read, search-type, and update), the
+        In addition to declaring the interactions (e.g. read, update, create, and search-type), the
         supported search parameters are also declared.
         """
         resources = []
@@ -300,7 +311,10 @@ class FHIRStarter(FastAPI):
             resource = {
                 "type": resource_type,
                 "interaction": [
-                    {"code": label} for label in sorted(interactions.keys())
+                    {"code": label}
+                    for label in sorted(
+                        interactions.keys(), key=lambda l: self._interaction_order[l]
+                    )
                 ],
             }
             if search_type_interaction := interactions.get("search-type"):
@@ -395,12 +409,16 @@ class FHIRStarter(FastAPI):
         FHIR search-type routes must support both GET and POST, so two routes are added for
         search-type interactions.
         """
-        if interaction.label() == "create":
+        if interaction.label() == "read":
+            self.get(**read_route_args(interaction))(make_read_function(interaction))
+        elif interaction.label() == "update":
+            self.put(**update_route_args(interaction))(
+                make_update_function(interaction)
+            )
+        elif interaction.label() == "create":
             self.post(**create_route_args(interaction))(
                 make_create_function(interaction)
             )
-        elif interaction.label() == "read":
-            self.get(**read_route_args(interaction))(make_read_function(interaction))
         elif interaction.label() == "search-type":
             search_parameter_metadata = self._search_parameters.get_metadata(
                 interaction.resource_type.get_resource_type()
@@ -418,10 +436,6 @@ class FHIRStarter(FastAPI):
                     search_parameter_metadata=search_parameter_metadata,
                     post=True,
                 )
-            )
-        elif interaction.label() == "update":
-            self.put(**update_route_args(interaction))(
-                make_update_function(interaction)
             )
 
 
@@ -473,7 +487,7 @@ async def _transform_null_response_body(
     Middleware that cleans up the response object when the response does not contain a response
     body.
 
-    Create and update interactions are not required to return a response body. In this scenario,
+    Update and create interactions are not required to return a response body. In this scenario,
     FastAPI for some reason returns a response with a body containing the string "null", rather than
     just an empty body. This middleware detects that scenario and cleans up the response body.
     """

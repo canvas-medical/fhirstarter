@@ -49,7 +49,7 @@ async def appointment_search_type(context: InteractionContext) -> Bundle:
 
 @pytest.fixture(scope="module")
 def schema() -> Dict[str, Any]:
-    client = create_test_client_async(("create", "read", "search-type", "update"))
+    client = create_test_client_async(("read", "update", "create", "search-type"))
     app_ = cast(FHIRStarter, client.app)
 
     provider = FHIRProvider()

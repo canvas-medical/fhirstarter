@@ -33,7 +33,7 @@ def client_all(
     create_test_client_func: Callable[[Tuple[str, ...]], TestClient]
 ) -> TestClient:
     """Return a test client with all interactions enabled."""
-    return create_test_client_func(("create", "read", "search-type", "update"))
+    return create_test_client_func(("read", "update", "create", "search-type"))
 
 
 @pytest.fixture
@@ -41,4 +41,4 @@ def client_create_and_read(
     create_test_client_func: Callable[[Tuple[str, ...]], TestClient]
 ) -> TestClient:
     """Return a test client with the create and read interactions enabled."""
-    return create_test_client_func(("create", "read"))
+    return create_test_client_func(("read", "create"))

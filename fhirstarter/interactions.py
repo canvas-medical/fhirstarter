@@ -27,10 +27,6 @@ class InteractionContext:
     response: Response
 
 
-CreateInteractionHandler = Callable[
-    [InteractionContext, ResourceType],
-    Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
-]
 ReadInteractionHandler = Callable[
     [InteractionContext, Id], Union[Coroutine[None, None, ResourceType], ResourceType]
 ]
@@ -38,15 +34,19 @@ UpdateInteractionHandler = Callable[
     [InteractionContext, Id, ResourceType],
     Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
 ]
+CreateInteractionHandler = Callable[
+    [InteractionContext, ResourceType],
+    Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
+]
 SearchTypeInteractionHandler = Callable[
     ..., Union[Coroutine[None, None, Bundle], Bundle]
 ]
 
 InteractionHandler = Union[
-    CreateInteractionHandler[ResourceType],
     ReadInteractionHandler[ResourceType],
-    SearchTypeInteractionHandler,
     UpdateInteractionHandler[ResourceType],
+    CreateInteractionHandler[ResourceType],
+    SearchTypeInteractionHandler,
 ]
 
 
@@ -77,25 +77,25 @@ class TypeInteraction(Generic[ResourceType]):
         raise NotImplementedError
 
 
-class CreateInteraction(TypeInteraction[ResourceType]):
-    @staticmethod
-    def label() -> Literal["create"]:
-        return "create"
-
-
 class ReadInteraction(TypeInteraction[ResourceType]):
     @staticmethod
     def label() -> Literal["read"]:
         return "read"
 
 
-class SearchTypeInteraction(TypeInteraction[ResourceType]):
-    @staticmethod
-    def label() -> Literal["search-type"]:
-        return "search-type"
-
-
 class UpdateInteraction(TypeInteraction[ResourceType]):
     @staticmethod
     def label() -> Literal["update"]:
         return "update"
+
+
+class CreateInteraction(TypeInteraction[ResourceType]):
+    @staticmethod
+    def label() -> Literal["create"]:
+        return "create"
+
+
+class SearchTypeInteraction(TypeInteraction[ResourceType]):
+    @staticmethod
+    def label() -> Literal["search-type"]:
+        return "search-type"

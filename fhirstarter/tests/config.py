@@ -21,20 +21,6 @@ _VALID_TOKEN = "valid"
 _INVALID_TOKEN = "invalid"
 
 
-async def patient_create_async(context: InteractionContext, resource: Patient) -> Id:
-    """Patient create FHIR interaction."""
-    return patient_create(context, resource)
-
-
-def patient_create(_: InteractionContext, resource: Patient) -> Id:
-    """Patient create FHIR interaction."""
-    patient = deepcopy(resource)
-    patient.id = generate_fhir_resource_id()
-    DATABASE[patient.id] = patient
-
-    return Id(patient.id)
-
-
 async def patient_read_async(context: InteractionContext, id_: Id) -> Patient:
     """Patient read FHIR interaction."""
     return patient_read(context, id_)
@@ -47,6 +33,38 @@ def patient_read(_: InteractionContext, id_: Id) -> Patient:
         raise FHIRResourceNotFoundError
 
     return patient
+
+
+async def patient_update_async(
+    context: InteractionContext, id_: Id, resource: Patient
+) -> Id:
+    """Patient update FHIR interaction."""
+    return patient_update(context, id_, resource)
+
+
+def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> Id:
+    """Patient update FHIR interaction."""
+    if id_ not in DATABASE:
+        raise FHIRResourceNotFoundError
+
+    patient = deepcopy(resource)
+    DATABASE[id_] = patient
+
+    return Id(patient.id)
+
+
+async def patient_create_async(context: InteractionContext, resource: Patient) -> Id:
+    """Patient create FHIR interaction."""
+    return patient_create(context, resource)
+
+
+def patient_create(_: InteractionContext, resource: Patient) -> Id:
+    """Patient create FHIR interaction."""
+    patient = deepcopy(resource)
+    patient.id = generate_fhir_resource_id()
+    DATABASE[patient.id] = patient
+
+    return Id(patient.id)
 
 
 async def patient_search_type_async(
@@ -87,24 +105,6 @@ def patient_search_type(
     return bundle
 
 
-async def patient_update_async(
-    context: InteractionContext, id_: Id, resource: Patient
-) -> Id:
-    """Patient update FHIR interaction."""
-    return patient_update(context, id_, resource)
-
-
-def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> Id:
-    """Patient update FHIR interaction."""
-    if id_ not in DATABASE:
-        raise FHIRResourceNotFoundError
-
-    patient = deepcopy(resource)
-    DATABASE[id_] = patient
-
-    return Id(patient.id)
-
-
 def app(provider: FHIRProvider) -> TestClient:
     """Create a FHIRStarter app, add the provider, reset the database, and return a TestClient."""
     config_file_contents = """
@@ -134,14 +134,14 @@ def create_test_client_async(interactions: Tuple[str, ...]) -> TestClient:
     provider = FHIRProvider()
 
     for interaction in interactions:
-        if interaction == "create":
-            provider.create(Patient)(patient_create_async)
-        elif interaction == "read":
+        if interaction == "read":
             provider.read(Patient)(patient_read_async)
-        elif interaction == "search-type":
-            provider.search_type(Patient)(patient_search_type_async)
         elif interaction == "update":
             provider.update(Patient)(patient_update_async)
+        elif interaction == "create":
+            provider.create(Patient)(patient_create_async)
+        elif interaction == "search-type":
+            provider.search_type(Patient)(patient_search_type_async)
 
     return app(provider)
 
@@ -151,13 +151,13 @@ def create_test_client(interactions: Tuple[str, ...]) -> TestClient:
     provider = FHIRProvider()
 
     for interaction in interactions:
-        if interaction == "create":
-            provider.create(Patient)(patient_create)
-        elif interaction == "read":
+        if interaction == "read":
             provider.read(Patient)(patient_read)
-        elif interaction == "search-type":
-            provider.search_type(Patient)(patient_search_type)
         elif interaction == "update":
             provider.update(Patient)(patient_update)
+        elif interaction == "create":
+            provider.create(Patient)(patient_create)
+        elif interaction == "search-type":
+            provider.search_type(Patient)(patient_search_type)
 
     return app(provider)

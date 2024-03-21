@@ -16,15 +16,15 @@ from .utils import assert_expected_response
     argnames="client,resource",
     argvalues=[
         (
-            ["create", "read", "search-type", "update"],
+            ["read", "create", "update", "search-type"],
             [
                 {
                     "type": "Patient",
                     "interaction": [
-                        {"code": "create"},
                         {"code": "read"},
-                        {"code": "search-type"},
                         {"code": "update"},
+                        {"code": "create"},
+                        {"code": "search-type"},
                     ],
                     "searchParam": [
                         {
@@ -59,16 +59,16 @@ from .utils import assert_expected_response
             ],
         ),
         (
-            ["create", "read"],
+            ["read", "create"],
             [
                 {
                     "type": "Patient",
-                    "interaction": [{"code": "create"}, {"code": "read"}],
+                    "interaction": [{"code": "read"}, {"code": "create"}],
                 },
             ],
         ),
     ],
-    ids=["all", "create and read"],
+    ids=["all", "read and create"],
     indirect=["client"],
 )
 def test_capability_statement(
@@ -174,7 +174,7 @@ def test_set_capability_statement_modifier(client_create_and_read: TestClient) -
                         "resource": [
                             {
                                 "type": "Patient",
-                                "interaction": [{"code": "create"}, {"code": "read"}],
+                                "interaction": [{"code": "read"}, {"code": "create"}],
                             }
                         ],
                     }

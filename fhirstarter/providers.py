@@ -63,23 +63,6 @@ class FHIRProvider:
     def interactions(self) -> Iterable[TypeInteraction[Resource]]:
         yield from self._interactions
 
-    def create(
-        self,
-        resource_type: Type[ResourceType],
-        *,
-        dependencies: Union[Sequence[params.Depends], None] = None,
-        include_in_schema: bool = True,
-    ) -> Callable[
-        [CreateInteractionHandler[ResourceType]], CreateInteractionHandler[ResourceType]
-    ]:
-        """Register a FHIR create interaction."""
-        return self._register_type_interaction(
-            resource_type,
-            CreateInteraction[ResourceType],
-            dependencies,
-            include_in_schema,
-        )
-
     def read(
         self,
         resource_type: Type[ResourceType],
@@ -98,21 +81,6 @@ class FHIRProvider:
             include_in_schema,
         )
 
-    def search_type(
-        self,
-        resource_type: Type[ResourceType],
-        *,
-        dependencies: Union[Sequence[params.Depends], None] = None,
-        include_in_schema: bool = True,
-    ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
-        """Register a FHIR search-type interaction."""
-        return self._register_type_interaction(
-            resource_type,
-            SearchTypeInteraction[ResourceType],
-            dependencies,
-            include_in_schema,
-        )
-
     def update(
         self,
         resource_type: Type[ResourceType],
@@ -126,6 +94,38 @@ class FHIRProvider:
         return self._register_type_interaction(
             resource_type,
             UpdateInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
+        )
+
+    def create(
+        self,
+        resource_type: Type[ResourceType],
+        *,
+        dependencies: Union[Sequence[params.Depends], None] = None,
+        include_in_schema: bool = True,
+    ) -> Callable[
+        [CreateInteractionHandler[ResourceType]], CreateInteractionHandler[ResourceType]
+    ]:
+        """Register a FHIR create interaction."""
+        return self._register_type_interaction(
+            resource_type,
+            CreateInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
+        )
+
+    def search_type(
+        self,
+        resource_type: Type[ResourceType],
+        *,
+        dependencies: Union[Sequence[params.Depends], None] = None,
+        include_in_schema: bool = True,
+    ) -> Callable[[SearchTypeInteractionHandler], SearchTypeInteractionHandler]:
+        """Register a FHIR search-type interaction."""
+        return self._register_type_interaction(
+            resource_type,
+            SearchTypeInteraction[ResourceType],
             dependencies,
             include_in_schema,
         )

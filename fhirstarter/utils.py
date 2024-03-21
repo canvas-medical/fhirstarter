@@ -16,7 +16,7 @@ from .resources import Bundle, OperationOutcome, Resource
 class InteractionInfo:
     resource_type: Union[str, None]
     interaction_type: Union[
-        Literal["create", "read", "update", "search-type", "capabilities"], None
+        Literal["read", "update", "create", "search-type", "capabilities"], None
     ]
     resource_id: Union[str, None]
 
@@ -26,7 +26,7 @@ def parse_fhir_request(request: Request) -> InteractionInfo:
     Parse a FHIR request into its component parts, and determine an interaction type.
 
     Note: This function is currently oriented around specific use cases for this framework.
-    Specifically, it will correctly categorize create, read, search-type, update, and capabilities
+    Specifically, it will correctly categorize read, update, create, search-type, and capabilities
     interactions. Further enhancement is needed to support more use cases.
     """
     no_info = InteractionInfo(  # type: ignore[call-arg]
@@ -216,33 +216,6 @@ def format_response(
         )
 
 
-def create_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
-    """Provide arguments for creation of a FHIR create API route."""
-    resource_type_str = interaction.resource_type.get_resource_type()
-
-    return {
-        "path": f"/{resource_type_str}",
-        "response_model": Union[interaction.resource_type, None],
-        "status_code": status.HTTP_201_CREATED,
-        "tags": [f"Type:{resource_type_str}"],
-        "summary": f"{resource_type_str} {interaction.label()}",
-        "description": f"The {resource_type_str} create interaction creates a new "
-        f"{resource_type_str} resource in a server-assigned location.",
-        "responses": _responses(
-            interaction,
-            _created,
-            _bad_request,
-            _unauthorized,
-            _forbidden,
-            _unprocessable_entity,
-            _internal_server_error,
-        ),
-        "operation_id": f"fhirstarter|type|create|post|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
-        "response_model_exclude_none": True,
-        **interaction.route_options,
-    }
-
-
 def read_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
     """Provide arguments for creation of a FHIR read API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
@@ -264,34 +237,6 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any
             _internal_server_error,
         ),
         "operation_id": f"fhirstarter|instance|read|get|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
-        "response_model_exclude_none": True,
-        **interaction.route_options,
-    }
-
-
-def search_type_route_args(
-    interaction: TypeInteraction[ResourceType], post: bool
-) -> Dict[str, Any]:
-    """Provide arguments for creation of a FHIR search-type API route."""
-    resource_type_str = interaction.resource_type.get_resource_type()
-
-    return {
-        "path": f"/{resource_type_str}{'/_search' if post else ''}",
-        "response_model": Bundle,
-        "status_code": status.HTTP_200_OK,
-        "tags": [f"Type:{resource_type_str}"],
-        "summary": f"{resource_type_str} {interaction.label()}",
-        "description": f"The {resource_type_str} search-type interaction searches a set of "
-        "resources based on some filter criteria.",
-        "responses": _responses(
-            interaction,
-            _ok,
-            _bad_request,
-            _unauthorized,
-            _forbidden,
-            _internal_server_error,
-        ),
-        "operation_id": f"fhirstarter|type|search-type|{'post' if post else 'get'}|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -320,6 +265,61 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, A
             _internal_server_error,
         ),
         "operation_id": f"fhirstarter|instance|update|put|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "response_model_exclude_none": True,
+        **interaction.route_options,
+    }
+
+
+def create_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
+    """Provide arguments for creation of a FHIR create API route."""
+    resource_type_str = interaction.resource_type.get_resource_type()
+
+    return {
+        "path": f"/{resource_type_str}",
+        "response_model": Union[interaction.resource_type, None],
+        "status_code": status.HTTP_201_CREATED,
+        "tags": [f"Type:{resource_type_str}"],
+        "summary": f"{resource_type_str} {interaction.label()}",
+        "description": f"The {resource_type_str} create interaction creates a new "
+        f"{resource_type_str} resource in a server-assigned location.",
+        "responses": _responses(
+            interaction,
+            _created,
+            _bad_request,
+            _unauthorized,
+            _forbidden,
+            _unprocessable_entity,
+            _internal_server_error,
+        ),
+        "operation_id": f"fhirstarter|type|create|post|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "response_model_exclude_none": True,
+        **interaction.route_options,
+    }
+
+
+def search_type_route_args(
+    interaction: TypeInteraction[ResourceType], post: bool
+) -> Dict[str, Any]:
+    """Provide arguments for creation of a FHIR search-type API route."""
+    resource_type_str = interaction.resource_type.get_resource_type()
+
+    return {
+        "path": f"/{resource_type_str}{'/_search' if post else ''}",
+        "response_model": Bundle,
+        "status_code": status.HTTP_200_OK,
+        "tags": [f"Type:{resource_type_str}"],
+        "summary": f"{resource_type_str} {interaction.label()}",
+        "description": f"The {resource_type_str} search-type interaction searches a set of "
+        "resources based on some filter criteria.",
+        "responses": _responses(
+            interaction,
+            _ok,
+            _bad_request,
+            _unauthorized,
+            _forbidden,
+            _internal_server_error,
+        ),
+        "operation_id": f"fhirstarter|type|search-type|{'post' if post else 'get'}|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }

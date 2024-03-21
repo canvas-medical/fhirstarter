@@ -54,7 +54,7 @@ will be based on the business needs of Canvas Medical.
 ## Background
 
 FHIRStarter uses a provider-decorator pattern. Developers can write functions, or handlers, that
-implement FHIR interactions -- such as create, read, search-type, and update -- and plug them into
+implement FHIR interactions -- such as read, update, create, and search-type -- and plug them into
 the framework. FHIRStarter then automatically creates FHIR-compatible API routes from these
 developer-provided functions. FHIR interactions that are supplied must use the resource classes
 defined by the [FHIR Resources](https://pypi.org/project/fhir.resources/) Python package, which is a
@@ -68,7 +68,7 @@ FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server.
 
 ### Currently-supported functionality
 
-FHIRStarter supports create, read, search-type, and update endpoints across all FHIR resource
+FHIRStarter supports read, update, create, and search-type endpoints across all FHIR resource
 types, and will automatically generate the `/metadata` capabilities statement endpoint.
 
 Handlers can be written as coroutines with `async/await` syntax, or as plain functions. FastAPI
@@ -194,7 +194,7 @@ FastAPI's [dependency injection system](https://fastapi.tiangolo.com/tutorial/de
 
 * **application**: the `__init__` method on the FHIRStarter class
 * **provider**: the `__init__` method on the FHIRProvider class
-* **handler**: the `create`, `read`, `search_type`, or `update` decorator used to add a handler to a provider
+* **handler**: the `read`, `update`, `create`, or `search_type` decorator used to add a handler to a provider
 
 Dependencies specified at the application level will be injected into all routes in the application.
 

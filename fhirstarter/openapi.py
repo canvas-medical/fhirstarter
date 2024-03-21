@@ -142,7 +142,7 @@ def _get_examples(
     openapi_schema: MutableMapping[str, Any]
 ) -> Dict[str, Dict[str, Any]]:
     """
-    Gather examples for all scenarios: request and response bodies for create, read, and update
+    Gather examples for all scenarios: request and response bodies for read, update, and create
     interactions; resource-specific Bundle examples for search interactions; and OperationOutcome
     examples for errors.
     """

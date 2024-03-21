@@ -48,16 +48,6 @@ provider = FHIRProvider()
 #   these values affect route creation in FastAPI)
 
 
-# Register the patient create FHIR interaction with the provider
-@provider.create(Patient)
-async def patient_create(context: InteractionContext, resource: Patient) -> Id:
-    patient = deepcopy(resource)
-    patient.id = Id(uuid4().hex)
-    DATABASE[patient.id] = patient
-
-    return Id(patient.id)
-
-
 # Register the patient read FHIR interaction with the provider
 @provider.read(Patient)
 async def patient_read(context: InteractionContext, id_: Id) -> Patient:
@@ -66,6 +56,28 @@ async def patient_read(context: InteractionContext, id_: Id) -> Patient:
         raise FHIRResourceNotFoundError
 
     return patient
+
+
+# Register the patient update FHIR interaction with the provider
+@provider.update(Patient)
+async def patient_update(context: InteractionContext, id_: Id, resource: Patient) -> Id:
+    if id_ not in DATABASE:
+        raise FHIRResourceNotFoundError
+
+    patient = deepcopy(resource)
+    DATABASE[id_] = patient
+
+    return Id(patient.id)
+
+
+# Register the patient create FHIR interaction with the provider
+@provider.create(Patient)
+async def patient_create(context: InteractionContext, resource: Patient) -> Id:
+    patient = deepcopy(resource)
+    patient.id = Id(uuid4().hex)
+    DATABASE[patient.id] = patient
+
+    return Id(patient.id)
 
 
 # Register the patient search-type FHIR interaction with the provider
@@ -93,18 +105,6 @@ async def patient_search_type(
     )
 
     return bundle
-
-
-# Register the patient update FHIR interaction with the provider
-@provider.update(Patient)
-async def patient_update(context: InteractionContext, id_: Id, resource: Patient) -> Id:
-    if id_ not in DATABASE:
-        raise FHIRResourceNotFoundError
-
-    patient = deepcopy(resource)
-    DATABASE[id_] = patient
-
-    return Id(patient.id)
 
 
 # Optional: Provide a custom example for the automatic documentation by defining a subclass of the
