@@ -19,7 +19,11 @@ from .fhir_specification import FHIR_SEQUENCE
 from .interactions import (
     CreateInteraction,
     CreateInteractionHandler,
+    DeleteInteraction,
+    DeleteInteractionHandler,
     InteractionHandler,
+    PatchInteraction,
+    PatchInteractionHandler,
     ReadInteraction,
     ReadInteractionHandler,
     ResourceType,
@@ -94,6 +98,38 @@ class FHIRProvider:
         return self._register_type_interaction(
             resource_type,
             UpdateInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
+        )
+
+    def patch(
+        self,
+        resource_type: Type[ResourceType],
+        *,
+        dependencies: Union[Sequence[params.Depends], None] = None,
+        include_in_schema: bool = True,
+    ) -> Callable[
+        [PatchInteractionHandler[ResourceType]], PatchInteractionHandler[ResourceType]
+    ]:
+        """Register a FHIR patch interaction."""
+        return self._register_type_interaction(
+            resource_type,
+            PatchInteraction[ResourceType],
+            dependencies,
+            include_in_schema,
+        )
+
+    def delete(
+        self,
+        resource_type: Type[ResourceType],
+        *,
+        dependencies: Union[Sequence[params.Depends], None] = None,
+        include_in_schema: bool = True,
+    ) -> Callable[[DeleteInteractionHandler], DeleteInteractionHandler]:
+        """Register a FHIR delete interaction."""
+        return self._register_type_interaction(
+            resource_type,
+            DeleteInteraction[ResourceType],
             dependencies,
             include_in_schema,
         )

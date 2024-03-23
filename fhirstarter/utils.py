@@ -16,7 +16,10 @@ from .resources import Bundle, OperationOutcome, Resource
 class InteractionInfo:
     resource_type: Union[str, None]
     interaction_type: Union[
-        Literal["read", "update", "create", "search-type", "capabilities"], None
+        Literal[
+            "read", "update", "patch", "delete", "create", "search-type", "capabilities"
+        ],
+        None,
     ]
     resource_id: Union[str, None]
 
@@ -26,8 +29,8 @@ def parse_fhir_request(request: Request) -> InteractionInfo:
     Parse a FHIR request into its component parts, and determine an interaction type.
 
     Note: This function is currently oriented around specific use cases for this framework.
-    Specifically, it will correctly categorize read, update, create, search-type, and capabilities
-    interactions. Further enhancement is needed to support more use cases.
+    Specifically, it will correctly categorize read, update, patch, create, search-type, and
+    capabilities interactions. Further enhancement is needed to support more use cases.
     """
     no_info = InteractionInfo(  # type: ignore[call-arg]
         resource_type=None, interaction_type=None, resource_id=None
@@ -65,6 +68,18 @@ def parse_fhir_request(request: Request) -> InteractionInfo:
         if len(split_path) >= 3:
             resource_type, resource_id = split_path[-2:]
             interaction_type = "update"
+        else:
+            return no_info
+    elif request.method == "PATCH":
+        if len(split_path) >= 3:
+            resource_type, resource_id = split_path[-2:]
+            interaction_type = "patch"
+        else:
+            return no_info
+    elif request.method == "DELETE":
+        if len(split_path) >= 3:
+            resource_type, resource_id = split_path[-2:]
+            interaction_type = "delete"
         else:
             return no_info
     else:
@@ -270,6 +285,60 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, A
     }
 
 
+def patch_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
+    """Provide arguments for creation of a FHIR patch API route."""
+    resource_type_str = interaction.resource_type.get_resource_type()
+
+    return {
+        "path": f"/{resource_type_str}/{{id}}",
+        "response_model": Union[interaction.resource_type, None],
+        "status_code": status.HTTP_200_OK,
+        "tags": [f"Type:{resource_type_str}"],
+        "summary": f"{resource_type_str} {interaction.label()}",
+        "description": f"The {resource_type_str} patch interaction creates a new current version "
+        f"for an existing {resource_type_str} resource by applying operations described in a "
+        "[JSON Patch document](https://datatracker.ietf.org/doc/html/rfc6902).",
+        "responses": _responses(
+            interaction,
+            _ok,
+            _bad_request,
+            _unauthorized,
+            _forbidden,
+            _not_found,
+            _unprocessable_entity,
+            _internal_server_error,
+        ),
+        "operation_id": f"fhirstarter|instance|patch|patch|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "response_model_exclude_none": True,
+        **interaction.route_options,
+    }
+
+
+def delete_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
+    """Provide arguments for creation of a FHIR delete API route."""
+    resource_type_str = interaction.resource_type.get_resource_type()
+
+    return {
+        "path": f"/{resource_type_str}/{{id}}",
+        "response_model": None,
+        "status_code": status.HTTP_204_NO_CONTENT,
+        "tags": [f"Type:{resource_type_str}"],
+        "summary": f"{resource_type_str} {interaction.label()}",
+        "description": f"The {resource_type_str} delete interaction removes an existing "
+        f"{resource_type_str} resource.",
+        "responses": _responses(
+            interaction,
+            _no_content,
+            _unauthorized,
+            _forbidden,
+            _internal_server_error,
+        ),
+        "operation_id": f"fhirstarter|instance|delete|delete|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "response_model_exclude_none": True,
+        **interaction.route_options,
+    }
+
+
 def create_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
     """Provide arguments for creation of a FHIR create API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
@@ -360,6 +429,17 @@ def _created(interaction: TypeInteraction[ResourceType]) -> _Responses:
         status.HTTP_201_CREATED: {
             "model": interaction.resource_type,
             "description": f"Successful {interaction.resource_type.get_resource_type()} create",
+        }
+    }
+
+
+def _no_content(interaction: TypeInteraction[ResourceType]) -> _Responses:
+    """Return documentation for an HTTP 204 No Content response."""
+    return {
+        status.HTTP_204_NO_CONTENT: {
+            "model": None,
+            "description": f"Successful {interaction.resource_type.get_resource_type()} "
+            f"{interaction.label()}",
         }
     }
 

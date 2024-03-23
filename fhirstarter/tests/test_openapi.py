@@ -6,6 +6,7 @@ import pytest
 
 from .. import FHIRProvider, FHIRStarter, InteractionContext
 from ..fhir_specification import FHIR_SEQUENCE
+from ..fhirstarter import status
 from .config import create_test_client_async
 from .resources import Appointment, Bundle, Id, Practitioner
 
@@ -49,7 +50,9 @@ async def appointment_search_type(context: InteractionContext) -> Bundle:
 
 @pytest.fixture(scope="module")
 def schema() -> Dict[str, Any]:
-    client = create_test_client_async(("read", "update", "create", "search-type"))
+    client = create_test_client_async(
+        ("read", "update", "patch", "delete", "create", "search-type")
+    )
     app_ = cast(FHIRStarter, client.app)
 
     provider = FHIRProvider()
@@ -89,6 +92,7 @@ def test_resource_schemas(schema: Mapping[str, Any]) -> None:
         "Bundle",
         "CapabilityStatement",
         "HTTPValidationError",
+        "JSONPatchOperation",
         "OperationOutcome",
         "Patient",
         "Practitioner",
@@ -101,15 +105,21 @@ def test_content_types(schema: Mapping[str, Any]) -> None:
     """Test that all application/json content types have been changed to application/fhir+json."""
     for path in schema["paths"].values():
         for operation in path.values():
+            _, _, interaction_type, *_ = operation["operationId"].split("|")
             if request_body := operation.get("requestBody"):
                 content = request_body["content"]
-                if "application/x-www-form-urlencoded" not in content:
+                if interaction_type == "patch":
+                    assert "application/json" in content
+                elif "application/x-www-form-urlencoded" not in content:
                     assert "application/json" not in content
                     assert "application/fhir+json" in content
-            for response in operation.get("responses", {}).values():
-                content = response["content"]
-                assert "application/json" not in content
-                assert "application/fhir+json" in content
+            for status_code, response in operation.get("responses", {}).items():
+                if status_code == str(status.HTTP_204_NO_CONTENT):
+                    assert "content" not in response
+                else:
+                    content = response["content"]
+                    assert "application/json" not in content
+                    assert "application/fhir+json" in content
 
 
 _PATIENT_EXAMPLE_NAMES = (
@@ -163,22 +173,6 @@ _PATIENT_EXAMPLE_NAMES = (
                 ),
             ),
             (
-                "Patient create request",
-                "Patient",
-                lambda s: s["paths"]["/Patient"]["post"]["requestBody"]["content"][
-                    "application/fhir+json"
-                ]["examples"],
-                _PATIENT_EXAMPLE_NAMES,
-            ),
-            (
-                "Patient create response",
-                "Patient",
-                lambda s: s["paths"]["/Patient"]["post"]["responses"]["201"]["content"][
-                    "application/fhir+json"
-                ]["examples"],
-                _PATIENT_EXAMPLE_NAMES,
-            ),
-            (
                 "Patient read response",
                 "Patient",
                 lambda s: s["paths"]["/Patient/{id}"]["get"]["responses"]["200"][
@@ -200,6 +194,22 @@ _PATIENT_EXAMPLE_NAMES = (
                 lambda s: s["paths"]["/Patient/{id}"]["put"]["responses"]["200"][
                     "content"
                 ]["application/fhir+json"]["examples"],
+                _PATIENT_EXAMPLE_NAMES,
+            ),
+            (
+                "Patient create request",
+                "Patient",
+                lambda s: s["paths"]["/Patient"]["post"]["requestBody"]["content"][
+                    "application/fhir+json"
+                ]["examples"],
+                _PATIENT_EXAMPLE_NAMES,
+            ),
+            (
+                "Patient create response",
+                "Patient",
+                lambda s: s["paths"]["/Patient"]["post"]["responses"]["201"]["content"][
+                    "application/fhir+json"
+                ]["examples"],
                 _PATIENT_EXAMPLE_NAMES,
             ),
             (
@@ -359,7 +369,6 @@ _OPERATION_OUTCOMES = {
                 "post",
                 ("400", "401", "403", "500"),
             ),
-            ("Patient create", "/Patient", "post", ("400", "401", "403", "422", "500")),
             ("Patient read", "/Patient/{id}", "get", ("401", "403", "404", "500")),
             (
                 "Patient update",
@@ -367,6 +376,7 @@ _OPERATION_OUTCOMES = {
                 "put",
                 ("400", "401", "403", "404", "422", "500"),
             ),
+            ("Patient create", "/Patient", "post", ("400", "401", "403", "422", "500")),
             ("Patient search-type", "/Patient", "get", ("400", "401", "403", "500")),
             (
                 "Patient search-type by post",

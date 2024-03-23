@@ -16,6 +16,16 @@ from .utils import generate_fhir_resource_id, make_request
     argvalues=(
         argvalues := [
             (
+                "capabilitites",
+                "GET",
+                "/metadata",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None,
+                    interaction_type="capabilities",
+                    resource_id=None,
+                ),
+            ),
+            (
                 "read",
                 "GET",
                 f"/Patient/{(id_ := generate_fhir_resource_id())}",
@@ -37,6 +47,46 @@ from .utils import generate_fhir_resource_id, make_request
                 f"/Patient/{(id_ := generate_fhir_resource_id())}",
                 InteractionInfo(  # type: ignore[call-arg]
                     resource_type="Patient", interaction_type="update", resource_id=id_
+                ),
+            ),
+            (
+                "update unrecognized resource type",
+                "PUT",
+                f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None, interaction_type=None, resource_id=None
+                ),
+            ),
+            (
+                "patch",
+                "PATCH",
+                f"/Patient/{(id_ := generate_fhir_resource_id())}",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type="Patient", interaction_type="patch", resource_id=id_
+                ),
+            ),
+            (
+                "patch unrecognized resource type",
+                "PATCH",
+                f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None, interaction_type=None, resource_id=None
+                ),
+            ),
+            (
+                "delete",
+                "DELETE",
+                f"/Patient/{(id_ := generate_fhir_resource_id())}",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type="Patient", interaction_type="delete", resource_id=id_
+                ),
+            ),
+            (
+                "delete unrecognized resource type",
+                "DELETE",
+                f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None, interaction_type=None, resource_id=None
                 ),
             ),
             (
@@ -92,24 +142,6 @@ from .utils import generate_fhir_resource_id, make_request
                 ),
             ),
             (
-                "update unrecognized resource type",
-                "PUT",
-                f"/FakeResource/{(id_ := generate_fhir_resource_id())}",
-                InteractionInfo(  # type: ignore[call-arg]
-                    resource_type=None, interaction_type=None, resource_id=None
-                ),
-            ),
-            (
-                "capabilitites",
-                "GET",
-                "/metadata",
-                InteractionInfo(  # type: ignore[call-arg]
-                    resource_type=None,
-                    interaction_type="capabilities",
-                    resource_id=None,
-                ),
-            ),
-            (
                 "unrecognized GET path",
                 "GET",
                 f"/Patient/{(id_ := generate_fhir_resource_id())}/extra",
@@ -129,6 +161,22 @@ from .utils import generate_fhir_resource_id, make_request
                 "unrecognized POST path",
                 "POST",
                 "/FakeResource/extra",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None, interaction_type=None, resource_id=None
+                ),
+            ),
+            (
+                "unrecognized PATCH path",
+                "PATCH",
+                f"/FakeResource/{(id_ := generate_fhir_resource_id())}/extra",
+                InteractionInfo(  # type: ignore[call-arg]
+                    resource_type=None, interaction_type=None, resource_id=None
+                ),
+            ),
+            (
+                "unrecognized DELETE path",
+                "DELETE",
+                f"/FakeResource/{(id_ := generate_fhir_resource_id())}/extra",
                 InteractionInfo(  # type: ignore[call-arg]
                     resource_type=None, interaction_type=None, resource_id=None
                 ),

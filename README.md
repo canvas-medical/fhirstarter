@@ -54,25 +54,31 @@ will be based on the business needs of Canvas Medical.
 ## Background
 
 FHIRStarter uses a provider-decorator pattern. Developers can write functions, or handlers, that
-implement FHIR interactions -- such as read, update, create, and search-type -- and plug them into
-the framework. FHIRStarter then automatically creates FHIR-compatible API routes from these
-developer-provided functions. FHIR interactions that are supplied must use the resource classes
-defined by the [FHIR Resources](https://pypi.org/project/fhir.resources/) Python package, which is a
-collection of Pydantic models for FHIR resources.
+implement FHIR interactions and plug them into the framework. FHIRStarter then automatically creates
+FHIR-compatible API routes from these developer-provided functions. Handlers that are supplied must
+  use the resource classes defined by the [FHIR Resources](https://pypi.org/project/fhir.resources/) Python package, which is a collection
+of Pydantic models for FHIR resources.
 
 In order to stand up a FHIR server, all that is required is to create a FHIRStarter and a
 FHIRProvider instance, register a FHIR interaction with the provider, add the provider to the
-FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server.
+FHIRStarter instance, and pass the FHIRStarter instance to an ASGI server. An example is provided
+below.
 
 ## Usage
 
 ### Currently-supported functionality
 
-FHIRStarter supports read, update, create, and search-type endpoints across all FHIR resource
-types, and will automatically generate the `/metadata` capabilities statement endpoint.
+FHIRStarter will automatically generate the capability statement endpoint at `/metadata`. In
+addition, it supports the following instance- and type-level interactions:
+* [read](https://hl7.org/fhir/http.html#read)
+* [update](https://hl7.org/fhir/http.html#update)
+* [patch](https://hl7.org/fhir/http.html#patch)
+* [delete](https://hl7.org/fhir/http.html#delete)
+* [create](https://hl7.org/fhir/http.html#create)
+* [search-type](https://hl7.org/fhir/http.html#search)
 
-Handlers can be written as coroutines with `async/await` syntax, or as plain functions. FastAPI
-supports both, as does FHIRStarter.
+Interaction handlers can be written as coroutines with `async/await` syntax, or as plain functions.
+FastAPI supports both, as does FHIRStarter.
 
 Using uvloop can improve performance of the underlying event loop on supported platforms. 
 FHIRStarter does not mandate the use of uvloop, but it may be enabled by importing uvloop and

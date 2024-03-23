@@ -29,7 +29,9 @@ def client(
     create_test_client_func: Callable[[Tuple[str, ...]], TestClient]
 ) -> TestClient:
     """Return a module-scoped test client with all interactions enabled."""
-    return create_test_client_func(("create", "read", "search-type", "update"))
+    return create_test_client_func(
+        ("read", "update", "patch", "delete", "create", "search-type")
+    )
 
 
 @pytest.fixture(scope="module")
@@ -145,6 +147,7 @@ def test_update(client: TestClient, patient_id: str) -> None:
     put_response = client.put(f"/Patient/{patient_id}", json=content)
 
     assert_expected_response(put_response, status.HTTP_200_OK)
+    assert id_from_location_header(put_response)
 
     read_response = client.get(f"/Patient/{patient_id}")
 
@@ -157,7 +160,6 @@ def test_update(client: TestClient, patient_id: str) -> None:
             "name": [{"family": "Baggins", "given": ["Frodo"]}],
         },
     )
-    assert id_from_location_header(put_response)
 
     content["name"][0]["given"][0] = "Bilbo"
     client.put(f"/Patient/{patient_id}", json=content)
@@ -205,6 +207,66 @@ def test_update_id_mismatch(client: TestClient, patient_id: str) -> None:
             ],
         },
     )
+
+
+def test_patch(client: TestClient, patient_id: str) -> None:
+    """Test FHIR patch interaction."""
+    content = [{"op": "replace", "path": "/name/0/given/0", "value": "Frodo"}]
+    patch_response = client.patch(f"/Patient/{patient_id}", json=content)
+
+    assert_expected_response(patch_response, status.HTTP_200_OK)
+
+    read_response = client.get(f"/Patient/{patient_id}")
+
+    assert_expected_response(
+        read_response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "Patient",
+            "id": patient_id,
+            "name": [{"family": "Baggins", "given": ["Frodo"]}],
+        },
+    )
+
+    content = [{"op": "replace", "path": "/name/0/given/0", "value": "Bilbo"}]
+    client.patch(f"/Patient/{patient_id}", json=content)
+
+
+def test_patch_not_found(client: TestClient) -> None:
+    """Test FHIR patch interaction that produces a 404 not found error."""
+    id_ = generate_fhir_resource_id()
+    patch_response = client.patch(f"/Patient/{id_}", json=[])
+
+    assert_expected_response(
+        patch_response,
+        status.HTTP_404_NOT_FOUND,
+        content=make_operation_outcome(
+            severity="error",
+            code="not-found",
+            details_text=f"Unknown Patient resource '{id_}'",
+        ).dict(),
+    )
+
+
+def test_delete(client: TestClient) -> None:
+    """Test FHIR delete interaction."""
+    create_response = client.post("/Patient", json=resource())
+    id_ = id_from_location_header(create_response)
+
+    read_response = client.get(f"/Patient/{id_}")
+    assert_expected_response(read_response, status.HTTP_200_OK)
+
+    delete_response = client.delete(f"/Patient/{id_}")
+    assert_expected_response(delete_response, status.HTTP_204_NO_CONTENT)
+
+    read_response = client.get(f"/Patient/{id_}")
+    assert_expected_response(read_response, status.HTTP_404_NOT_FOUND)
+
+
+def test_delete_not_found(client: TestClient) -> None:
+    """Test FHIR delete interaction on a non-existent resource."""
+    delete_response = client.delete(f"/Patient/{generate_fhir_resource_id()}")
+    assert_expected_response(delete_response, status.HTTP_204_NO_CONTENT)
 
 
 def test_create(create_response: Response) -> None:

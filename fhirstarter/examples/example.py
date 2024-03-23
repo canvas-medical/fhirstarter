@@ -3,11 +3,13 @@ An example FHIR server implementation using FHIRStarter, with examples showing h
 interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
 """
 
+import contextlib
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, MutableMapping, Union, cast
 from uuid import uuid4
 
+import jsonpatch
 import uvicorn
 from fhir.resources.bundle import Bundle
 from fhir.resources.fhirtypes import Id
@@ -21,8 +23,10 @@ from fhirstarter import (
     FHIRProvider,
     FHIRStarter,
     InteractionContext,
+    JSONPatch,
     Request,
     Response,
+    convert_json_patch,
     examples,
 )
 from fhirstarter.exceptions import FHIRResourceNotFoundError
@@ -68,6 +72,34 @@ async def patient_update(context: InteractionContext, id_: Id, resource: Patient
     DATABASE[id_] = patient
 
     return Id(patient.id)
+
+
+# Register the patient patch FHIR interaction with the provider
+@provider.patch(Patient)
+async def patient_patch(
+    context: InteractionContext, id_: Id, json_patch: JSONPatch
+) -> Id:
+    if id_ not in DATABASE:
+        raise FHIRResourceNotFoundError
+
+    patient = DATABASE[id_].dict()
+
+    # Convert the JSONPatch object to a list of dicts using the helper function, and use the
+    # jsonpatch package to apply the patch to the patient resource
+    patch = convert_json_patch(json_patch)
+    jsonpatch.apply_patch(patient, jsonpatch.JsonPatch(patch), in_place=True)
+
+    DATABASE[id_] = Patient(**patient)
+
+    return Id(id_)
+
+
+@provider.delete(Patient)
+async def patient_delete(context: InteractionContext, id_: Id) -> None:
+    with contextlib.suppress(KeyError):
+        del DATABASE[id_]
+
+    return None
 
 
 # Register the patient create FHIR interaction with the provider
