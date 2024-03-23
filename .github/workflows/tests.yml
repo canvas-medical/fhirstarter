@@ -52,3 +52,26 @@ jobs:
       env:
         FHIR_SEQUENCE: ${{ matrix.fhir-sequence }}
       run: poetry run pytest
+  run-tests-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        fhir-sequence: [R5]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install Poetry
+      run: pipx install poetry
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'poetry'
+    - name: Install Python packages
+      run: |
+        poetry add "fhir.resources"@^7.0.0
+        poetry install
+    - name: Run tests
+      env:
+        FHIR_SEQUENCE: ${{ matrix.fhir-sequence }}
+      run: poetry run pytest
