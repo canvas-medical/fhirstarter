@@ -35,6 +35,8 @@ from .functions import (
     FORMAT_QP,
     PRETTY_QP,
     make_create_function,
+    make_delete_function,
+    make_patch_function,
     make_read_function,
     make_search_type_function,
     make_update_function,
@@ -52,9 +54,11 @@ from .search_parameters import (
 from .utils import (
     FormatParameters,
     create_route_args,
+    delete_route_args,
     format_response,
     make_operation_outcome,
     parse_fhir_request,
+    patch_route_args,
     read_route_args,
     search_type_route_args,
     update_route_args,
@@ -66,6 +70,18 @@ logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARN
 CapabilityStatementModifier = Callable[
     [MutableMapping[str, Any], Request, Response], MutableMapping[str, Any]
 ]
+
+_INTERACTION_ORDER = {
+    "read": 1,
+    "vread": 2,
+    "update": 3,
+    "patch": 4,
+    "delete": 5,
+    "history-instance": 6,
+    "history-type": 7,
+    "create": 8,
+    "search-type": 9,
+}
 
 
 class FHIRStarter(FastAPI):
@@ -119,13 +135,6 @@ class FHIRStarter(FastAPI):
         self.middleware("http")(_transform_null_response_body)
         self.middleware("http")(_set_content_type_header)
 
-        self._interaction_order = {
-            "read": 1,
-            "update": 2,
-            "create": 3,
-            "search-type": 4,
-        }
-
         async def default_exception_callback(
             _: Request, response: Response, __: Exception
         ) -> Response:
@@ -158,7 +167,7 @@ class FHIRStarter(FastAPI):
                 provider_interactions,
                 key=lambda i: cast(str, i.resource_type.get_resource_type()),
             ),
-            key=lambda i: self._interaction_order[i.label()],
+            key=lambda i: _INTERACTION_ORDER[i.label()],
         ):
             resource_type = interaction.resource_type.get_resource_type()
             label = interaction.label()
@@ -299,8 +308,8 @@ class FHIRStarter(FastAPI):
         """
         Generate the capability statement for the instance based on the FHIR interactions provided.
 
-        In addition to declaring the interactions (e.g. read, update, create, and search-type), the
-        supported search parameters are also declared.
+        In addition to declaring the interactions, the supported search parameters are also
+        declared.
         """
         resources = []
         for resource_type, interactions in sorted(self._capabilities.items()):
@@ -313,7 +322,7 @@ class FHIRStarter(FastAPI):
                 "interaction": [
                     {"code": label}
                     for label in sorted(
-                        interactions.keys(), key=lambda l: self._interaction_order[l]
+                        interactions.keys(), key=lambda l: _INTERACTION_ORDER[l]
                     )
                 ],
             }
@@ -415,6 +424,14 @@ class FHIRStarter(FastAPI):
             self.put(**update_route_args(interaction))(
                 make_update_function(interaction)
             )
+        elif interaction.label() == "patch":
+            self.patch(**patch_route_args(interaction))(
+                make_patch_function(interaction)
+            )
+        elif interaction.label() == "delete":
+            self.delete(**delete_route_args(interaction))(
+                make_delete_function(interaction)
+            )
         elif interaction.label() == "create":
             self.post(**create_route_args(interaction))(
                 make_create_function(interaction)
@@ -487,11 +504,22 @@ async def _transform_null_response_body(
     Middleware that cleans up the response object when the response does not contain a response
     body.
 
-    Update and create interactions are not required to return a response body. In this scenario,
-    FastAPI for some reason returns a response with a body containing the string "null", rather than
-    just an empty body. This middleware detects that scenario and cleans up the response body.
+    Update, patch, and create interactions are not required to return a response body. In this
+    scenario, FastAPI for some reason returns a response with a body containing the string "null",
+    rather than just an empty body. This middleware detects that scenario and cleans up the response
+    body.
     """
     response = await call_next(request)
+
+    # Clean up the content headers for delete interactions
+    interaction_info = parse_fhir_request(request)
+    if (
+        interaction_info.interaction_type == "delete"
+        and "Content-Length" not in response.headers
+    ):
+        response.headers["Content-Length"] = "0"
+        if "Content-Type" in response.headers:
+            del response.headers["Content-Type"]
 
     # This condition is probably too broad, but given that all FHIR responses should either have a
     # body that is a resource (that must be more than 4 bytes by definition) or an empty response

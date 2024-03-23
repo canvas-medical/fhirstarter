@@ -16,13 +16,15 @@ from .utils import assert_expected_response
     argnames="client,resource",
     argvalues=[
         (
-            ["read", "create", "update", "search-type"],
+            ["read", "update", "patch", "delete", "create", "search-type"],
             [
                 {
                     "type": "Patient",
                     "interaction": [
                         {"code": "read"},
                         {"code": "update"},
+                        {"code": "patch"},
+                        {"code": "delete"},
                         {"code": "create"},
                         {"code": "search-type"},
                     ],
@@ -77,8 +79,8 @@ def test_capability_statement(
     """
     Test the capability statement.
 
-    Two scenarios are parameterized: a server with create, read, search, and update supported, and
-    a server with only create and read supported.
+    Two scenarios are parameterized: a server with all interaction types supported, and a server
+    with only create and read supported.
     """
     app = cast(FHIRStarter, client.app)
 

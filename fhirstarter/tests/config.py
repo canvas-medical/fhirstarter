@@ -5,9 +5,12 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Dict, Tuple, Union, cast
 
+import jsonpatch
+
 from ..exceptions import FHIRResourceNotFoundError
 from ..fhirstarter import FHIRStarter
 from ..interactions import InteractionContext
+from ..json_patch import JSONPatch, convert_json_patch
 from ..providers import FHIRProvider
 from ..resources import Bundle, Id
 from ..testclient import TestClient
@@ -51,6 +54,44 @@ def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> Id:
     DATABASE[id_] = patient
 
     return Id(patient.id)
+
+
+async def patient_patch_async(
+    context: InteractionContext, id_: Id, json_patch: JSONPatch
+) -> Id:
+    """Patient patch FHIR interaction."""
+    return patient_patch(context, id_, json_patch)
+
+
+def patient_patch(_: InteractionContext, id_: Id, json_patch: JSONPatch) -> Id:
+    """Patient patch FHIR interaction."""
+    if id_ not in DATABASE:
+        raise FHIRResourceNotFoundError
+
+    patient = DATABASE[id_].dict()
+
+    jsonpatch.apply_patch(
+        patient, jsonpatch.JsonPatch(convert_json_patch(json_patch)), in_place=True
+    )
+
+    DATABASE[id_] = Patient(**patient)
+
+    return Id(id_)
+
+
+async def patient_delete_async(context: InteractionContext, id_: Id) -> None:
+    """Patient delete FHIR interaction."""
+    return patient_delete(context, id_)
+
+
+def patient_delete(_: InteractionContext, id_: Id) -> None:
+    """Patient delete FHIR interaction."""
+    if id_ not in DATABASE:
+        return
+
+    del DATABASE[id_]
+
+    return None
 
 
 async def patient_create_async(context: InteractionContext, resource: Patient) -> Id:
@@ -138,6 +179,10 @@ def create_test_client_async(interactions: Tuple[str, ...]) -> TestClient:
             provider.read(Patient)(patient_read_async)
         elif interaction == "update":
             provider.update(Patient)(patient_update_async)
+        elif interaction == "patch":
+            provider.patch(Patient)(patient_patch_async)
+        elif interaction == "delete":
+            provider.delete(Patient)(patient_delete_async)
         elif interaction == "create":
             provider.create(Patient)(patient_create_async)
         elif interaction == "search-type":
@@ -155,6 +200,10 @@ def create_test_client(interactions: Tuple[str, ...]) -> TestClient:
             provider.read(Patient)(patient_read)
         elif interaction == "update":
             provider.update(Patient)(patient_update)
+        elif interaction == "patch":
+            provider.patch(Patient)(patient_patch)
+        elif interaction == "delete":
+            provider.delete(Patient)(patient_delete)
         elif interaction == "create":
             provider.create(Patient)(patient_create)
         elif interaction == "search-type":

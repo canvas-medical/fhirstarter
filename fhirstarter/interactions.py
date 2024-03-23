@@ -16,6 +16,7 @@ from typing import (
 
 from fastapi import Request, Response
 
+from .json_patch import JSONPatch
 from .resources import Bundle, Id, Resource
 
 ResourceType = TypeVar("ResourceType", bound=Resource)
@@ -34,6 +35,14 @@ UpdateInteractionHandler = Callable[
     [InteractionContext, Id, ResourceType],
     Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
 ]
+PatchInteractionHandler = Callable[
+    [InteractionContext, Id, JSONPatch],
+    Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
+]
+DeleteInteractionHandler = Callable[
+    [InteractionContext, Id],
+    Union[Coroutine[None, None, None], None],
+]
 CreateInteractionHandler = Callable[
     [InteractionContext, ResourceType],
     Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
@@ -44,6 +53,8 @@ SearchTypeInteractionHandler = Callable[
 
 InteractionHandler = Union[
     ReadInteractionHandler[ResourceType],
+    PatchInteractionHandler[ResourceType],
+    DeleteInteractionHandler,
     UpdateInteractionHandler[ResourceType],
     CreateInteractionHandler[ResourceType],
     SearchTypeInteractionHandler,
@@ -87,6 +98,18 @@ class UpdateInteraction(TypeInteraction[ResourceType]):
     @staticmethod
     def label() -> Literal["update"]:
         return "update"
+
+
+class PatchInteraction(TypeInteraction[ResourceType]):
+    @staticmethod
+    def label() -> Literal["patch"]:
+        return "patch"
+
+
+class DeleteInteraction(TypeInteraction[ResourceType]):
+    @staticmethod
+    def label() -> Literal["delete"]:
+        return "delete"
 
 
 class CreateInteraction(TypeInteraction[ResourceType]):

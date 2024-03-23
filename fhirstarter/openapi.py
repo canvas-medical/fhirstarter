@@ -88,7 +88,6 @@ def adjust_schema(openapi_schema: MutableMapping[str, Any]) -> None:
     examples = _get_examples(openapi_schema)
     for operation_id, operation in _operations(openapi_schema):
         _adjust_operation(operation_id, operation, examples)
-    pass
 
 
 def _inline_search_post_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
@@ -142,9 +141,9 @@ def _get_examples(
     openapi_schema: MutableMapping[str, Any]
 ) -> Dict[str, Dict[str, Any]]:
     """
-    Gather examples for all scenarios: request and response bodies for read, update, and create
-    interactions; resource-specific Bundle examples for search interactions; and OperationOutcome
-    examples for errors.
+    Gather examples for all scenarios: request and response bodies for interactions;
+    resource-specific Bundle examples for search interactions; and OperationOutcome examples for
+    errors.
     """
     examples: DefaultDict[str, Any] = defaultdict(dict)
 
@@ -217,19 +216,21 @@ def _adjust_operation(
     else:
         resource_examples = examples[cast(str, operation_id.model_name)]
 
-    # For operations that take a request body, change the application/json content type to
-    # application/fhir+json and add request body examples
-    if content := operation.get("requestBody", {}).get("content"):
-        if "application/json" in content:
-            content["application/fhir+json"] = content.pop("application/json")
-            content["application/fhir+json"].update(resource_examples)
+    # For operations that take a request body (excluding patch), change the application/json content
+    # type to application/fhir+json and add request body examples
+    if operation_id.interaction_type != "patch":
+        if content := operation.get("requestBody", {}).get("content"):
+            if "application/json" in content:
+                content["application/fhir+json"] = content.pop("application/json")
+                content["application/fhir+json"].update(resource_examples)
 
     # For each possible response (i.e. status code), remove the default FastAPI response schema
     responses = operation["responses"]
     status_codes: Tuple[str, ...] = tuple(responses.keys())
     for status_code in status_codes:
         if (
-            responses[status_code]["content"]
+            status_code != str(status.HTTP_204_NO_CONTENT)
+            and responses[status_code]["content"]
             .get("application/json", {})
             .get("schema", {})
             .get("$ref")
@@ -240,6 +241,9 @@ def _adjust_operation(
     # For each response, change all instances of application/json to application/fhir+json and add
     # response body examples
     for status_code, response in responses.items():
+        if status_code == str(status.HTTP_204_NO_CONTENT):
+            continue
+
         # Move the response for "application/json" to "application/fhir+json"
         schema = response["content"].pop("application/json", None)
         if schema:

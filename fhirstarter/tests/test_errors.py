@@ -30,7 +30,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
     argnames="client,request_body,response_body",
     argvalues=[
         (
-            ("read", "update", "create", "search-type"),
+            ("read", "update", "patch", "delete", "create", "search-type"),
             " ",
             make_operation_outcome(
                 severity="error",
@@ -39,7 +39,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("read", "update", "create", "search-type"),
+            ("read", "update", "patch", "delete", "create", "search-type"),
             {"extraField": []},
             make_operation_outcome(
                 severity="error",
@@ -49,7 +49,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("read", "update", "create", "search-type"),
+            ("read", "update", "patch", "delete", "create", "search-type"),
             {"communication": [{}]},
             make_operation_outcome(
                 severity="error",
@@ -59,7 +59,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("read", "update", "create", "search-type"),
+            ("read", "update", "patch", "delete", "create", "search-type"),
             {"id": ""},
             make_operation_outcome(
                 severity="error",
@@ -69,7 +69,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("read", "update", "create", "search-type"),
+            ("read", "update", "patch", "delete", "create", "search-type"),
             {"name": 0},
             make_operation_outcome(
                 severity="error",
@@ -78,7 +78,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             ),
         ),
         (
-            ("read", "update", "create", "search-type"),
+            ("read", "update", "patch", "delete", "create", "search-type"),
             {"extraField": [], "communication": [{}]},
             {
                 "resourceType": "OperationOutcome",
@@ -306,7 +306,7 @@ def test_exception(
 
 @pytest.mark.parametrize(
     argnames="client",
-    argvalues=[("create", "read", "search-type", "update")],
+    argvalues=[("read", "update", "patch", "delete", "create", "search-type")],
     ids=["all"],
     indirect=True,
 )
