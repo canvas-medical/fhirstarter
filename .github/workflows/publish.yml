@@ -18,4 +18,4 @@ jobs:
     - name: Configure Poetry
       run: poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
     - name: Publish to PyPI
-      run: poetry publish --build --dry-run
+      run: poetry publish --build
