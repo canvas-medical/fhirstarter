@@ -1,0 +1,21 @@
+name: publish
+on:
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: Release tag
+        required: true
+        type: string
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.events.inputs.release-tag }}
+    - name: Install Poetry
+      run: pipx install poetry
+    - name: Configure Poetry
+      run: poetry config pypi-token.pypi ${{ secrets.PYPI_TOKEN }}
+    - name: Publish to PyPI
+      run: poetry publish --build --dry-run
