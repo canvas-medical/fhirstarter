@@ -2,7 +2,7 @@ name: publish
 on:
   workflow_dispatch:
     inputs:
-      release-tag:
+      tag:
         description: Release tag
         required: true
         type: string
@@ -12,7 +12,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        ref: ${{ github.events.inputs.release-tag }}
+        ref: ${{ github.events.inputs.tag }}
     - name: Install Poetry
       run: pipx install poetry
     - name: Configure Poetry
