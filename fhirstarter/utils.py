@@ -1,7 +1,7 @@
 """Miscellaneous utility functions."""
 
 from dataclasses import dataclass
-from typing import Any, Callable, ClassVar, Dict, Literal, Union
+from typing import Any, Callable, ClassVar, Dict, Literal, Sequence, Union
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
@@ -29,107 +29,127 @@ class ParsedRequest:
 def parse_fhir_request(request: Request) -> ParsedRequest:
     """
     Parse a FHIR request into its component parts, and determine an interaction type or operation
-    name.
+    name. Return a ParsedRequest object with the information.
+
+    If this function isn't able to identify the request as a FHIR request, then an empty
+    ParsedRequest object will be returned.
 
     Note: This function is currently oriented around specific use cases for this framework.
     Specifically, it will correctly categorize read, update, patch, create, search-type, and
     capabilities interactions, and will identify operations. Further enhancement is needed to
     support more use cases.
     """
-    # If this function isn't able to identify the request as a FHIR request, then this empty
-    # ParsedRequest object will be returned
-    no_info = ParsedRequest()
-
     split_path = request.url.path.split("/")
     if not split_path:
-        return no_info
+        return ParsedRequest()
 
-    path_parts_count = len(split_path)
+    if split_path[-1].startswith("$"):
+        return _parse_fhir_operation_request(request, split_path)
+    else:
+        return _parse_fhir_interaction_request(request, split_path)
+
+
+def _parse_fhir_operation_request(
+    request: Request, split_path: Sequence[str]
+) -> ParsedRequest:
+    """Parse a potential FHIR operation request."""
+    # The request may be a FHIR operation -- make sure the method is either a GET or POST
+    if request.method not in ("GET", "POST"):
+        return ParsedRequest()
 
     resource_type = None
     resource_id = None
-    interaction_type = None
-    operation_name = None
 
-    if split_path[-1].startswith("$"):
-        # The request may be a FHIR operation -- make sure the method is either a GET or POST
-        if request.method not in ("GET", "POST"):
-            return no_info
+    # Determine the operation name
+    operation_name = split_path[-1]
+    if operation_name and operation_name[0] == "$":
+        operation_name = operation_name[1:]
 
-        request_type = "operation"
-        operation_name = split_path[-1]
-        if operation_name and operation_name[0] == "$":
-            operation_name = operation_name[1:]
-
-        # If neither of these conditions are met, then it's an operation on the base URL
-        if path_parts_count >= 3 and is_resource_type(split_path[-3]):
-            # Instance operation
-            resource_type = split_path[-3]
-            resource_id = split_path[-2]
-        elif path_parts_count >= 2 and is_resource_type(split_path[-2]):
-            # Type operation
-            resource_type = split_path[-2]
-    else:
-        # The request may be a FHIR interaction -- determine what it is based on the request method
-        # and the URL format
-        request_type = "interaction"
-
-        if request.method == "GET":
-            if split_path[-1] == "metadata":
-                interaction_type = "capabilities"
-            elif is_resource_type(split_path[-1]):
-                resource_type = split_path[-1]
-                interaction_type = "search-type"
-            elif path_parts_count >= 3:
-                resource_type = split_path[-2]
-                resource_id = split_path[-1]
-                interaction_type = "read"
-            else:
-                return no_info
-        elif request.method == "POST":
-            if is_resource_type(split_path[-1]):
-                resource_type = split_path[-1]
-                interaction_type = "create"
-            elif split_path[-1] == "_search":
-                resource_type = split_path[-2]
-                interaction_type = "search-type"
-            else:
-                return no_info
-        elif request.method == "PUT":
-            if path_parts_count >= 3:
-                resource_type = split_path[-2]
-                resource_id = split_path[-1]
-                interaction_type = "update"
-            else:
-                return no_info
-        elif request.method == "PATCH":
-            if path_parts_count >= 3:
-                resource_type = split_path[-2]
-                resource_id = split_path[-1]
-                interaction_type = "patch"
-            else:
-                return no_info
-        elif request.method == "DELETE":
-            if path_parts_count >= 3:
-                resource_type = split_path[-2]
-                resource_id = split_path[-1]
-                interaction_type = "delete"
-            else:
-                return no_info
-        else:
-            return no_info
-
-        # If the resource type found is not an actual resource type, then it's not a FHIR
-        # interaction
-        if resource_type and not is_resource_type(resource_type):
-            return no_info
+    # If neither of these conditions are met, then it's an operation on the base URL
+    path_parts_count = len(split_path)
+    if path_parts_count >= 3 and is_resource_type(split_path[-3]):
+        # Instance operation -- get the resource type and path
+        resource_type = split_path[-3]
+        resource_id = split_path[-2]
+    elif path_parts_count >= 2 and is_resource_type(split_path[-2]):
+        # Type operation -- get the resource type
+        resource_type = split_path[-2]
 
     return ParsedRequest(  # type: ignore[call-arg]
-        request_type=request_type,
+        request_type="operation",
+        resource_type=resource_type,
+        resource_id=resource_id,
+        operation_name=operation_name,
+    )
+
+
+def _parse_fhir_interaction_request(
+    request: Request, split_path: Sequence[str]
+) -> ParsedRequest:
+    """Parse a potential FHIR interaction request."""
+    # The request may be a FHIR interaction -- determine what it is based on the request method
+    # and the URL format
+    resource_type = None
+    resource_id = None
+    interaction_type: Union[str, None]
+
+    path_parts_count = len(split_path)
+
+    if request.method == "GET":
+        if split_path[-1] == "metadata":
+            interaction_type = "capabilities"
+        elif is_resource_type(split_path[-1]):
+            resource_type = split_path[-1]
+            interaction_type = "search-type"
+        elif path_parts_count >= 3:
+            resource_type = split_path[-2]
+            resource_id = split_path[-1]
+            interaction_type = "read"
+        else:
+            return ParsedRequest()
+    elif request.method == "POST":
+        if is_resource_type(split_path[-1]):
+            resource_type = split_path[-1]
+            interaction_type = "create"
+        elif split_path[-1] == "_search":
+            resource_type = split_path[-2]
+            interaction_type = "search-type"
+        else:
+            return ParsedRequest()
+    elif request.method == "PUT":
+        if path_parts_count >= 3:
+            resource_type = split_path[-2]
+            resource_id = split_path[-1]
+            interaction_type = "update"
+        else:
+            return ParsedRequest()
+    elif request.method == "PATCH":
+        if path_parts_count >= 3:
+            resource_type = split_path[-2]
+            resource_id = split_path[-1]
+            interaction_type = "patch"
+        else:
+            return ParsedRequest()
+    elif request.method == "DELETE":
+        if path_parts_count >= 3:
+            resource_type = split_path[-2]
+            resource_id = split_path[-1]
+            interaction_type = "delete"
+        else:
+            return ParsedRequest()
+    else:
+        return ParsedRequest()
+
+    # If the resource type found is not an actual resource type, then it's not a FHIR
+    # interaction
+    if resource_type and not is_resource_type(resource_type):
+        return ParsedRequest()
+
+    return ParsedRequest(  # type: ignore[call-arg]
+        request_type="interaction",
         resource_type=resource_type,
         resource_id=resource_id,
         interaction_type=interaction_type,
-        operation_name=operation_name,
     )
 
 
@@ -289,7 +309,8 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any
             _not_found,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|instance|read|get|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "operation_id": f"fhirstarter|instance|read|get|{resource_type_str}|"
+        f"{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -317,7 +338,8 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, A
             _unprocessable_entity,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|instance|update|put|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "operation_id": f"fhirstarter|instance|update|put|{resource_type_str}|"
+        f"{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -346,7 +368,8 @@ def patch_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, An
             _unprocessable_entity,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|instance|patch|patch|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "operation_id": f"fhirstarter|instance|patch|patch|{resource_type_str}|"
+        f"{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -371,7 +394,8 @@ def delete_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, A
             _forbidden,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|instance|delete|delete|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "operation_id": f"fhirstarter|instance|delete|delete|{resource_type_str}|"
+        f"{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -398,7 +422,8 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, A
             _unprocessable_entity,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|type|create|post|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "operation_id": f"fhirstarter|type|create|post|{resource_type_str}|"
+        f"{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -426,7 +451,9 @@ def search_type_route_args(
             _forbidden,
             _internal_server_error,
         ),
-        "operation_id": f"fhirstarter|type|search-type|{'post' if post else 'get'}|{resource_type_str}|{interaction.resource_type.__module__}|{interaction.resource_type.__name__}",
+        "operation_id": f"fhirstarter|type|search-type|{'post' if post else 'get'}|"
+        f"{resource_type_str}|{interaction.resource_type.__module__}|"
+        f"{interaction.resource_type.__name__}",
         "response_model_exclude_none": True,
         **interaction.route_options,
     }
@@ -545,6 +572,7 @@ def _internal_server_error(_: TypeInteraction[ResourceType]) -> _Responses:
     return {
         status.HTTP_500_INTERNAL_SERVER_ERROR: {
             "model": OperationOutcome,
-            "description": f"The server has encountered a situation it does not know how to handle.",
+            "description": f"The server has encountered a situation it does not know how to "
+            "handle.",
         }
     }
