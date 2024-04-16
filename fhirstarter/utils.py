@@ -1,4 +1,4 @@
-"""Utility functions for creation of routes and responses."""
+"""Miscellaneous utility functions."""
 
 from dataclasses import dataclass
 from typing import Any, Callable, ClassVar, Dict, Literal, Union
@@ -13,85 +13,121 @@ from .resources import Bundle, OperationOutcome, Resource
 
 
 @dataclass
-class InteractionInfo:
-    resource_type: Union[str, None]
+class ParsedRequest:
+    request_type: Union[Literal["interaction", "operation"], None] = None
+    resource_type: Union[str, None] = None
+    resource_id: Union[str, None] = None
     interaction_type: Union[
         Literal[
             "read", "update", "patch", "delete", "create", "search-type", "capabilities"
         ],
         None,
-    ]
-    resource_id: Union[str, None]
+    ] = None
+    operation_name: Union[str, None] = None
 
 
-def parse_fhir_request(request: Request) -> InteractionInfo:
+def parse_fhir_request(request: Request) -> ParsedRequest:
     """
-    Parse a FHIR request into its component parts, and determine an interaction type.
+    Parse a FHIR request into its component parts, and determine an interaction type or operation
+    name.
 
     Note: This function is currently oriented around specific use cases for this framework.
     Specifically, it will correctly categorize read, update, patch, create, search-type, and
-    capabilities interactions. Further enhancement is needed to support more use cases.
+    capabilities interactions, and will identify operations. Further enhancement is needed to
+    support more use cases.
     """
-    no_info = InteractionInfo(  # type: ignore[call-arg]
-        resource_type=None, interaction_type=None, resource_id=None
-    )
+    no_info = ParsedRequest()
 
     split_path = request.url.path.split("/")
     if not split_path:
         return no_info
 
+    path_parts_count = len(split_path)
+
+    resource_type = None
     resource_id = None
+    interaction_type = None
+    operation_name = None
 
-    if request.method == "GET":
-        if split_path[-1] == "metadata":
-            return InteractionInfo(  # type: ignore[call-arg]
-                resource_type=None, interaction_type="capabilities", resource_id=None
-            )
-        elif is_resource_type(split_path[-1]):
-            resource_type = split_path[-1]
-            interaction_type = "search-type"
-        elif len(split_path) >= 3:
-            resource_type, resource_id = split_path[-2:]
-            interaction_type = "read"
-        else:
+    if split_path[-1].startswith("$"):
+        # The request may be a FHIR operation -- make sure the method is either a GET or POST
+        if request.method not in ("GET", "POST"):
             return no_info
-    elif request.method == "POST":
-        if is_resource_type(split_path[-1]):
-            resource_type = split_path[-1]
-            interaction_type = "create"
-        elif split_path[-1] == "_search":
+
+        request_type = "operation"
+        operation_name = split_path[-1]
+        if operation_name and operation_name[0] == "$":
+            operation_name = operation_name[1:]
+
+        # If neither of these conditions are met, then it's an operation on the base URL
+        if path_parts_count >= 3 and is_resource_type(split_path[-3]):
+            # Instance operation
+            resource_type = split_path[-3]
+            resource_id = split_path[-2]
+        elif path_parts_count >= 2 and is_resource_type(split_path[-2]):
+            # Type operation
             resource_type = split_path[-2]
-            interaction_type = "search-type"
-        else:
-            return no_info
-    elif request.method == "PUT":
-        if len(split_path) >= 3:
-            resource_type, resource_id = split_path[-2:]
-            interaction_type = "update"
-        else:
-            return no_info
-    elif request.method == "PATCH":
-        if len(split_path) >= 3:
-            resource_type, resource_id = split_path[-2:]
-            interaction_type = "patch"
-        else:
-            return no_info
-    elif request.method == "DELETE":
-        if len(split_path) >= 3:
-            resource_type, resource_id = split_path[-2:]
-            interaction_type = "delete"
-        else:
-            return no_info
     else:
-        return no_info
+        # The request may be a FHIR interaction -- determine what it is based on the request method
+        # and the URL format
+        request_type = "interaction"
 
-    if not is_resource_type(resource_type):
-        return no_info
+        if request.method == "GET":
+            if split_path[-1] == "metadata":
+                interaction_type = "capabilities"
+            elif is_resource_type(split_path[-1]):
+                resource_type = split_path[-1]
+                interaction_type = "search-type"
+            elif path_parts_count >= 3:
+                resource_type = split_path[-2]
+                resource_id = split_path[-1]
+                interaction_type = "read"
+            else:
+                return no_info
+        elif request.method == "POST":
+            if is_resource_type(split_path[-1]):
+                resource_type = split_path[-1]
+                interaction_type = "create"
+            elif split_path[-1] == "_search":
+                resource_type = split_path[-2]
+                interaction_type = "search-type"
+            else:
+                return no_info
+        elif request.method == "PUT":
+            if path_parts_count >= 3:
+                resource_type = split_path[-2]
+                resource_id = split_path[-1]
+                interaction_type = "update"
+            else:
+                return no_info
+        elif request.method == "PATCH":
+            if path_parts_count >= 3:
+                resource_type = split_path[-2]
+                resource_id = split_path[-1]
+                interaction_type = "patch"
+            else:
+                return no_info
+        elif request.method == "DELETE":
+            if path_parts_count >= 3:
+                resource_type = split_path[-2]
+                resource_id = split_path[-1]
+                interaction_type = "delete"
+            else:
+                return no_info
+        else:
+            return no_info
 
-    return InteractionInfo(  # type: ignore[call-arg]
+        # If the resource type found is not an actual resource type, then it's not a FHIR
+        # interaction
+        if resource_type and not is_resource_type(resource_type):
+            return no_info
+
+    return ParsedRequest(  # type: ignore[call-arg]
+        request_type=request_type,
         resource_type=resource_type,
-        interaction_type=interaction_type,
         resource_id=resource_id,
+        interaction_type=interaction_type,
+        operation_name=operation_name,
     )
 
 
