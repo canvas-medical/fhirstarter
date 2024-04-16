@@ -36,6 +36,8 @@ def parse_fhir_request(request: Request) -> ParsedRequest:
     capabilities interactions, and will identify operations. Further enhancement is needed to
     support more use cases.
     """
+    # If this function isn't able to identify the request as a FHIR request, then this empty
+    # ParsedRequest object will be returned
     no_info = ParsedRequest()
 
     split_path = request.url.path.split("/")
