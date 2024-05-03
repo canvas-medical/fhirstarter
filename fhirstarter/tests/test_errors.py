@@ -1,8 +1,8 @@
 """Test FHIRStarter error handling"""
 
-import json
 from typing import Any, Callable, Coroutine, Mapping, Union, cast
 
+import orjson
 import pytest
 from fastapi import HTTPException
 
@@ -122,7 +122,7 @@ def test_validation_error(
     Test FHIR create interaction that produces 400 bad request error due to a validation failure.
     """
     if isinstance(request_body, Mapping):
-        request_body = json.dumps(request_body)
+        request_body = orjson.dumps(request_body).decode()
 
     create_response = client.post("/Patient", content=request_body)
 
