@@ -1,10 +1,10 @@
 """Test utilities"""
 
-import json
 from typing import Any, Dict, Mapping, Union
 from urllib.parse import urlparse
 from uuid import uuid4
 
+import orjson
 from funcy import omit
 from requests.models import Response
 
@@ -43,7 +43,7 @@ def id_from_location_header(response: Response) -> str:
 
 def json_dumps_pretty(value: Any) -> str:
     """Dump the value to JSON in pretty format."""
-    return json.dumps(value, indent=2, separators=(", ", ": "))
+    return orjson.dumps(value, option=orjson.OPT_INDENT_2).decode()
 
 
 def make_request(

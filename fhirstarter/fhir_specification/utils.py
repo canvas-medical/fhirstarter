@@ -1,11 +1,12 @@
 """Utilities for working with the FHIR specification."""
 
 import importlib.metadata
-import json
 import os
 import zipfile
 from copy import deepcopy
 from typing import Dict, Set
+
+import orjson
 
 try:
     from functools import cache
@@ -70,7 +71,7 @@ def is_resource_type(resource_type: str) -> bool:
 def _load_resources_list() -> Set[str]:
     """Load the list of resources from the JSON file."""
     with open(FHIR_DIR / "resource_types.json") as file_:
-        return set(json.load(file_))
+        return orjson.loads(file_.read())
 
 
 @cache
@@ -79,7 +80,7 @@ def load_examples(
 ) -> Dict[str, Dict[str, Union[str, Dict[str, Any]]]]:
     """Return the examples for a specific resource type."""
     with zipfile.ZipFile(FHIR_DIR / "examples.zip") as file_:
-        return json.loads(file_.read(f"{resource_type.lower()}.json"))
+        return orjson.loads(file_.read(f"{resource_type.lower()}.json"))
 
 
 def create_bundle_example(resource_example: Mapping[str, Any]) -> Dict[str, Any]:
@@ -134,10 +135,10 @@ def make_operation_outcome_example(
 def load_search_parameters() -> Dict[str, Any]:
     """Load the search parameters file."""
     with zipfile.ZipFile(FHIR_DIR / "search-parameters.zip") as file_:
-        return json.loads(file_.read("search-parameters.json"))
+        return orjson.loads(file_.read("search-parameters.json"))
 
 
 def load_extra_search_parameters() -> Dict[str, Dict[str, Union[str, bool]]]:
     """Load the extra search parameters file."""
     with open(FHIR_DIR / "extra-search-parameters.json") as file_:
-        return json.load(file_)
+        return orjson.loads(file_.read())
