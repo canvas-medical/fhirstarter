@@ -1,6 +1,6 @@
 """
-An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR
-interactions (i.e. endpoints) that perform create, read, search-type, and update operations.
+An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR interactions
+(i.e. endpoints) that perform read, update, patch, delete, create, and search-type actions.
 """
 
 import contextlib
