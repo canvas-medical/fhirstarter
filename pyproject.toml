@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fhirstarter"
-version = "2.4.1"
+version = "2.4.2"
 description = "An ASGI FHIR API framework built on top of FastAPI and FHIR Resources"
 authors = ["Christopher Sande <christopher.sande@canvasmedical.com>"]
 maintainers = ["Canvas Medical Engineering <engineering@canvasmedical.com>"]
@@ -36,7 +36,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = ">=3.8.0,<3.13.0"
-fastapi = ">=0.103.1,<0.112.0"
+fastapi = ">=0.103.1,<0.116.0"
 "fhir.resources" = {version = ">=6.4.0", extras = ["xml"]}
 orjson = "^3.10.3"
 pydantic = ">=1.10.12,<2.0.0"
