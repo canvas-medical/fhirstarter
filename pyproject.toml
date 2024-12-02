@@ -48,7 +48,7 @@ tzdata = { version = ">=2023.3,<2025.0", markers = "platform_system == 'Windows'
 black = ">=23.7,<25.0"
 beautifulsoup4 = "^4.12.2"
 funcy = "^2.0"
-httpx = ">=0.24.1,<0.28.0"
+httpx = ">=0.24.1,<0.29.0"
 isort = "^5.12.0"
 jsonpatch = "^1.33"
 mypy = "^1.5.1"
