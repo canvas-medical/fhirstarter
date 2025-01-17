@@ -29,9 +29,6 @@ if FHIR_SEQUENCE == "STU3":
 
     FHIR_VERSION = fhir.resources.STU3.__fhir_version__
     FHIR_DIR = Path(sequences.STU3.__file__).parent
-elif FHIR_SEQUENCE == "R4":
-    FHIR_VERSION = fhir.resources.__fhir_version__
-    FHIR_DIR = Path(sequences.R4.__file__).parent
 elif FHIR_SEQUENCE == "R4B":
     import fhir.resources.R4B
 
@@ -41,25 +38,7 @@ elif FHIR_SEQUENCE == "R5":
     FHIR_VERSION = fhir.resources.__fhir_version__
     FHIR_DIR = Path(sequences.R5.__file__).parent
 else:
-    raise AssertionError(f"Specified FHIR sequence must be one of: STU3, R4, R4B, R5")
-
-
-# Ensure that a compatible version of fhir.resources is installed
-FHIR_RESOURCES_VERSION = importlib.metadata.version("fhir.resources")
-if FHIR_SEQUENCE == "R4":
-    assert FHIR_RESOURCES_VERSION == "6.4.0", (
-        f"fhir.resources package version must be 6.4.0 for FHIR R4 sequence; installed version is "
-        f"{FHIR_RESOURCES_VERSION}"
-    )
-else:
-    assert FHIR_RESOURCES_VERSION >= "7.0.0", (
-        f"fhir.resources package version must be 7.0.0 or greater for FHIR STU3, R4B, and R5 "
-        f"sequences; installed version is {FHIR_RESOURCES_VERSION}"
-    )
-    assert fhir.resources.__fhir_version__ == "5.0.0", (
-        f"fhir.resources package references unexpected FHIR version "
-        f"{fhir.resources.__fhir_version__}"
-    )
+    raise AssertionError(f"Specified FHIR sequence must be one of: STU3, R4B, R5")
 
 
 def is_resource_type(resource_type: str) -> bool:

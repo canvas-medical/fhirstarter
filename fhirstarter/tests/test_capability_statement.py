@@ -191,7 +191,7 @@ def _fhir_sequence_adjust(
 ) -> MutableMapping[str, Any]:
     """
     Adjust a capability statement for the purposes of comparison.
-    Example: For R4, R4B, and R5, the "acceptUnknown" value is no longer present.
+    Example: For R4B and R5, the "acceptUnknown" value is no longer present.
     """
     if FHIR_SEQUENCE != "STU3":
         del capability_statement["acceptUnknown"]
