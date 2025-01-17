@@ -70,7 +70,7 @@ def main() -> None:
 
     print("")
 
-    for sequence in ("STU3", "R4", "R4B", "R5"):
+    for sequence in ("STU3", "R4B", "R5"):
         print(f"Creating sequence data for {sequence}...")
 
         # Download the search parameters file
