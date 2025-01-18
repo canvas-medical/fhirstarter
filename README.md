@@ -2,7 +2,7 @@
 
 <p>
   <a href="https://github.com/canvas-medical/fhirstarter/actions?query=workflow%3Atests+event%3Apush+branch%3Amain" target="_blank">
-    <img src="https://github.com/canvas-medical/fhirstarter/actions/workflows/tests.yml/badge.svg?branch=main&event=push" alt="tests">
+    <img src="https://img.shields.io/github/actions/workflow/status/canvas-medical/fhirstarter/tests.yml?branch=main&event=push&label=tests" alt="tests">
   </a>
   <a href="https://pypi.org/project/fhirstarter/">
     <img src="https://img.shields.io/pypi/v/fhirstarter">
