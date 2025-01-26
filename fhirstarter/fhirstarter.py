@@ -15,16 +15,21 @@ from os import PathLike
 from typing import (
     Any,
     Callable,
+    Collection,
     Coroutine,
     DefaultDict,
     Dict,
     List,
     MutableMapping,
+    Set,
     Union,
     cast,
 )
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import parse_qs, urlencode, urlparse
 
+import httpx
+from asyncache import cachedmethod
+from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from pydantic.error_wrappers import display_errors
@@ -64,13 +69,6 @@ from .utils import (
     update_route_args,
 )
 
-# Suppress warnings from base fhir.resources class
-logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
-
-CapabilityStatementModifier = Callable[
-    [MutableMapping[str, Any], Request, Response], MutableMapping[str, Any]
-]
-
 _INTERACTION_ORDER = {
     "read": 1,
     "vread": 2,
@@ -82,6 +80,19 @@ _INTERACTION_ORDER = {
     "create": 8,
     "search-type": 9,
 }
+
+_DEFAULT_EXTERNAL_EXAMPLES_ENABLED = True
+_DEFAULT_EXTERNAL_EXAMPLES_CACHE_SIZE = 2_048
+_DEFAULT_EXTERNAL_EXAMPLES_CACHE_TTL_HOURS = 6
+
+# Suppress warnings from base fhir.resources class
+logging.getLogger("fhir.resources.core.fhirabstractmodel").setLevel(logging.WARNING + 1)
+
+CapabilityStatementModifier = Callable[
+    [MutableMapping[str, Any], Request, Response], MutableMapping[str, Any]
+]
+
+_HTTP_CLIENT = httpx.AsyncClient()
 
 
 class FHIRStarter(FastAPI):
@@ -118,6 +129,7 @@ class FHIRStarter(FastAPI):
 
             self._search_parameters = SearchParameters(config.get("search-parameters"))
         else:
+            config = {}
             self._search_parameters = SearchParameters()
 
         self._capabilities: DefaultDict[str, Dict[str, TypeInteraction]] = defaultdict(
@@ -130,6 +142,30 @@ class FHIRStarter(FastAPI):
         self.set_capability_statement_modifier(lambda c, _, __: c)
 
         self._add_capabilities_route()
+
+        # Set up the TTL cache to store external documentation examples
+        external_examples_config = config.get("app", {}).get(
+            "external-documentation-examples", {}
+        )
+        self._external_examples_enabled = external_examples_config.get(
+            "enabled", _DEFAULT_EXTERNAL_EXAMPLES_ENABLED
+        )
+        self._external_examples_cache = TTLCache(
+            maxsize=external_examples_config.get(
+                "cache-size", _DEFAULT_EXTERNAL_EXAMPLES_CACHE_SIZE
+            ),
+            ttl=external_examples_config.get(
+                "cache-ttl-hours", _DEFAULT_EXTERNAL_EXAMPLES_CACHE_TTL_HOURS
+            )
+            * 3600,
+        )
+
+        # Add the external example proxy route
+        self._allowed_external_example_urls: Set[str] = set()
+        if self._external_examples_enabled and not (
+            "openapi_url" in kwargs and kwargs["openapi_url"] is None
+        ):
+            self._add_external_example_proxy_route()
 
         self.middleware("http")(_transform_search_type_post_request)
         self.middleware("http")(_transform_null_response_body)
@@ -380,7 +416,11 @@ class FHIRStarter(FastAPI):
             return self.openapi_schema
 
         openapi_schema = super().openapi()
-        adjust_schema(openapi_schema)
+        external_example_urls = adjust_schema(
+            openapi_schema, self._external_examples_enabled
+        )
+
+        self._allowed_external_example_urls = external_example_urls
 
         return openapi_schema
 
@@ -410,6 +450,32 @@ class FHIRStarter(FastAPI):
             operation_id="fhirstarter|system|capabilities|get",
             response_model_exclude_none=True,
         )(capability_statement_handler)
+
+    def _add_external_example_proxy_route(self) -> None:
+        """Add the /_example route to proxy external documentation examples."""
+
+        async def example(value: str) -> Dict[str, Any]:
+            return await self._example(value, self._allowed_external_example_urls)
+
+        self.get(
+            "/_example",
+            include_in_schema=False,
+        )(example)
+
+    @cachedmethod(
+        lambda self: self._external_examples_cache,
+        key=lambda app, url, allowed_urls: url,
+    )
+    async def _example(self, url: str, allowed_urls: Collection[str]) -> Dict[str, Any]:
+        """Fetch the external documentation example if the provided URL is in the allow list."""
+        if urlparse(url).scheme != "https" or url not in allowed_urls:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        try:
+            response = await _HTTP_CLIENT.get(url)
+            return response.json()
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _add_route(self, interaction: TypeInteraction[ResourceType]) -> None:
         """

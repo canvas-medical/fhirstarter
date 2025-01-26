@@ -208,7 +208,7 @@ def _check_resource_type_module(resource_type: Type[Resource]) -> None:
         module
     ), f"Unable to determine FHIR sequence of resource {resource_type.get_resource_type()}"
 
-    if FHIR_SEQUENCE in ("R4", "R4"):
+    if FHIR_SEQUENCE in ("R4", "R5"):
         assert not module.startswith(
             ("fhir.resources.STU3", "fhir.resources.R4B")
         ), f"Resource types from {module} cannot be used with FHIR sequence {FHIR_SEQUENCE}"
