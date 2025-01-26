@@ -454,9 +454,6 @@ class FHIRStarter(FastAPI):
     def _add_external_example_proxy_route(self) -> None:
         """Add the /_example route to proxy external documentation examples."""
 
-        # xTODO: Lint, revert import change
-        # TODO: Review diff
-        # TODO: Publish
         async def example(value: str) -> Dict[str, Any]:
             return await self._example(value, self._allowed_external_example_urls)
 
