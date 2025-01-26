@@ -11,6 +11,7 @@ from typing import (
     List,
     Mapping,
     MutableMapping,
+    Set,
     Tuple,
     Union,
     cast,
@@ -67,9 +68,12 @@ def _search_type_operations(
             yield operation_id, operation
 
 
-def adjust_schema(openapi_schema: MutableMapping[str, Any]) -> None:
+def adjust_schema(
+    openapi_schema: MutableMapping[str, Any], include_external_examples: bool
+) -> Set[str]:
     """
-    Adjust the OpenAPI schema to make it more FHIR-friendly.
+    Adjust the OpenAPI schema to make it more FHIR-friendly. Return a set containing all the URLs
+    for external documentation examples.
 
     Remove some default schemas that are not needed nor used, and change all content types that
     are set to "application/json" to instead be "application/fhir+json". Make a few additional
@@ -85,9 +89,13 @@ def adjust_schema(openapi_schema: MutableMapping[str, Any]) -> None:
     # the tasks so that all the schemas are there for subsequent actions.
     _add_schemas(openapi_schema)
 
-    examples = _get_examples(openapi_schema)
+    examples, external_example_urls = _get_examples(
+        openapi_schema, include_external_examples
+    )
     for operation_id, operation in _operations(openapi_schema):
         _adjust_operation(operation_id, operation, examples)
+
+    return external_example_urls
 
 
 def _inline_search_post_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
@@ -138,14 +146,16 @@ def _add_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
 
 
 def _get_examples(
-    openapi_schema: MutableMapping[str, Any]
-) -> Dict[str, Dict[str, Any]]:
+    openapi_schema: MutableMapping[str, Any],
+    include_external_examples: bool,
+) -> Tuple[Dict[str, Dict[str, Any]], Set[str]]:
     """
     Gather examples for all scenarios: request and response bodies for interactions;
     resource-specific Bundle examples for search interactions; and OperationOutcome examples for
     errors.
     """
     examples: DefaultDict[str, Any] = defaultdict(dict)
+    external_example_urls = set()
 
     # Get all resource examples from the models and the FHIR specification
     for schema_name, schema in openapi_schema["components"]["schemas"].items():
@@ -165,6 +175,20 @@ def _get_examples(
             examples["Bundle"][schema_name] = create_bundle_example(schema_example)
         elif is_resource_type(resource_type):
             resource_examples = load_examples(resource_type)
+
+            # If external examples are not to be included, remove them
+            if not include_external_examples:
+                example_keys = list(resource_examples.keys())
+                for example_key in example_keys:
+                    if "externalValue" in resource_examples[example_key]:
+                        del resource_examples[example_key]
+
+            # Replace all examples provided by an externalValue with a proxy URL
+            for example in resource_examples.values():
+                if value := example.get("externalValue"):
+                    example["externalValue"] = f"/_example?value={value}"
+                    external_example_urls.add(value)
+
             examples[schema_name]["examples"] = resource_examples
             examples["Bundle"][schema_name] = create_bundle_example(
                 next(iter(resource_examples.values()))["value"]
@@ -195,7 +219,7 @@ def _get_examples(
             severity="error", code=code, details_text=details_text
         )
 
-    return examples
+    return examples, external_example_urls
 
 
 def _adjust_operation(

@@ -149,6 +149,11 @@ def patient_search_type(
 def app(provider: FHIRProvider) -> TestClient:
     """Create a FHIRStarter app, add the provider, reset the database, and return a TestClient."""
     config_file_contents = """
+[app.external-documentation-examples]
+enabled = true
+cache-size = 2048  # number of entries
+cache-ttl-hours = 6
+
 [search-parameters.Patient.nickname]
 type = "string"
 description = "Nickname"
