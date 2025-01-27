@@ -463,7 +463,7 @@ class FHIRStarter(FastAPI):
         )(example)
 
     @cachedmethod(
-        lambda self: self._external_examples_cache,
+        lambda app: app._external_examples_cache,
         key=lambda app, url, allowed_urls: url,
     )
     async def _example(self, url: str, allowed_urls: Collection[str]) -> Dict[str, Any]:

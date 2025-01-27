@@ -7,6 +7,7 @@ import pytest
 from .. import FHIRProvider, FHIRStarter, InteractionContext
 from ..fhir_specification import FHIR_SEQUENCE
 from ..fhirstarter import status
+from ..testclient import TestClient
 from .config import create_test_client_async
 from .resources import Appointment, Bundle, Id, Practitioner
 
@@ -428,3 +429,16 @@ def test_error_examples(
             responses[status_code]["content"]["application/fhir+json"]["example"]
             == _OPERATION_OUTCOMES[status_code]
         )
+
+
+@pytest.mark.parametrize(
+    argnames="url",
+    argvalues=[
+        "http://hl7.org/fhir/DSTU2/patient-example.json",
+        "https://hl7.org/fhir/DSTU2/patient-example.json",
+    ],
+    ids=["no https", "not in allowlist"],
+)
+def test_example_proxy_error(client_all: TestClient, url: str) -> None:
+    response = client_all.get(f"/_example?value={url}")
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
