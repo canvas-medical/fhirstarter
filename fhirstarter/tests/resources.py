@@ -10,14 +10,7 @@ import os
 
 FHIR_SEQUENCE = os.getenv("FHIR_SEQUENCE", "R5")
 
-if FHIR_SEQUENCE in ("R4", "R5"):
-    from fhir.resources.appointment import Appointment
-    from fhir.resources.bundle import Bundle
-    from fhir.resources.fhirtypes import Id
-    from fhir.resources.humanname import HumanName
-    from fhir.resources.patient import Patient
-    from fhir.resources.practitioner import Practitioner
-elif FHIR_SEQUENCE == "STU3":
+if FHIR_SEQUENCE == "STU3":
     from fhir.resources.STU3.appointment import Appointment
     from fhir.resources.STU3.bundle import Bundle
     from fhir.resources.STU3.fhirtypes import Id
@@ -31,5 +24,12 @@ elif FHIR_SEQUENCE == "R4B":
     from fhir.resources.R4B.humanname import HumanName
     from fhir.resources.R4B.patient import Patient
     from fhir.resources.R4B.practitioner import Practitioner
+elif FHIR_SEQUENCE =="R5":
+    from fhir.resources.appointment import Appointment
+    from fhir.resources.bundle import Bundle
+    from fhir.resources.fhirtypes import Id
+    from fhir.resources.humanname import HumanName
+    from fhir.resources.patient import Patient
+    from fhir.resources.practitioner import Practitioner
 
 __all__ = ["Patient", "HumanName", "Appointment", "Bundle", "Id", "Practitioner"]
