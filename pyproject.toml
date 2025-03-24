@@ -39,7 +39,7 @@ python = ">=3.8.0,<3.13.0"
 asyncache = "^0.3.1"
 cachetools = "^5.5.1"
 fastapi = ">=0.103.1,<0.116.0"
-"fhir.resources" = {version = ">=6.4.0", extras = ["xml"]}
+"fhir.resources" = {version = ">=7.0.0,<8.0.0", extras = ["xml"]}
 httpx = ">=0.24.1,<0.29.0"
 orjson = "^3.10.3"
 pydantic = ">=1.10.12,<2.0.0"
