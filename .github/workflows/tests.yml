@@ -13,21 +13,22 @@ jobs:
         fhir-sequence: [STU3, R4B, R5]
     steps:
     - uses: actions/checkout@v4
-    - name: Install Poetry
-      run: pipx install poetry
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+          version: "0.6.11"
     - name: Install Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        cache: 'poetry'
     - name: Install Python packages
       run: |
-        poetry add "fhir.resources"@^7.0.0 --extras=xml
-        poetry install
+        uv add "fhir.resources[xml]>=7.0.0,<8.0.0"
+        uv sync --all-extras --dev
     - name: Run tests
       env:
         FHIR_SEQUENCE: ${{ matrix.fhir-sequence }}
-      run: poetry run pytest
+      run: uv run pytest
   run-tests-r4:
     needs: run-tests
     runs-on: ubuntu-latest
@@ -37,21 +38,22 @@ jobs:
         fhir-sequence: [R4]
     steps:
     - uses: actions/checkout@v4
-    - name: Install Poetry
-      run: pipx install poetry
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+          version: "0.6.11"
     - name: Install Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        cache: 'poetry'
     - name: Install Python packages
       run: |
-        poetry add "fhir.resources"@~6.4.0 --extras=xml
-        poetry install
+        uv add "fhir.resources[xml]==6.4.0"
+        uv sync --all-extras --dev
     - name: Run tests
       env:
         FHIR_SEQUENCE: ${{ matrix.fhir-sequence }}
-      run: poetry run pytest
+      run: uv run pytest
   run-tests-windows:
     runs-on: windows-latest
     strategy:
@@ -60,18 +62,19 @@ jobs:
         fhir-sequence: [R5]
     steps:
     - uses: actions/checkout@v4
-    - name: Install Poetry
-      run: pipx install poetry
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+          version: "0.6.11"
     - name: Install Python
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-        cache: 'poetry'
     - name: Install Python packages
       run: |
-        poetry add "fhir.resources"@^7.0.0 --extras=xml
-        poetry install
+        uv add "fhir.resources[xml]>=7.0.0,<8.0.0"
+        uv sync --all-extras --dev
     - name: Run tests
       env:
         FHIR_SEQUENCE: ${{ matrix.fhir-sequence }}
-      run: poetry run pytest
+      run: uv run pytest
