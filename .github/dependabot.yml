@@ -2,11 +2,11 @@
 #   -> https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
 version: 2
 updates:
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 25
+#  - package-ecosystem: "pip"
+#    directory: "/"
+#    schedule:
+#      interval: "daily"
+#    open-pull-requests-limit: 25
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
