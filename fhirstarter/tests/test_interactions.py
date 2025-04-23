@@ -79,7 +79,9 @@ def test_read_xml(client: TestClient, patient_id: str, pretty: str) -> None:
         read_response,
         status.HTTP_200_OK,
         content_type="application/fhir+xml",
-        content=Patient(**(resource(patient_id))).xml(pretty_print=(pretty == "true")),
+        content=Patient.model_validate(resource(patient_id)).model_dump_xml(
+            pretty_print=(pretty == "true")
+        ),
     )
 
 
@@ -95,7 +97,7 @@ def test_read_not_found(client: TestClient) -> None:
             severity="error",
             code="not-found",
             details_text=f"Unknown Patient resource '{id_}'",
-        ).dict(),
+        ).model_dump(),
     )
 
 
@@ -112,7 +114,7 @@ def test_read_not_found_pretty(client: TestClient) -> None:
                 severity="error",
                 code="not-found",
                 details_text=f"Unknown Patient resource '{id_}'",
-            ).dict()
+            ).model_dump()
         ),
     )
 
@@ -135,7 +137,7 @@ def test_read_not_found_xml(client: TestClient, pretty: str) -> None:
             severity="error",
             code="not-found",
             details_text=f"Unknown Patient resource '{id_}'",
-        ).xml(pretty_print=(pretty == "true")),
+        ).model_dump_xml(pretty_print=(pretty == "true")),
     )
 
 
@@ -177,13 +179,13 @@ def test_update_not_found(client: TestClient) -> None:
             severity="error",
             code="not-found",
             details_text=f"Unknown Patient resource '{id_}'",
-        ).dict(),
+        ).model_dump(),
     )
 
 
 def test_update_id_mismatch(client: TestClient, patient_id: str) -> None:
     """
-    Test FHIR update interaction where the logical Id in the URL does not match the logical ID in
+    Test FHIR update interaction where the logical ID in the URL does not match the logical ID in
     the resource.
     """
     read_response = client.get(f"/Patient/{patient_id}")
@@ -244,7 +246,7 @@ def test_patch_not_found(client: TestClient) -> None:
             severity="error",
             code="not-found",
             details_text=f"Unknown Patient resource '{id_}'",
-        ).dict(),
+        ).model_dump(),
     )
 
 
@@ -369,7 +371,7 @@ def _search_type_handler_parameter_multiple_values() -> Callable[..., Bundle]:
             **{
                 "type": "searchset",
                 "total": len(patients),
-                "entry": [{"resource": patient.dict()} for patient in patients],
+                "entry": [{"resource": patient.model_dump()} for patient in patients],
             }
         )
 

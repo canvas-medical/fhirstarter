@@ -9,7 +9,7 @@ from ..fhir_specification import FHIR_SEQUENCE, FHIR_VERSION
 from ..fhirstarter import FHIRStarter
 from ..resources import CapabilityStatement
 from ..testclient import TestClient
-from .utils import assert_expected_response
+from .utils import assert_expected_response, json_dumps_pretty
 
 
 @pytest.mark.parametrize(
@@ -116,9 +116,7 @@ def test_capability_statement_pretty(client_create_and_read: TestClient) -> None
     assert_expected_response(
         response,
         status.HTTP_200_OK,
-        content=CapabilityStatement(**response.json()).json(
-            indent=2, separators=(", ", ": ")
-        ),
+        content=json_dumps_pretty(CapabilityStatement.model_validate_json(response.json())),
     )
 
 
@@ -137,9 +135,9 @@ def test_capability_statement_xml(
         response,
         status.HTTP_200_OK,
         content_type="application/fhir+xml",
-        content=CapabilityStatement.parse_raw(
-            response.content, content_type="text/xml"
-        ).xml(pretty_print=(pretty == "true")),
+        content=CapabilityStatement.model_validate_xml(response.content).model_dump_xml(
+            pretty_print=(pretty == "true")
+        ),
     )
 
 
