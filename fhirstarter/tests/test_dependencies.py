@@ -10,7 +10,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from ..exceptions import FHIRUnauthorizedError
 from ..fhirstarter import FHIRProvider, status
 from ..interactions import InteractionContext
-from ..resources import Id
 from .config import app, patient_create, patient_create_async
 from .resources import Patient
 from .utils import assert_expected_response, resource
@@ -34,7 +33,7 @@ def validate_token(
 )
 def patient_create_func(
     request: FixtureRequest,
-) -> Callable[[InteractionContext, Patient], Union[Coroutine[None, None, Id], Id]]:
+) -> Callable[[InteractionContext, Patient], Union[Coroutine[None, None, str], str]]:
     """Parametrized fixture to ensure that tests are tested in both async and nonasync modes."""
     return request.param
 
@@ -42,7 +41,7 @@ def patient_create_func(
 @pytest.fixture
 def provider_with_dependency(
     patient_create_func: Callable[
-        [InteractionContext, Patient], Union[Coroutine[None, None, Id], Id]
+        [InteractionContext, Patient], Union[Coroutine[None, None, str], str]
     ]
 ) -> FHIRProvider:
     """Create a provider with a provider-level dependency."""
@@ -55,7 +54,7 @@ def provider_with_dependency(
 @pytest.fixture
 def provider_with_interaction_dependency(
     patient_create_func: Callable[
-        [InteractionContext, Patient], Union[Coroutine[None, None, Id], Id]
+        [InteractionContext, Patient], Union[Coroutine[None, None, str], str]
     ]
 ) -> FHIRProvider:
     """Create a provider with an interaction-level dependency."""

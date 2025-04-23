@@ -12,7 +12,7 @@ from ..fhirstarter import FHIRStarter
 from ..interactions import InteractionContext
 from ..json_patch import JSONPatch, convert_json_patch
 from ..providers import FHIRProvider
-from ..resources import Bundle, Id
+from ..resources import Bundle
 from ..testclient import TestClient
 from .resources import HumanName, Patient
 from .utils import generate_fhir_resource_id
@@ -24,12 +24,12 @@ _VALID_TOKEN = "valid"
 _INVALID_TOKEN = "invalid"
 
 
-async def patient_read_async(context: InteractionContext, id_: Id) -> Patient:
+async def patient_read_async(context: InteractionContext, id_: str) -> Patient:
     """Patient read FHIR interaction."""
     return patient_read(context, id_)
 
 
-def patient_read(_: InteractionContext, id_: Id) -> Patient:
+def patient_read(_: InteractionContext, id_: str) -> Patient:
     """Patient read FHIR interaction."""
     patient = DATABASE.get(id_)
     if not patient:
@@ -39,13 +39,13 @@ def patient_read(_: InteractionContext, id_: Id) -> Patient:
 
 
 async def patient_update_async(
-    context: InteractionContext, id_: Id, resource: Patient
-) -> Id:
+    context: InteractionContext, id_: str, resource: Patient
+) -> str:
     """Patient update FHIR interaction."""
     return patient_update(context, id_, resource)
 
 
-def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> Id:
+def patient_update(_: InteractionContext, id_: str, resource: Patient) -> str:
     """Patient update FHIR interaction."""
     if id_ not in DATABASE:
         raise FHIRResourceNotFoundError
@@ -53,22 +53,22 @@ def patient_update(_: InteractionContext, id_: Id, resource: Patient) -> Id:
     patient = deepcopy(resource)
     DATABASE[id_] = patient
 
-    return Id(patient.id)
+    return patient.id
 
 
 async def patient_patch_async(
-    context: InteractionContext, id_: Id, json_patch: JSONPatch
-) -> Id:
+    context: InteractionContext, id_: str, json_patch: JSONPatch
+) -> str:
     """Patient patch FHIR interaction."""
     return patient_patch(context, id_, json_patch)
 
 
-def patient_patch(_: InteractionContext, id_: Id, json_patch: JSONPatch) -> Id:
+def patient_patch(_: InteractionContext, id_: str, json_patch: JSONPatch) -> str:
     """Patient patch FHIR interaction."""
     if id_ not in DATABASE:
         raise FHIRResourceNotFoundError
 
-    patient = DATABASE[id_].dict()
+    patient = DATABASE[id_].model_dump()
 
     jsonpatch.apply_patch(
         patient, jsonpatch.JsonPatch(convert_json_patch(json_patch)), in_place=True
@@ -76,15 +76,15 @@ def patient_patch(_: InteractionContext, id_: Id, json_patch: JSONPatch) -> Id:
 
     DATABASE[id_] = Patient(**patient)
 
-    return Id(id_)
+    return id_
 
 
-async def patient_delete_async(context: InteractionContext, id_: Id) -> None:
+async def patient_delete_async(context: InteractionContext, id_: str) -> None:
     """Patient delete FHIR interaction."""
     return patient_delete(context, id_)
 
 
-def patient_delete(_: InteractionContext, id_: Id) -> None:
+def patient_delete(_: InteractionContext, id_: str) -> None:
     """Patient delete FHIR interaction."""
     if id_ not in DATABASE:
         return
@@ -94,18 +94,18 @@ def patient_delete(_: InteractionContext, id_: Id) -> None:
     return None
 
 
-async def patient_create_async(context: InteractionContext, resource: Patient) -> Id:
+async def patient_create_async(context: InteractionContext, resource: Patient) -> str:
     """Patient create FHIR interaction."""
     return patient_create(context, resource)
 
 
-def patient_create(_: InteractionContext, resource: Patient) -> Id:
+def patient_create(_: InteractionContext, resource: Patient) -> str:
     """Patient create FHIR interaction."""
     patient = deepcopy(resource)
     patient.id = generate_fhir_resource_id()
     DATABASE[patient.id] = patient
 
-    return Id(patient.id)
+    return patient.id
 
 
 async def patient_search_type_async(
@@ -139,7 +139,7 @@ def patient_search_type(
         **{
             "type": "searchset",
             "total": len(patients),
-            "entry": [{"resource": patient.dict()} for patient in patients],
+            "entry": [{"resource": patient.model_dump()} for patient in patients],
         }
     )
 

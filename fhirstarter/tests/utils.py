@@ -9,7 +9,6 @@ from funcy import omit
 from requests.models import Response
 
 from .. import Request
-from ..resources import Id
 
 _RESOURCE = {
     "resourceType": "Patient",
@@ -31,9 +30,9 @@ def resource(id_: Union[str, None] = None) -> Dict[str, Any]:
         return omit(_RESOURCE, ["id"])
 
 
-def generate_fhir_resource_id() -> Id:
+def generate_fhir_resource_id() -> str:
     """Generate a UUID-based FHIR Resource ID."""
-    return Id(str(uuid4()))
+    return str(uuid4())
 
 
 def id_from_location_header(response: Response) -> str:
