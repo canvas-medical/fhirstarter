@@ -1,6 +1,5 @@
 """Utilities for working with the FHIR specification."""
 
-import importlib.metadata
 import os
 import zipfile
 from copy import deepcopy
