@@ -63,6 +63,9 @@ def var_name_to_qp_name(name: str) -> str:
     Python-friendly versions of these have their uppercase characters replaced with an underscore
     plus the lowercase version of the character.
     """
+    if name in {"format_", "pretty_"}:
+        return f"_{name[:-1]}"
+
     if name.startswith("_"):
         return f"_{re.sub('_[a-z]', lambda m: m.group(0)[1:].upper(), name[1:])}"
 

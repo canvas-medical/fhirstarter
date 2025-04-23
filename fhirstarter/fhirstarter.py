@@ -32,7 +32,7 @@ from asyncache import cachedmethod
 from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from pydantic.error_wrappers import display_errors
+from pydantic.v1.error_wrappers import display_errors
 
 from .exceptions import FHIRException
 from .fhir_specification import FHIR_SEQUENCE, FHIR_VERSION
@@ -430,8 +430,8 @@ class FHIRStarter(FastAPI):
         def capability_statement_handler(
             request: Request,
             response: Response,
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[CapabilityStatement, Response]:
             return format_response(
                 resource=self.capability_statement(request, response),
@@ -449,6 +449,11 @@ class FHIRStarter(FastAPI):
             "capabilities - which portions of the FHIR specification it supports.",
             operation_id="fhirstarter|system|capabilities|get",
             response_model_exclude_none=True,
+            responses={
+                200: {
+                    "model": CapabilityStatement,
+                }
+            },
         )(capability_statement_handler)
 
     def _add_external_example_proxy_route(self) -> None:

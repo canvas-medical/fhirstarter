@@ -2,7 +2,7 @@
 Dynamic function creation for FHIR interactions.
 
 The callables passed to FastAPI by FHIRStarter are created using functional programming techniques.
-Interactions other than search are fairly straightforward -- these functions simply call a
+Interactions other than search are fairly straightforward — these functions simply call a
 developer-provided handler, perform some FHIR-related processing, and return the result up the
 chain.
 
@@ -37,7 +37,7 @@ from .interactions import (
     UpdateInteractionHandler,
 )
 from .json_patch import JSONPatch
-from .resources import Bundle, Id, Resource
+from .resources import Bundle, Resource
 from .search_parameters import (
     search_parameter_sort_key,
     supported_search_parameters,
@@ -52,8 +52,15 @@ _PRETTY_PARAMETER_DESCRIPTION = (
     "Ask for a pretty printed response for human convenience"
 )
 
-FORMAT_QP = Query(None, description=_FORMAT_PARAMETER_DESCRIPTION)
-PRETTY_QP = Query(None, description=_PRETTY_PARAMETER_DESCRIPTION)
+ID_PP = Path(
+    alias="id",
+    min_length=1,
+    max_length=64,
+    regex="^[A-Za-z0-9\-.]+$",
+    description=Resource.model_fields["id"].title,
+)
+FORMAT_QP = Query(None, alias="_format", description=_FORMAT_PARAMETER_DESCRIPTION)
+PRETTY_QP = Query(None, alias="_pretty", description=_PRETTY_PARAMETER_DESCRIPTION)
 
 
 # Note: I'm not currently aware of a better way do support both async and non-async handlers than
@@ -64,7 +71,7 @@ PRETTY_QP = Query(None, description=_PRETTY_PARAMETER_DESCRIPTION)
 def make_read_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, Id, str, str],
+    [Request, Response, str, str, str],
     Union[Coroutine[None, None, Union[ResourceType, Response]], ResourceType, Response],
 ]:
     """Make a function suitable for creation of a FHIR read API route."""
@@ -74,12 +81,9 @@ def make_read_function(
         async def read_async(
             request: Request,
             response: Response,
-            id_: Id = Path(
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            id_: str = ID_PP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[ResourceType, Response]:
             """Function for read interaction."""
             handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
@@ -98,12 +102,9 @@ def make_read_function(
         def read(
             request: Request,
             response: Response,
-            id_: Id = Path(
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            id_: str = ID_PP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[ResourceType, Response]:
             """Function for read interaction."""
             handler = cast(ReadInteractionHandler[ResourceType], interaction.handler)
@@ -121,7 +122,7 @@ def make_read_function(
 def make_update_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, ResourceType, Id, str, str],
+    [Request, Response, ResourceType, str, str, str],
     Union[Coroutine[None, None, Union[ResourceType, Response]], ResourceType, Response],
 ]:
     """Make a function suitable for creation of a FHIR update API route."""
@@ -133,12 +134,9 @@ def make_update_function(
             request: Request,
             response: Response,
             resource: ResourceType,
-            id_: Id = Path(
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            id_: str = ID_PP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[ResourceType, Response]:
             """Function for update interaction."""
             if resource and resource.id and id_ != resource.id:
@@ -148,7 +146,7 @@ def make_update_function(
                 )
 
             handler = cast(UpdateInteractionHandler[ResourceType], interaction.handler)
-            result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore[call-arg]
+            result = await handler(InteractionContext(request, response), id_, resource)  # type: ignore[call-arg,misc]
             _, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers["Location"] = f"/{resource_type_str}/{id_}"
@@ -172,12 +170,9 @@ def make_update_function(
             request: Request,
             response: Response,
             resource: ResourceType,
-            id_: Id = Path(
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            id_: str = ID_PP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[ResourceType, Response]:
             """Function for update interaction."""
             if resource and resource.id and id_ != resource.id:
@@ -210,7 +205,7 @@ def make_update_function(
 def make_patch_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, JSONPatch, Id, str, str],
+    [Request, Response, JSONPatch, str, str, str],
     Union[
         Coroutine[None, None, Union[ResourceType, Response]],
         ResourceType,
@@ -226,16 +221,13 @@ def make_patch_function(
             request: Request,
             response: Response,
             json_patch: JSONPatch,
-            id_: Id = Path(
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            id_: str = ID_PP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[ResourceType, Response]:
             """Function for patch interaction."""
             handler = cast(PatchInteractionHandler[ResourceType], interaction.handler)
-            result = await handler(InteractionContext(request, response), id_, json_patch)  # type: ignore[call-arg]
+            result = await handler(InteractionContext(request, response), id_, json_patch)  # type: ignore[call-arg,misc]
             _, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers["Location"] = f"/{resource_type_str}/{id_}"
@@ -253,12 +245,9 @@ def make_patch_function(
             request: Request,
             response: Response,
             json_patch: JSONPatch,
-            id_: Id = Path(
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            id_: str = ID_PP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[ResourceType, Response]:
             """Function for patch interaction."""
             handler = cast(PatchInteractionHandler[ResourceType], interaction.handler)
@@ -279,23 +268,18 @@ def make_patch_function(
 def make_delete_function(
     interaction: TypeInteraction[ResourceType],
 ) -> Callable[
-    [Request, Response, Id, str, str],
+    [Request, Response, str, str, str],
     Union[Coroutine[None, None, None], None],
 ]:
     """Make a function suitable for creation of a FHIR delete API route."""
-    resource_type_str = interaction.resource_type.get_resource_type()
-
     if iscoroutinefunction(interaction.handler):
 
         async def delete_async(
             request: Request,
             response: Response,
-            id_: Id = Path(
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            id_: str = ID_PP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> None:
             """Function for delete interaction."""
             handler = cast(DeleteInteractionHandler, interaction.handler)
@@ -309,12 +293,9 @@ def make_delete_function(
         def delete(
             request: Request,
             response: Response,
-            id_: Id = Path(
-                alias="id",
-                description=Resource.schema()["properties"]["id"]["title"],
-            ),
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            id_: str = ID_PP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> None:
             """Function for delete interaction."""
             handler = cast(DeleteInteractionHandler, interaction.handler)
@@ -344,8 +325,8 @@ def make_create_function(
             request: Request,
             response: Response,
             resource: ResourceType,
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[ResourceType, Response]:
             """
             Function for create interaction.
@@ -353,7 +334,7 @@ def make_create_function(
             Calls the handler, and sets the Location header based on the Id of the created resource.
             """
             handler = cast(CreateInteractionHandler[ResourceType], interaction.handler)
-            result = await handler(InteractionContext(request, response), resource)  # type: ignore[call-arg]
+            result = await handler(InteractionContext(request, response), resource)  # type: ignore[call-arg,misc]
             id_, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers["Location"] = f"/{resource_type_str}/{id_}"
@@ -377,8 +358,8 @@ def make_create_function(
             request: Request,
             response: Response,
             resource: ResourceType,
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[ResourceType, Response]:
             """
             Function for create interaction.
@@ -428,8 +409,13 @@ def make_search_type_function(
     parameters are supported by the developer-defined handler.
     """
     if post:
-        format_annotation = Form(None, description=_FORMAT_PARAMETER_DESCRIPTION)
-        pretty_annotation = Form(None, description=_PRETTY_PARAMETER_DESCRIPTION)
+        # At the time of writing, there is a bug in FastAPI causing Forms parameters to ignore the
+        # value specified for alias. The suggested workaround is to use validation_alias instead.
+        #
+        # Discussion: https://github.com/fastapi/fastapi/discussions/10024
+        # Issue: https://github.com/fastapi/fastapi/issues/10286
+        format_annotation = Form(None, alias="_format", validation_alias="_format", description=_FORMAT_PARAMETER_DESCRIPTION)
+        pretty_annotation = Form(None, alias="_pretty", validation_alias="_pretty", description=_PRETTY_PARAMETER_DESCRIPTION)
     else:
         format_annotation = FORMAT_QP
         pretty_annotation = PRETTY_QP
@@ -452,8 +438,8 @@ def make_search_type_function(
             request: Request,
             response: Response,
             *,
-            _format: str = format_annotation,
-            _pretty: str = pretty_annotation,
+            format_: str = format_annotation,
+            pretty_: str = pretty_annotation,
             **kwargs: str,
         ) -> Union[Bundle, Response]:
             """Function for search-type interaction."""
@@ -476,8 +462,8 @@ def make_search_type_function(
             request: Request,
             response: Response,
             *,
-            _format: str = format_annotation,
-            _pretty: str = pretty_annotation,
+            format_: str = format_annotation,
+            pretty_: str = pretty_annotation,
             **kwargs: str,
         ) -> Union[Bundle, Response]:
             """Function for search-type interaction."""
@@ -496,8 +482,8 @@ def make_search_type_function(
 
 
 def _result_to_id_resource_tuple(
-    result: Union[Id, ResourceType],
-) -> Tuple[Union[Id, None], Union[ResourceType, None]]:
+    result: Union[str, ResourceType],
+) -> Tuple[Union[str, None], Union[ResourceType, None]]:
     """
     Given an Id or a Resource, return an Id and a Resource.
 
