@@ -118,7 +118,6 @@ A detailed example is available here: [example.py](https://github.com/canvas-med
 
 ```python
 import uvicorn
-from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 
 from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext
@@ -133,7 +132,7 @@ provider = FHIRProvider()
 
 # Register the patient read FHIR interaction with the provider
 @provider.read(Patient)
-async def patient_read(context: InteractionContext, id_: Id) -> Patient:
+async def patient_read(context: InteractionContext, id_: str) -> Patient:
     # Get the patient from the database
     patient = ...
 
