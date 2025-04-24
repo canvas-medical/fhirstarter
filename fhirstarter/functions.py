@@ -39,7 +39,7 @@ from .interactions import (
 from .json_patch import JSONPatch
 from .resources import Bundle, Resource
 from .search_parameters import (
-    search_parameter_sort_key,
+    parameter_sort_key,
     supported_search_parameters,
     var_name_to_qp_name,
 )
@@ -414,8 +414,12 @@ def make_search_type_function(
         #
         # Discussion: https://github.com/fastapi/fastapi/discussions/10024
         # Issue: https://github.com/fastapi/fastapi/issues/10286
-        format_annotation = Form(None, alias="_format", validation_alias="_format", description=_FORMAT_PARAMETER_DESCRIPTION)
-        pretty_annotation = Form(None, alias="_pretty", validation_alias="_pretty", description=_PRETTY_PARAMETER_DESCRIPTION)
+        format_annotation = Form(
+            None, validation_alias="_format", description=_FORMAT_PARAMETER_DESCRIPTION
+        )
+        pretty_annotation = Form(
+            None, validation_alias="_pretty", description=_PRETTY_PARAMETER_DESCRIPTION
+        )
     else:
         format_annotation = FORMAT_QP
         pretty_annotation = PRETTY_QP
@@ -508,16 +512,40 @@ def _make_search_parameter(
         name
     ), f"{name} is not a valid search parameter name"
 
-    return Parameter(
-        name=name,
-        kind=Parameter.KEYWORD_ONLY,
-        default=(
-            Form(None, alias=var_name_to_qp_name(name), description=description)
-            if post
-            else Query(None, alias=var_name_to_qp_name(name), description=description)
-        ),
-        annotation=List[str] if multiple else str,
-    )
+    if post:
+        # At the time of writing, there is a bug in FastAPI causing Forms parameters to ignore the
+        # value specified for alias. The suggested workaround is to use validation_alias instead.
+        #
+        # Discussion: https://github.com/fastapi/fastapi/discussions/10024
+        # Issue: https://github.com/fastapi/fastapi/issues/10286
+        #
+        # Additionally, Pydantic v2 does not allow model fields to start with an underscore, so
+        # parameters like "_lastUpdated" are problematic. For some reason, this only manifests with
+        # the search-type by POST endpoint (possibly because FastAPI creates schemas for POST
+        # endpoints that accept form data). Search-type by POST is forwarded to the search-type GET
+        # endpoint, so the search-type by POST function will never actually handle any requests.
+        # Because of this, we can just manipulate it so that the OpenAPI documentation looks
+        # correct. We'll use a name mangling scheme for this: The Python parameter name gets a
+        # prefix that is acceptable to Pydantic.
+        return Parameter(
+            name=f"form__{name}",
+            kind=Parameter.KEYWORD_ONLY,
+            default=Form(
+                None,
+                validation_alias=var_name_to_qp_name(name),
+                description=description,
+            ),
+            annotation=List[str] if multiple else str,
+        )
+    else:
+        return Parameter(
+            name=name,
+            kind=Parameter.KEYWORD_ONLY,
+            default=Query(
+                None, alias=var_name_to_qp_name(name), description=description
+            ),
+            annotation=List[str] if multiple else str,
+        )
 
 
 def _is_valid_parameter_name(name: str) -> bool:
@@ -554,8 +582,8 @@ def _set_search_type_function_signature(
 
     sorted_search_parameters: List[Parameter] = sorted(
         parameters + search_parameters,
-        key=lambda p: search_parameter_sort_key(
-            p.name, search_parameter_metadata, p.annotation
+        key=lambda p: parameter_sort_key(
+            var_name_to_qp_name(p.name), search_parameter_metadata, p.annotation
         ),
     )
 

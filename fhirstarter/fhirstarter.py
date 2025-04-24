@@ -52,7 +52,7 @@ from .providers import FHIRProvider
 from .resources import CapabilityStatement, OperationOutcome
 from .search_parameters import (
     SearchParameters,
-    search_parameter_sort_key,
+    parameter_sort_key,
     supported_search_parameters,
     var_name_to_qp_name,
 )
@@ -380,7 +380,7 @@ class FHIRStarter(FastAPI):
                         )
                 resource["searchParam"] = sorted(
                     supported_search_parameters_,
-                    key=lambda p: search_parameter_sort_key(
+                    key=lambda p: parameter_sort_key(
                         cast(Dict[str, str], p)["name"], search_parameter_metadata
                     ),
                 )
