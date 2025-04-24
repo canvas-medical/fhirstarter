@@ -191,19 +191,30 @@ def _get_examples(
 
     # Get all resource examples from the models and the FHIR specification
     for schema_name, schema in openapi_schema["components"]["schemas"].items():
-        resource_type = schema_name
-        if not is_resource_type(schema_name):
+        properties = schema.get("properties", {})
+
+        # The resource_name value was removed from schemas in the fhir.resources 8.0.0, so there is
+        # no easy way to determine if a schema is for a FHIR resource or not. Using the
+        # is_resource_type function works for most cases, but doesn't for custom resources. Checking
+        # for the presence of the fields on DomainResource is a hack that works.
+        if not is_resource_type(schema_name) and not {
+            "text",
+            "contained",
+            "extension",
+            "modifierExtension",
+        }.issubset(properties):
             continue
 
         # Bundle, OperationOutcome, and Parameters are handled differently
+        resource_type = schema_name
         if resource_type in {"Bundle", "OperationOutcome", "Parameters"}:
             continue
 
         # If there is a custom example on the model, use it. Otherwise, get examples from the FHIR
         # specification. Add the example(s) and a bundle example.
-        if schema_example := schema.get("example"):
-            examples[schema_name]["example"] = schema_example
-            examples["Bundle"][schema_name] = create_bundle_example(schema_example)
+        if schema_examples := schema.get("examples"):
+            examples[schema_name]["examples"] = [schema_examples[0]]
+            examples["Bundle"][schema_name] = create_bundle_example(schema_examples[0])
         elif is_resource_type(resource_type):
             resource_examples = load_examples(resource_type)
 

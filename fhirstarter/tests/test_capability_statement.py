@@ -117,7 +117,7 @@ def test_capability_statement_pretty(client_create_and_read: TestClient) -> None
         response,
         status.HTTP_200_OK,
         content=json_dumps_pretty(
-            CapabilityStatement.model_validate_json(response.json())
+            CapabilityStatement.model_validate(response.json()).model_dump()
         ),
     )
 

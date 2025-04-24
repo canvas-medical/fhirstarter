@@ -34,6 +34,7 @@ from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from pydantic.v1.error_wrappers import display_errors
 
+from .errors import PYDANTIC_ERROR_TO_FHIR_ISSUE_TYPE
 from .exceptions import FHIRException
 from .fhir_specification import FHIR_SEQUENCE, FHIR_VERSION
 from .functions import (
@@ -257,12 +258,14 @@ class FHIRStarter(FastAPI):
         Creates an operation outcome by destructuring the RequestValidationError and mapping the
         values to the correct places in the OperationOutcome.
         """
-        operation_outcome = OperationOutcome(
-            **{
+        operation_outcome = OperationOutcome.model_validate(
+            {
                 "issue": [
                     {
                         "severity": "error",
-                        "code": _pydantic_error_to_fhir_issue_type(error["type"]),
+                        "code": PYDANTIC_ERROR_TO_FHIR_ISSUE_TYPE.get(
+                            error["type"], "invalid"
+                        ),
                         "details": {
                             "text": display_errors([error]).replace("\n ", " —")
                         },
@@ -645,26 +648,6 @@ async def _set_content_type_header(
         response.headers["Content-Type"] = "application/fhir+json"
 
     return response
-
-
-def _pydantic_error_to_fhir_issue_type(error: str) -> str:
-    """Return a FHIR issue type code mapped from a Pydantic error code."""
-    error_type, *rest = error.split(".")
-    error_code = rest[0] if rest else None
-
-    if error_type == "json_invalid":
-        return "structure"
-    elif error_type == "type_error":
-        return "value"
-    elif error_type == "value_error":
-        if error_code == "extra":
-            return "structure"
-        elif error_code == "missing":
-            return "required"
-        else:
-            return "value"
-    else:
-        return "invalid"
 
 
 def _exception_response(

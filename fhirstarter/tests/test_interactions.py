@@ -296,9 +296,7 @@ def test_no_body(
             "issue": [
                 {
                     "code": "required",
-                    "details": {
-                        "text": "body — field required (type=value_error.missing)"
-                    },
+                    "details": {"text": "body — Field required (type=missing)"},
                     "severity": "error",
                 }
             ],
@@ -367,11 +365,15 @@ def _search_type_handler_parameter_multiple_values() -> Callable[..., Bundle]:
                 if set(given or ()).issubset(cast(HumanName, name).given):
                     patients.append(patient)
 
-        bundle = Bundle(
-            **{
+        bundle = Bundle.model_validate(
+            {
                 "type": "searchset",
                 "total": len(patients),
-                "entry": [{"resource": patient.model_dump()} for patient in patients],
+                "entry": (
+                    [{"resource": patient.model_dump()} for patient in patients]
+                    if patients
+                    else None
+                ),
             }
         )
 

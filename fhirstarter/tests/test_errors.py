@@ -36,7 +36,7 @@ from .utils import assert_expected_response, generate_fhir_resource_id
                 severity="error",
                 code="structure",
                 details_text="body -> 1 — JSON decode error (type=json_invalid; error=Expecting value)",
-            ),
+            ).model_dump(),
         ),
         (
             ("read", "update", "patch", "delete", "create", "search-type"),
@@ -44,9 +44,9 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="structure",
-                details_text="body -> extraField — extra fields not permitted "
-                "(type=value_error.extra)",
-            ),
+                details_text="body -> extraField — Extra inputs are not permitted "
+                "(type=extra_forbidden)",
+            ).model_dump(),
         ),
         (
             ("read", "update", "patch", "delete", "create", "search-type"),
@@ -54,9 +54,9 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="required",
-                details_text="body -> communication -> 0 -> language — field required "
-                "(type=value_error.missing)",
-            ),
+                details_text="body -> communication -> 0 -> language — Field required "
+                "(type=missing)",
+            ).model_dump(),
         ),
         (
             ("read", "update", "patch", "delete", "create", "search-type"),
@@ -64,9 +64,9 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="value",
-                details_text="body -> id — ensure this value has at least 1 characters "
-                "(type=value_error.any_str.min_length; limit_value=1)",
-            ),
+                details_text="body -> id — String should have at least 1 character "
+                "(type=string_too_short; min_length=1)",
+            ).model_dump(),
         ),
         (
             ("read", "update", "patch", "delete", "create", "search-type"),
@@ -74,8 +74,8 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="value",
-                details_text="body -> name — value is not a valid list (type=type_error.list)",
-            ),
+                details_text="body -> name — Input should be a valid list (type=list_type)",
+            ).model_dump(),
         ),
         (
             ("read", "update", "patch", "delete", "create", "search-type"),
@@ -87,16 +87,16 @@ from .utils import assert_expected_response, generate_fhir_resource_id
                         "severity": "error",
                         "code": "required",
                         "details": {
-                            "text": "body -> communication -> 0 -> language — field required "
-                            "(type=value_error.missing)"
+                            "text": "body -> communication -> 0 -> language — Field required "
+                            "(type=missing)"
                         },
                     },
                     {
                         "severity": "error",
                         "code": "structure",
                         "details": {
-                            "text": "body -> extraField — extra fields not permitted "
-                            "(type=value_error.extra)"
+                            "text": "body -> extraField — Extra inputs are not permitted "
+                            "(type=extra_forbidden)"
                         },
                     },
                 ],

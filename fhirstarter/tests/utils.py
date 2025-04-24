@@ -89,7 +89,9 @@ def assert_expected_response(
         and response.headers["Content-Type"] == content_type
     )
     if content:
-        if isinstance(content, str):
+        if isinstance(content, Mapping):
+            assert response.json() == content
+        elif isinstance(content, str):
             assert response.content.decode() == content
         else:
-            assert response.json() == content
+            assert response.content == content  # type: ignore[unreachable]

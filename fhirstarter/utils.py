@@ -266,8 +266,8 @@ def format_response(
             )
         else:
             if status_code:
-                return JSONResponse(
-                    content=resource.model_dump(),
+                return Response(
+                    content=orjson.dumps(resource.model_dump()),
                     status_code=status_code,
                     media_type=format_parameters.format,
                 )
@@ -275,8 +275,11 @@ def format_response(
                 assert (
                     response is not None
                 ), "Response object or status code must be provided for non-pretty JSON responses"
-                response.headers["Content-Type"] = format_parameters.format
-                return resource
+
+                return Response(
+                    content=orjson.dumps(resource.model_dump()),
+                    media_type=format_parameters.format,
+                )
     else:
         return Response(
             content=resource.model_dump_xml(pretty_print=format_parameters.pretty),
