@@ -140,8 +140,8 @@ async def patient_search_type(
             if name.get("family") == family:
                 patients.append(patient)
 
-    bundle = Bundle.model_validate(
-        {
+    bundle = Bundle(
+        **{
             "type": "searchset",
             "total": len(patients),
             "entry": (

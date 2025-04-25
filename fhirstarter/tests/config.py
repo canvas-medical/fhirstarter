@@ -135,8 +135,8 @@ def patient_search_type(
             if cast(HumanName, name).family == family:
                 patients.append(patient)
 
-    bundle = Bundle.model_validate(
-        {
+    bundle = Bundle(
+        **{
             "type": "searchset",
             "total": len(patients),
             "entry": (

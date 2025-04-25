@@ -158,8 +158,8 @@ def make_operation_outcome(
     severity: str, code: str, details_text: str
 ) -> OperationOutcome:
     """Create a simple OperationOutcome given a severity, code, and details."""
-    return OperationOutcome.model_validate(
-        {
+    return OperationOutcome(
+        **{
             "issue": [
                 {
                     "severity": severity,

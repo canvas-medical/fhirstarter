@@ -139,8 +139,8 @@ async def patient_read(context: InteractionContext, id_: str) -> Patient:
     if not patient:
         raise FHIRResourceNotFoundError
 
-    return Patient.model_validate(
-        {
+    return Patient(
+        **{
             # Map patient from database to FHIR Patient structure
         }
     )

@@ -79,7 +79,7 @@ def test_read_xml(client: TestClient, patient_id: str, pretty: str) -> None:
         read_response,
         status.HTTP_200_OK,
         content_type="application/fhir+xml",
-        content=Patient.model_validate(resource(patient_id)).model_dump_xml(
+        content=Patient(**resource(patient_id)).model_dump_xml(
             pretty_print=(pretty == "true")
         ),
     )
@@ -365,8 +365,8 @@ def _search_type_handler_parameter_multiple_values() -> Callable[..., Bundle]:
                 if set(given or ()).issubset(cast(HumanName, name).given):
                     patients.append(patient)
 
-        bundle = Bundle.model_validate(
-            {
+        bundle = Bundle(
+            **{
                 "type": "searchset",
                 "total": len(patients),
                 "entry": (

@@ -258,8 +258,8 @@ class FHIRStarter(FastAPI):
         Creates an operation outcome by destructuring the RequestValidationError and mapping the
         values to the correct places in the OperationOutcome.
         """
-        operation_outcome = OperationOutcome.model_validate(
-            {
+        operation_outcome = OperationOutcome(
+            **{
                 "issue": [
                     {
                         "severity": "error",

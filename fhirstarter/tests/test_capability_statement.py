@@ -116,9 +116,7 @@ def test_capability_statement_pretty(client_create_and_read: TestClient) -> None
     assert_expected_response(
         response,
         status.HTTP_200_OK,
-        content=json_dumps_pretty(
-            CapabilityStatement.model_validate(response.json()).model_dump()
-        ),
+        content=json_dumps_pretty(CapabilityStatement(**response.json()).model_dump()),
     )
 
 
