@@ -57,10 +57,14 @@ provider = FHIRProvider()
 # Register the patient read FHIR interaction with the provider
 @provider.read(Patient)
 async def patient_read(context: InteractionContext, id_: str) -> Patient:
+    # Read the patient
     patient = DATABASE["Patient"].get(id_)
+
+    # Raise a not found exception if the patient wasn't found
     if not patient:
         raise FHIRResourceNotFoundError
 
+    # Construct the patient object for return, which also validates the patient
     return Patient.model_validate_json(patient)
 
 
@@ -69,11 +73,14 @@ async def patient_read(context: InteractionContext, id_: str) -> Patient:
 async def patient_update(
     context: InteractionContext, id_: str, resource: Patient
 ) -> str:
+    # Raise a not found exception if the patient wasn't found
     if id_ not in DATABASE["Patient"]:
         raise FHIRResourceNotFoundError
 
+    # Update the patient
     DATABASE["Patient"][id_] = resource.model_dump_json()
 
+    # Return the identifier
     return id_
 
 
@@ -82,7 +89,10 @@ async def patient_update(
 async def patient_patch(
     context: InteractionContext, id_: str, json_patch: JSONPatch
 ) -> str:
+    # Read the patient
     patient = json.loads(DATABASE["Patient"].get(id_, "{}"))
+
+    # Raise a not found exception if the patient wasn't found
     if not patient:
         raise FHIRResourceNotFoundError
 
@@ -93,19 +103,22 @@ async def patient_patch(
 
     # Validate the change
     try:
-        Patient.model_validate(patient)
+        patient_obj = Patient.model_validate(patient)
     except Exception as exception:
         raise FHIRUnprocessableEntityError(
             code="invalid", details_text="Validation of patched resource failed"
         ) from exception
 
-    DATABASE["Patient"][id_] = json.dumps(patient, separators=(",", ":"))
+    # Update the patient
+    DATABASE["Patient"][id_] = patient_obj.model_dump_json()
 
+    # Return the identifier
     return id_
 
 
 @provider.delete(Patient)
 async def patient_delete(context: InteractionContext, id_: str) -> None:
+    # Delete the patient
     with contextlib.suppress(KeyError):
         del DATABASE["Patient"][id_]
 
@@ -115,11 +128,14 @@ async def patient_delete(context: InteractionContext, id_: str) -> None:
 # Register the patient create FHIR interaction with the provider
 @provider.create(Patient)
 async def patient_create(context: InteractionContext, resource: Patient) -> str:
+    # Generate a unique identifier
     id_ = str(uuid4())
 
+    # Set the identifier on the patient and add the patient to the database
     resource.id = id_
     DATABASE["Patient"][id_] = resource.model_dump_json()
 
+    # Return the identifier
     return id_
 
 
@@ -133,6 +149,7 @@ async def patient_search_type(
     nickname: Union[str, None],
     _last_updated: Union[str, None],
 ) -> Bundle:
+    # Filter the patients based on the search criteria
     patients = []
     for patient_serialized in DATABASE["Patient"].values():
         patient = json.loads(patient_serialized)
@@ -140,7 +157,8 @@ async def patient_search_type(
             if name.get("family") == family:
                 patients.append(patient)
 
-    bundle = Bundle(
+    # Construct the bundle object for return
+    return Bundle(
         **{
             "type": "searchset",
             "total": len(patients),
@@ -149,8 +167,6 @@ async def patient_search_type(
             ),
         }
     )
-
-    return bundle
 
 
 # Optional: Provide a custom example for the automatic documentation by defining a subclass of the
@@ -178,15 +194,19 @@ class PractitionerCustom(Practitioner):
 async def practitioner_read(
     context: InteractionContext, id_: str
 ) -> PractitionerCustom:
+    # Read the practitioner
     practitioner = DATABASE["Practitioner"].get(id_)
+
+    # Raise a not found exception if the practitioner wasn't found
     if not practitioner:
         raise FHIRResourceNotFoundError
 
+    # Construct the practitioner object for return, which also validates the practitioner
     return PractitionerCustom.model_validate_json(practitioner)
 
 
 # Add the provider to the app. This will automatically generate the API routes for the interactions
-# provided by the providers (e.g. create, read, search-type, and update).
+# provided by the providers (e.g. read, update, patch, delete, create, and search-type).
 app.add_providers(provider)
 
 
