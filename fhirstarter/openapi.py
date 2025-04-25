@@ -196,7 +196,8 @@ def _get_examples(
         # The resource_name value was removed from schemas in the fhir.resources 8.0.0, so there is
         # no easy way to determine if a schema is for a FHIR resource or not. Using the
         # is_resource_type function works for most cases, but doesn't for custom resources. Checking
-        # for the presence of the fields on DomainResource is a hack that works.
+        # for the presence of the fields on DomainResource is a hack that works for custom
+        # resources.
         if not is_resource_type(schema_name) and not {
             "text",
             "contained",

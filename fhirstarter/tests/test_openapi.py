@@ -267,6 +267,14 @@ def test_multiple_examples(
     assert examples[first_example_name]["value"]["resourceType"] == resource_type
 
 
+def test_custom_example(schema: Mapping[str, Any]) -> None:
+    """Test that examples for custom resources are added to the schema."""
+    assert (
+        schema["components"]["schemas"]["PractitionerCustom"]["examples"][0]
+        == PractitionerCustom.model_config["json_schema_extra"]["examples"][0]
+    )
+
+
 @pytest.mark.parametrize(
     argnames="resource_type",
     argvalues=["Appointment", "Patient", "Practitioner"],
