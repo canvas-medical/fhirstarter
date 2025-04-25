@@ -1,6 +1,7 @@
 """
-An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR interactions
-(i.e. endpoints) that perform read, update, patch, delete, create, and search-type actions.
+An example FHIR server implementation using FHIRStarter, with examples showing how to create FHIR
+interactions (i.e. endpoints) that perform read, update, patch, delete, create, and search-type
+actions.
 """
 
 import contextlib
@@ -12,7 +13,6 @@ from uuid import uuid4
 import jsonpatch
 import uvicorn
 from fhir.resources.bundle import Bundle
-from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 from fhir.resources.practitioner import Practitioner
 from starlette.responses import RedirectResponse
@@ -45,7 +45,7 @@ DATABASE: Dict[str, Dict[str, str]] = {"Patient": {}, "Practitioner": {}}
 # Create a provider
 provider = FHIRProvider()
 
-# To register FHIR interactions with  a provider, the pieces of information the developer has to
+# To register FHIR interactions with a provider, the pieces of information the developer has to
 # provide are:
 # * FHIR interaction type (this affects what the endpoint will look like)
 # * FHIR resource type (this affects validation of inputs and outputs, and what search parameters
@@ -56,30 +56,32 @@ provider = FHIRProvider()
 
 # Register the patient read FHIR interaction with the provider
 @provider.read(Patient)
-async def patient_read(context: InteractionContext, id_: Id) -> Patient:
+async def patient_read(context: InteractionContext, id_: str) -> Patient:
     patient = DATABASE["Patient"].get(id_)
     if not patient:
         raise FHIRResourceNotFoundError
 
-    return Patient(**json.loads(patient))
+    return Patient.model_validate_json(patient)
 
 
 # Register the patient update FHIR interaction with the provider
 @provider.update(Patient)
-async def patient_update(context: InteractionContext, id_: Id, resource: Patient) -> Id:
+async def patient_update(
+    context: InteractionContext, id_: str, resource: Patient
+) -> str:
     if id_ not in DATABASE["Patient"]:
         raise FHIRResourceNotFoundError
 
-    DATABASE["Patient"][id_] = resource.json(separators=(",", ":"))
+    DATABASE["Patient"][id_] = resource.model_dump_json()
 
-    return Id(id_)
+    return id_
 
 
 # Register the patient patch FHIR interaction with the provider
 @provider.patch(Patient)
 async def patient_patch(
-    context: InteractionContext, id_: Id, json_patch: JSONPatch
-) -> Id:
+    context: InteractionContext, id_: str, json_patch: JSONPatch
+) -> str:
     patient = json.loads(DATABASE["Patient"].get(id_, "{}"))
     if not patient:
         raise FHIRResourceNotFoundError
@@ -91,7 +93,7 @@ async def patient_patch(
 
     # Validate the change
     try:
-        Patient.validate(patient)
+        Patient.model_validate(patient)
     except Exception as exception:
         raise FHIRUnprocessableEntityError(
             code="invalid", details_text="Validation of patched resource failed"
@@ -99,11 +101,11 @@ async def patient_patch(
 
     DATABASE["Patient"][id_] = json.dumps(patient, separators=(",", ":"))
 
-    return Id(id_)
+    return id_
 
 
 @provider.delete(Patient)
-async def patient_delete(context: InteractionContext, id_: Id) -> None:
+async def patient_delete(context: InteractionContext, id_: str) -> None:
     with contextlib.suppress(KeyError):
         del DATABASE["Patient"][id_]
 
@@ -112,13 +114,13 @@ async def patient_delete(context: InteractionContext, id_: Id) -> None:
 
 # Register the patient create FHIR interaction with the provider
 @provider.create(Patient)
-async def patient_create(context: InteractionContext, resource: Patient) -> Id:
+async def patient_create(context: InteractionContext, resource: Patient) -> str:
     id_ = str(uuid4())
 
     resource.id = id_
-    DATABASE["Patient"][id_] = resource.json(separators=(",", ":"))
+    DATABASE["Patient"][id_] = resource.model_dump_json()
 
-    return Id(id_)
+    return id_
 
 
 # Register the patient search-type FHIR interaction with the provider
@@ -138,11 +140,13 @@ async def patient_search_type(
             if name.get("family") == family:
                 patients.append(patient)
 
-    bundle = Bundle(
-        **{
+    bundle = Bundle.model_validate(
+        {
             "type": "searchset",
             "total": len(patients),
-            "entry": [{"resource": patient} for patient in patients],
+            "entry": (
+                [{"resource": patient} for patient in patients] if patients else None
+            ),
         }
     )
 
@@ -150,27 +154,35 @@ async def patient_search_type(
 
 
 # Optional: Provide a custom example for the automatic documentation by defining a subclass of the
-# FHIR Practitioner Pydantic model. If a custom model is not provided, examples from the FHIR
-# specification are used.
+# FHIR Practitioner Pydantic model. Only the first example will be added to the OpenAPI
+# documentation. If a custom model is not provided, examples from the FHIR specification are used.
 class PractitionerCustom(Practitioner):
-    class Config:
-        schema_extra = {
-            "example": {
-                "resourceType": "Practitioner",
-                "id": "example",
-                "name": [{"family": "Careful", "given": ["Adam"], "prefix": ["Dr"]}],
-            }
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "resourceType": "Practitioner",
+                    "id": "example",
+                    "name": [
+                        {"family": "Careful", "given": ["Adam"], "prefix": ["Dr"]}
+                    ],
+                }
+            ]
         }
+    }
 
 
 # Register the practitioner read FHIR interaction with the provider using the custom subclass
 @provider.read(PractitionerCustom)
-async def practitioner_read(context: InteractionContext, id_: Id) -> PractitionerCustom:
+async def practitioner_read(
+    context: InteractionContext, id_: str
+) -> PractitionerCustom:
     practitioner = DATABASE["Practitioner"].get(id_)
     if not practitioner:
         raise FHIRResourceNotFoundError
 
-    return PractitionerCustom(**json.loads(practitioner))
+    return PractitionerCustom.model_validate_json(practitioner)
 
 
 # Add the provider to the app. This will automatically generate the API routes for the interactions
