@@ -17,7 +17,7 @@ from typing import (
 from fastapi import Request, Response
 
 from .json_patch import JSONPatch
-from .resources import Bundle, Id, Resource
+from .resources import Bundle, Resource
 
 ResourceType = TypeVar("ResourceType", bound=Resource)
 
@@ -29,23 +29,23 @@ class InteractionContext:
 
 
 ReadInteractionHandler = Callable[
-    [InteractionContext, Id], Union[Coroutine[None, None, ResourceType], ResourceType]
+    [InteractionContext, str], Union[Coroutine[None, None, ResourceType], ResourceType]
 ]
 UpdateInteractionHandler = Callable[
-    [InteractionContext, Id, ResourceType],
-    Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
+    [InteractionContext, str, ResourceType],
+    Union[Coroutine[None, None, Union[str, ResourceType]], str, ResourceType],
 ]
 PatchInteractionHandler = Callable[
-    [InteractionContext, Id, JSONPatch],
-    Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
+    [InteractionContext, str, JSONPatch],
+    Union[Coroutine[None, None, Union[str, ResourceType]], str, ResourceType],
 ]
 DeleteInteractionHandler = Callable[
-    [InteractionContext, Id],
+    [InteractionContext, str],
     Union[Coroutine[None, None, None], None],
 ]
 CreateInteractionHandler = Callable[
     [InteractionContext, ResourceType],
-    Union[Coroutine[None, None, Union[Id, ResourceType]], Id, ResourceType],
+    Union[Coroutine[None, None, Union[str, ResourceType]], str, ResourceType],
 ]
 SearchTypeInteractionHandler = Callable[
     ..., Union[Coroutine[None, None, Bundle], Bundle]
@@ -63,7 +63,7 @@ InteractionHandler = Union[
 
 class TypeInteraction(Generic[ResourceType]):
     """
-    Collection of values that represent a FHIR type interactions. This class can also represent
+    Collection of values that represent a FHIR type interaction. This class can also represent
     instance level interactions.
 
     resource_type:    The type of FHIR resource on which this interaction operates, as defined by

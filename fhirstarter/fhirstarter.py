@@ -32,8 +32,9 @@ from asyncache import cachedmethod
 from cachetools import TTLCache
 from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.exceptions import RequestValidationError
-from pydantic.error_wrappers import display_errors
+from pydantic.v1.error_wrappers import display_errors
 
+from .errors import PYDANTIC_ERROR_TO_FHIR_ISSUE_TYPE
 from .exceptions import FHIRException
 from .fhir_specification import FHIR_SEQUENCE, FHIR_VERSION
 from .functions import (
@@ -52,7 +53,7 @@ from .providers import FHIRProvider
 from .resources import CapabilityStatement, OperationOutcome
 from .search_parameters import (
     SearchParameters,
-    search_parameter_sort_key,
+    parameter_sort_key,
     supported_search_parameters,
     var_name_to_qp_name,
 )
@@ -262,7 +263,9 @@ class FHIRStarter(FastAPI):
                 "issue": [
                     {
                         "severity": "error",
-                        "code": _pydantic_error_to_fhir_issue_type(error["type"]),
+                        "code": PYDANTIC_ERROR_TO_FHIR_ISSUE_TYPE.get(
+                            error["type"], "invalid"
+                        ),
                         "details": {
                             "text": display_errors([error]).replace("\n ", " —")
                         },
@@ -380,7 +383,7 @@ class FHIRStarter(FastAPI):
                         )
                 resource["searchParam"] = sorted(
                     supported_search_parameters_,
-                    key=lambda p: search_parameter_sort_key(
+                    key=lambda p: parameter_sort_key(
                         cast(Dict[str, str], p)["name"], search_parameter_metadata
                     ),
                 )
@@ -430,8 +433,8 @@ class FHIRStarter(FastAPI):
         def capability_statement_handler(
             request: Request,
             response: Response,
-            _format: str = FORMAT_QP,
-            _pretty: str = PRETTY_QP,
+            format_: str = FORMAT_QP,
+            pretty_: str = PRETTY_QP,
         ) -> Union[CapabilityStatement, Response]:
             return format_response(
                 resource=self.capability_statement(request, response),
@@ -449,6 +452,11 @@ class FHIRStarter(FastAPI):
             "capabilities - which portions of the FHIR specification it supports.",
             operation_id="fhirstarter|system|capabilities|get",
             response_model_exclude_none=True,
+            responses={
+                200: {
+                    "model": CapabilityStatement,
+                }
+            },
         )(capability_statement_handler)
 
     def _add_external_example_proxy_route(self) -> None:
@@ -640,26 +648,6 @@ async def _set_content_type_header(
         response.headers["Content-Type"] = "application/fhir+json"
 
     return response
-
-
-def _pydantic_error_to_fhir_issue_type(error: str) -> str:
-    """Return a FHIR issue type code mapped from a Pydantic error code."""
-    error_type, *rest = error.split(".")
-    error_code = rest[0] if rest else None
-
-    if error_type == "json_invalid":
-        return "structure"
-    elif error_type == "type_error":
-        return "value"
-    elif error_type == "value_error":
-        if error_code == "extra":
-            return "structure"
-        elif error_code == "missing":
-            return "required"
-        else:
-            return "value"
-    else:
-        return "invalid"
 
 
 def _exception_response(

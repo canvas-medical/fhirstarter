@@ -63,11 +63,23 @@ def var_name_to_qp_name(name: str) -> str:
     Python-friendly versions of these have their uppercase characters replaced with an underscore
     plus the lowercase version of the character.
     """
+    # If this is a mangled parameter name for a form value, remove the prefix
+    name = name.replace("form__", "")
+
+    # The _format and _pretty parameters are handled differently because they apply to more than
+    # just search-type interactions
+    if name in {"format_", "pretty_"}:
+        return f"_{name[:-1]}"
+
+    # Convert variables like "_last_updated" to "_lastUpdated"
     if name.startswith("_"):
         return f"_{re.sub('_[a-z]', lambda m: m.group(0)[1:].upper(), name[1:])}"
 
+    # Reserved names will have underscores after them
     if name.endswith("_"):
         name = name[:-1]
+
+    # Finally, replace underscores with dashes
     return name.replace("_", "-")
 
 
@@ -98,15 +110,18 @@ def supported_search_parameters(
     )
 
 
-def search_parameter_sort_key(
+def parameter_sort_key(
     name: str,
     search_parameter_metadata: Dict[str, Dict[str, str]],
     parameter_annotation: Union[type, None] = None,
 ) -> Tuple[bool, bool, bool, bool, bool, str]:
     """
-    Return a sort key for a search parameter.
+    Return a sort key for a parameter.
 
     This function allows for consistent sorting of search parameters throughout the package.
+
+    Note: The "name" argument is the name of the query parameter, not the name of the Python
+          function parameter.
 
     Sort order is:
     1. Request and response annotations
@@ -116,17 +131,16 @@ def search_parameter_sort_key(
     4. Parameters that are part of the capability statement (this favors search parameters like
        _has over search result parameters like _sort)
     5. Alphabetical by name
-
     """
     return (
         parameter_annotation != Request,
         parameter_annotation != Response,
         name.startswith("_"),
-        var_name_to_qp_name(name) not in search_parameter_metadata,
-        not search_parameter_metadata.get(var_name_to_qp_name(name), {}).get(
+        name not in search_parameter_metadata,
+        not search_parameter_metadata.get(name, {}).get(
             "include-in-capability-statement", False
         ),
-        var_name_to_qp_name(name),
+        name,
     )
 
 

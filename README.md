@@ -23,7 +23,6 @@ An ASGI [FHIR](https://hl7.org/fhir/) API framework built on top of [FastAPI](ht
 
 Supports FHIR sequences:
 * [STU (v3.0.2)](https://hl7.org/fhir/STU3/)
-* [R4 (v4.0.1)](https://hl7.org/fhir/R4/)
 * [R4B (v4.3.0)](https://hl7.org/fhir/R4B/)
 * [R5 (v5.0.0)](https://hl7.org/fhir/R5/)
 
@@ -36,7 +35,7 @@ pip install fhirstarter
 ## Features
 
 * Automatic, standardized API route creation
-* Automatic validation of inputs and outputs through the use of FHIR Resources Pydantic models
+* Automatic validation of inputs and outputs through the use of FHIR Resources Pydantic models                         
 * Automatically-generated capability statement that can be customized, and a capability statement
   API route
 * An exception-handling framework that produces FHIR-friendly responses (i.e. OperationOutcomes)
@@ -97,14 +96,8 @@ specified with an environment variable:
 FHIR_SEQUENCE=R4B
 ```
 
-The latest version of the [FHIR Resources](https://pypi.org/project/fhir.resources/) package only
-supports FHIR STU3, R4B, and R5. FHIR R4 is supported by an earlier version. Because of this, if a
-developer desires to use FHIR R4, then the developer must pin version **6.4.0** of fhir.resources in
-their project. FHIRStarter will check the version of fhir.resources against the specified FHIR
-version in the environment variable to ensure that they are compatible.
-
-Model imports are also affected by which version of fhir.resources is installed. For STU3 and R4B,
-model imports will look like this:
+Model imports are affected by which version of fhir.resources is installed. For STU3 and R4B, model
+imports will look like this:
 
 ```python
 from fhir.resources.STU3.patient import Patient
@@ -113,7 +106,7 @@ from fhir.resources.STU3.patient import Patient
 from fhir.resources.R4B.patient import Patient
 ```
 
-For R4 and R5, model imports will look like this:
+For R5, model imports will look like this:
 
 ```python
 from fhir.resources.patient import Patient
@@ -125,7 +118,6 @@ A detailed example is available here: [example.py](https://github.com/canvas-med
 
 ```python
 import uvicorn
-from fhir.resources.fhirtypes import Id
 from fhir.resources.patient import Patient
 
 from fhirstarter import FHIRProvider, FHIRStarter, InteractionContext
@@ -140,7 +132,7 @@ provider = FHIRProvider()
 
 # Register the patient read FHIR interaction with the provider
 @provider.read(Patient)
-async def patient_read(context: InteractionContext, id_: Id) -> Patient:
+async def patient_read(context: InteractionContext, id_: str) -> Patient:
     # Get the patient from the database
     patient = ...
 

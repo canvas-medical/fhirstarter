@@ -24,6 +24,7 @@ from .fhir_specification.utils import (
     make_operation_outcome_example,
 )
 from .fhirstarter import status
+from .resources import Bundle, CapabilityStatement, OperationOutcome
 
 __all__ = ["adjust_schema"]
 
@@ -76,19 +77,23 @@ def adjust_schema(
     for external documentation examples.
 
     Remove some default schemas that are not needed nor used, and change all content types that
-    are set to "application/json" to instead be "application/fhir+json". Make a few additional
-    aesthetic changes to clean up the auto-generated documentation.
+    are set to "application/json" to instead be "application/fhir+json". Add missing schemas. Make a
+    few additional aesthetic changes to clean up the auto-generated documentation.
 
     Because it directly modifies the OpenAPI schema, it is vulnerable to breakage from updates
     to FastAPI. This is not a significant vulnerability because the core server functionality
     will still work (i.e. this is just documentation).
     """
+    _rename_schemas(openapi_schema)
+
     _inline_search_post_schemas(openapi_schema)
 
-    # Add any missing schemas (from search-type interactions). This needs to run before the rest of
-    # the tasks so that all the schemas are there for subsequent actions.
+    # Add any missing schemas. This needs to run before the rest of the tasks so that all the
+    # schemas are there for subsequent actions.
     _add_schemas(openapi_schema)
 
+    # Iterate over the operations and make adjustments, including adding examples from the FHIR
+    # specification
     examples, external_example_urls = _get_examples(
         openapi_schema, include_external_examples
     )
@@ -96,6 +101,22 @@ def adjust_schema(
         _adjust_operation(operation_id, operation, examples)
 
     return external_example_urls
+
+
+def _rename_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
+    """
+    Input and output schemas are the same in FHIR, so rename the default-named schemas so that they
+    do not have "-Input" or "-Output" suffixes.
+    """
+    schemas = openapi_schema.get("components", {}).get("schemas", {})
+
+    for schema_name in list(schemas.keys()):
+        # The output schemas are empty for some reason, so just remove them
+        if schema_name.endswith("-Output"):
+            del schemas[schema_name]
+        # The input schemas have the content, so rename them
+        elif schema_name.endswith("-Input"):
+            schemas[schema_name[:-6]] = schemas.pop(schema_name)
 
 
 def _inline_search_post_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
@@ -122,26 +143,37 @@ def _add_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
     """
     Add missing schemas.
 
-    If a server only supports search for a given resource, then the OpenAPI schema won't include the
-    schema for the resources that are returned in the bundle by the search interaction.
+    A schema might be missing for a few different reasons. If a server only supports search for a
+    given resource, then the OpenAPI schema won't include the schema for the resources that are
+    returned in the bundle by the search interaction.
+
+    Additionally, resources like Bundle, CapabilityStatement, and OperationOutcome are not included
+    automatically.
     """
-    for operation_id, operation in _search_type_operations(openapi_schema):
-        if (
-            operation_id.model_name
-            and operation_id.model_name not in openapi_schema["components"]["schemas"]
+    schemas = openapi_schema["components"]["schemas"]
+
+    # Iterate over the operations and add resource schemas that are missing
+    for operation_id, operation in _operations(openapi_schema):
+        if operation_id.model_name and (
+            operation_id.model_name not in schemas
+            or schemas[operation_id.model_name] == {"type": "object"}
         ):
             module = import_module(operation_id.module_name)
             model = getattr(module, operation_id.model_name)
-            openapi_schema["components"]["schemas"][
-                operation_id.model_name
-            ] = model.schema()
+            schemas[operation_id.model_name] = model.model_json_schema()
+
+    # The schemas for Bundle, CapabilityStatement, and OperationOutcome are not added automatically,
+    # so add them here
+    if "Bundle" in schemas:
+        schemas["Bundle"] = Bundle.model_json_schema()
+    if "CapabilityStatement" in schemas:
+        schemas["CapabilityStatement"] = CapabilityStatement.model_json_schema()
+    if "OperationOutcome" in schemas:
+        schemas["OperationOutcome"] = OperationOutcome.model_json_schema()
 
     # Recreate the schema dictionary so that the schemas appear sorted
     openapi_schema["components"]["schemas"] = {
-        schema_name: schema
-        for schema_name, schema in sorted(
-            openapi_schema["components"]["schemas"].items()
-        )
+        schema_name: schema for schema_name, schema in sorted(schemas.items())
     }
 
 
@@ -160,19 +192,30 @@ def _get_examples(
     # Get all resource examples from the models and the FHIR specification
     for schema_name, schema in openapi_schema["components"]["schemas"].items():
         properties = schema.get("properties", {})
-        if "resource_type" not in properties:
+
+        # The resource_name value was removed from schemas in the fhir.resources 8.0.0, so there is
+        # no easy way to determine if a schema is for a FHIR resource or not. Using the
+        # is_resource_type function works for most cases, but doesn't for custom resources. Checking
+        # for the presence of the fields on DomainResource is a hack that works for custom
+        # resources.
+        if not is_resource_type(schema_name) and not {
+            "text",
+            "contained",
+            "extension",
+            "modifierExtension",
+        }.issubset(properties):
             continue
 
         # Bundle, OperationOutcome, and Parameters are handled differently
-        resource_type = properties["resource_type"]["const"]
+        resource_type = schema_name
         if resource_type in {"Bundle", "OperationOutcome", "Parameters"}:
             continue
 
         # If there is a custom example on the model, use it. Otherwise, get examples from the FHIR
         # specification. Add the example(s) and a bundle example.
-        if schema_example := schema.get("example"):
-            examples[schema_name]["example"] = schema_example
-            examples["Bundle"][schema_name] = create_bundle_example(schema_example)
+        if schema_examples := schema.get("examples"):
+            examples[schema_name]["examples"] = [schema_examples[0]]
+            examples["Bundle"][schema_name] = create_bundle_example(schema_examples[0])
         elif is_resource_type(resource_type):
             resource_examples = load_examples(resource_type)
 
@@ -241,12 +284,16 @@ def _adjust_operation(
         resource_examples = examples[cast(str, operation_id.model_name)]
 
     # For operations that take a request body (excluding patch), change the application/json content
-    # type to application/fhir+json and add request body examples
+    # type to application/fhir+json and add request body examples. Also, adjust schema references
+    # that point to schemas that were renamed.
     if operation_id.interaction_type != "patch":
         if content := operation.get("requestBody", {}).get("content"):
             if "application/json" in content:
                 content["application/fhir+json"] = content.pop("application/json")
                 content["application/fhir+json"].update(resource_examples)
+                schema = content["application/fhir+json"]
+                if schema.get("schema", {}).get("$ref", "").endswith("-Input"):
+                    schema["schema"]["$ref"] = schema["schema"]["$ref"][:-6]
 
     # For each possible response (i.e. status code), remove the default FastAPI response schema
     responses = operation["responses"]
@@ -268,9 +315,21 @@ def _adjust_operation(
         if status_code == str(status.HTTP_204_NO_CONTENT):
             continue
 
-        # Move the response for "application/json" to "application/fhir+json"
+        # Move the response for "application/json" to "application/fhir+json", and adjust schema
+        # references that point to schemas that were renamed
         schema = response["content"].pop("application/json", None)
         if schema:
+            if "schema" in schema:
+                any_of = schema["schema"].get("anyOf", ())
+                for item in any_of:
+                    if item.get("$ref", "").endswith("-Output"):
+                        item["$ref"] = item["$ref"][:-7]
+
+                if schema["schema"].get("$ref", "").endswith("-Input"):
+                    schema["schema"]["$ref"] = schema["schema"]["$ref"][:-6]
+                if schema["schema"].get("$ref", "").endswith("-Output"):
+                    schema["schema"]["$ref"] = schema["schema"]["$ref"][:-7]
+
             response["content"]["application/fhir+json"] = schema
 
         # Add examples for success responses

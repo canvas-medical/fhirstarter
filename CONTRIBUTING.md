@@ -17,8 +17,8 @@ FHIRStarter wraps the developer-provided handler using some simple functional pr
 and other features of Python in order to produce a callable that can be passed to FastAPI during API
 route creation.
 
-Particular attention should be paid to function signatures -- specifically variable names,
-annotations, and defaults -- because FastAPI uses this information for documentation generation.
+Particular attention should be paid to function signatures — specifically variable names,
+annotations, and defaults — because FastAPI uses this information for documentation generation.
 Annotations are overridden in several cases to ensure that the correct types are used for
 documentation generation, and in the search use case, the function signature itself must be changed.
 

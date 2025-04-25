@@ -9,7 +9,7 @@ from ..fhir_specification import FHIR_SEQUENCE
 from ..fhirstarter import status
 from ..testclient import TestClient
 from .config import create_test_client_async
-from .resources import Appointment, Bundle, Id, Practitioner
+from .resources import Appointment, Bundle, Practitioner
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -23,21 +23,28 @@ def check_fhir_sequence() -> None:
     well.
     """
     if FHIR_SEQUENCE != "R5":
-        pytest.skip("blah")
+        pytest.skip()
 
 
 class PractitionerCustom(Practitioner):
-    class Config:
-        schema_extra = {
-            "example": {
-                "resourceType": "Practitioner",
-                "id": "example",
-                "name": [{"family": "Careful", "given": ["Adam"], "prefix": ["Dr"]}],
-            }
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "resourceType": "Practitioner",
+                    "id": "example",
+                    "name": [
+                        {"family": "Careful", "given": ["Adam"], "prefix": ["Dr"]}
+                    ],
+                }
+            ]
         }
+    }
 
 
-async def practitioner_read(context: InteractionContext, id_: Id) -> PractitionerCustom:
+async def practitioner_read(
+    context: InteractionContext, id_: str
+) -> PractitionerCustom:
     raise NotImplementedError
 
 
@@ -258,6 +265,14 @@ def test_multiple_examples(
     # Test that the inlined example (the first one) matches the resource type
     first_example_name = example_names[0]
     assert examples[first_example_name]["value"]["resourceType"] == resource_type
+
+
+def test_custom_example(schema: Mapping[str, Any]) -> None:
+    """Test that examples for custom resources are added to the schema."""
+    assert (
+        schema["components"]["schemas"]["PractitionerCustom"]["examples"][0]
+        == PractitionerCustom.model_config["json_schema_extra"]["examples"][0]
+    )
 
 
 @pytest.mark.parametrize(

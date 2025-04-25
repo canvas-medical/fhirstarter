@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, ClassVar, Dict, Literal, Sequence, Union
 
+import orjson
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 
@@ -53,7 +54,7 @@ def _parse_fhir_operation_request(
     request: Request, split_path: Sequence[str]
 ) -> ParsedRequest:
     """Parse a potential FHIR operation request."""
-    # The request may be a FHIR operation -- make sure the method is either a GET or POST
+    # The request may be a FHIR operation — make sure the method is either a GET or POST
     if request.method not in ("GET", "POST"):
         return ParsedRequest()
 
@@ -68,11 +69,11 @@ def _parse_fhir_operation_request(
     # If neither of these conditions are met, then it's an operation on the base URL
     path_parts_count = len(split_path)
     if path_parts_count >= 3 and is_resource_type(split_path[-3]):
-        # Instance operation -- get the resource type and path
+        # Instance operation — get the resource type and path
         resource_type = split_path[-3]
         resource_id = split_path[-2]
     elif path_parts_count >= 2 and is_resource_type(split_path[-2]):
-        # Type operation -- get the resource type
+        # Type operation — get the resource type
         resource_type = split_path[-2]
 
     return ParsedRequest(  # type: ignore[call-arg]
@@ -87,7 +88,7 @@ def _parse_fhir_interaction_request(
     request: Request, split_path: Sequence[str]
 ) -> ParsedRequest:
     """Parse a potential FHIR interaction request."""
-    # The request may be a FHIR interaction -- determine what it is based on the request method
+    # The request may be a FHIR interaction — determine what it is based on the request method
     # and the URL format
     resource_type = None
     resource_id = None
@@ -242,7 +243,7 @@ def format_response(
     This function provides a response in JSON or XML format that has been prettified if requested.
 
     There are six scenarios that are handled:
-    1. Null resource (when there is no body -- no handling required)
+    1. Null resource (when there is no body — no handling required)
     1. Pretty JSON
     2. Minified JSON with a status code (mainly for errors)
     3. Minified JSON with no specified status code (usually the default)
@@ -259,19 +260,14 @@ def format_response(
     if format_parameters.format == "application/fhir+json":
         if format_parameters.pretty:
             return Response(
-                content=resource.json(
-                    ensure_ascii=False,
-                    allow_nan=False,
-                    indent=2,
-                    separators=(", ", ": "),
-                ),
+                content=orjson.dumps(resource.model_dump(), option=orjson.OPT_INDENT_2),
                 status_code=status_code or status.HTTP_200_OK,
                 media_type=format_parameters.format,
             )
         else:
             if status_code:
-                return JSONResponse(
-                    content=resource.dict(),
+                return Response(
+                    content=orjson.dumps(resource.model_dump()),
                     status_code=status_code,
                     media_type=format_parameters.format,
                 )
@@ -279,11 +275,14 @@ def format_response(
                 assert (
                     response is not None
                 ), "Response object or status code must be provided for non-pretty JSON responses"
-                response.headers["Content-Type"] = format_parameters.format
-                return resource
+
+                return Response(
+                    content=orjson.dumps(resource.model_dump()),
+                    media_type=format_parameters.format,
+                )
     else:
         return Response(
-            content=resource.xml(pretty_print=format_parameters.pretty),
+            content=resource.model_dump_xml(pretty_print=format_parameters.pretty),
             status_code=status_code or status.HTTP_200_OK,
             media_type=format_parameters.format,
         )
