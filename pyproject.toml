@@ -40,7 +40,7 @@ python = ">=3.8.0,<3.14.0"
 asyncache = "^0.3.1"
 cachetools = "^5.5.1"
 eval-type-backport = "^0.2.2"
-fastapi = ">=0.103.1,<0.116.0"
+fastapi = ">=0.103.1,<0.117.0"
 "fhir.resources" = {version = ">=8.0.0,<9.0.0", extras = ["xml"]}
 httpx = ">=0.24.1,<0.29.0"
 orjson = "^3.10.3"
