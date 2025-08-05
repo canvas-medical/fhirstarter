@@ -114,7 +114,7 @@ from fhir.resources.patient import Patient
 
 ### Example
 
-A detailed example is available here: [example.py](https://github.com/canvas-medical/fhirstarter/blob/main/fhirstarter/examples/example.py).
+A detailed example is available here: [example.py](/fhirstarter/examples/example.py).
 
 ```python
 import uvicorn
