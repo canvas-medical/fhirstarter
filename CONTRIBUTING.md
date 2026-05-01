@@ -27,5 +27,45 @@ forward the requests on to the handlers provided by the developer.
 
 # Contributions
 
-If you would like to contribute to FHIRStarter, consider discussing your contribution on GitHub, 
+If you would like to contribute to FHIRStarter, consider discussing your contribution on GitHub,
 or simply fork the project and submit a pull request.
+
+# Development setup
+
+FHIRStarter uses [uv](https://docs.astral.sh/uv/) for dependency management and
+[prek](https://github.com/j178/prek) — a drop-in Rust reimplementation of pre-commit — for
+lint, format, and type-check hooks.
+
+1. Install uv:
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+2. Sync the project (creates a `.venv`, installs runtime + dev deps):
+   ```bash
+   uv sync
+   ```
+3. Install prek and enable the git hooks:
+   ```bash
+   uv tool install prek
+   prek install
+   ```
+   After this, every `git commit` runs the configured hooks. To run them on demand:
+   ```bash
+   prek run --all-files
+   ```
+4. Run the test suite:
+   ```bash
+   uv run pytest
+   ```
+
+The lint stack:
+
+- `ruff check` — lint (pycodestyle, pyflakes, isort, bugbear, pyupgrade, simplify,
+  comprehensions, naming, ruff-specific, perflint, tryceratops, annotations).
+- `ruff format` — formatter (black-compatible).
+- `ty check` — type checker. `ty` is currently in beta; several rules are silenced via
+  `[[tool.ty.overrides]]` in `pyproject.toml` for files that use the framework's dynamic
+  FHIR Resource construction patterns. Tighten as `ty` matures.
+
+Configuration for all three lives in `pyproject.toml` under `[tool.ruff]` and `[tool.ty]`.
+The same hooks run in CI via `.github/workflows/lint.yml`.
