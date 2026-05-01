@@ -4,6 +4,7 @@
     "config:recommended",
     "group:allNonMajor",
     "helpers:pinGitHubActionDigests",
+    ":enablePreCommit",
     ":semanticCommitsDisabled"
   ],
   "schedule": ["before 3am on Monday"],

@@ -35,7 +35,7 @@ pip install fhirstarter
 ## Features
 
 * Automatic, standardized API route creation
-* Automatic validation of inputs and outputs through the use of FHIR Resources Pydantic models                         
+* Automatic validation of inputs and outputs through the use of FHIR Resources Pydantic models
 * Automatically-generated capability statement that can be customized, and a capability statement
   API route
 * An exception-handling framework that produces FHIR-friendly responses (i.e. OperationOutcomes)
@@ -79,7 +79,7 @@ addition, it supports the following instance- and type-level interactions:
 Interaction handlers can be written as coroutines with `async/await` syntax, or as plain functions.
 FastAPI supports both, as does FHIRStarter.
 
-Using uvloop can improve performance of the underlying event loop on supported platforms. 
+Using uvloop can improve performance of the underlying event loop on supported platforms.
 FHIRStarter does not mandate the use of uvloop, but it may be enabled by importing uvloop and
 adding a snippet like this to your application startup script:
 

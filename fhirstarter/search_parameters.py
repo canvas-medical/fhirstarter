@@ -30,7 +30,7 @@ class SearchParameters:
         custom_search_parameters: Union[
             Mapping[str, Mapping[str, Mapping[str, str]]], None
         ] = None,
-    ):
+    ) -> None:
         self._custom_search_parameters = custom_search_parameters or {}
 
     def get_metadata(self, resource_type: str) -> Dict[str, Dict[str, str]]:
@@ -90,7 +90,7 @@ class SupportedSearchParameter:
 
 
 def supported_search_parameters(
-    search_function: Callable[..., Any]
+    search_function: Callable[..., Any],
 ) -> Tuple[SupportedSearchParameter, ...]:
     """
     Given a callable, return a list of the parameter names in the function (excluding variadic
@@ -103,7 +103,8 @@ def supported_search_parameters(
     #  annotation, but this is sufficient for now.
     return tuple(
         SupportedSearchParameter(
-            name=name, multiple="list[str]" in str(parameter.annotation).lower()  # type: ignore[call-arg]
+            name=name,
+            multiple="list[str]" in str(parameter.annotation).lower(),  # type: ignore[call-arg]
         )
         for name, parameter in inspect.signature(search_function).parameters.items()
         if parameter.annotation != InteractionContext

@@ -10,7 +10,7 @@ The framework supports three FHIR sequences: STU3, R4B, and R5. The active seque
 
 ## Common commands
 
-Dependency and environment management uses [uv](https://docs.astral.sh/uv/).
+Dependency and environment management uses [uv](https://docs.astral.sh/uv/). Lint, format, and type-check are orchestrated through [prek](https://github.com/j178/prek), a Rust reimplementation of pre-commit (same `.pre-commit-config.yaml`).
 
 ```bash
 uv sync                             # install dependencies (incl. dev group)
@@ -19,14 +19,19 @@ FHIR_SEQUENCE=STU3 uv run pytest
 FHIR_SEQUENCE=R4B  uv run pytest
 FHIR_SEQUENCE=R5   uv run pytest    # default
 uv run pytest fhirstarter/tests/test_interactions.py::<test_name>  # single test
-uv run mypy fhirstarter             # type-check
-uv run black fhirstarter            # format
-uv run isort fhirstarter            # import sort
+
+prek run --all-files                # all hooks (lint + format + type-check + file checks)
+uv run ruff check fhirstarter       # lint only
+uv run ruff format fhirstarter      # format only
+uv run ty check                     # type-check only
+
 uv run python -m fhirstarter.examples.example  # run the example server
 uv build                            # produce wheel + sdist
 ```
 
-CI (`.github/workflows/tests.yml`) runs `uv run --frozen pytest` across the full matrix of Python 3.8–3.13 × {STU3, R4B, R5}. When changing behavior that could differ between sequences, run all three locally before declaring done.
+CI (`.github/workflows/tests.yml`) runs `uv run --frozen pytest` across the full matrix of Python 3.8–3.13 × {STU3, R4B, R5}. A separate workflow (`.github/workflows/lint.yml`) runs `prek run --all-files` on every PR. When changing behavior that could differ between sequences, run all three locally before declaring done.
+
+`ty` is in beta and produces false positives on the framework's dynamic patterns (FHIR Resource construction via `**{...}` kwarg expansion, dynamic type hints derived from `interaction.resource_type`, the decorator/wrapper pattern in `functions.py`). Several rules are silenced via `[[tool.ty.overrides]]` in `pyproject.toml` for the affected files; new files get full ty enforcement. Promote rules back to default as ty matures.
 
 ## Architecture
 

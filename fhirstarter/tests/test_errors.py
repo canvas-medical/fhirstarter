@@ -35,7 +35,9 @@ from .utils import assert_expected_response, generate_fhir_resource_id
             make_operation_outcome(
                 severity="error",
                 code="structure",
-                details_text="body -> 1 — JSON decode error (type=json_invalid; error=Expecting value)",
+                details_text=(
+                    "body -> 1 — JSON decode error (type=json_invalid; error=Expecting value)"
+                ),
             ).model_dump(),
         ),
         (

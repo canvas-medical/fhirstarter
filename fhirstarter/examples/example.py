@@ -173,8 +173,7 @@ async def patient_search_type(
 # FHIR Practitioner Pydantic model. Only the first example will be added to the OpenAPI
 # documentation. If a custom model is not provided, examples from the FHIR specification are used.
 class PractitionerCustom(Practitioner):
-
-    model_config = {
+    model_config = {  # noqa: RUF012  # pydantic model_config
         "json_schema_extra": {
             "examples": [
                 {

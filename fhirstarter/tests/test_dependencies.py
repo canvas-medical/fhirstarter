@@ -42,7 +42,7 @@ def patient_create_func(
 def provider_with_dependency(
     patient_create_func: Callable[
         [InteractionContext, Patient], Union[Coroutine[None, None, str], str]
-    ]
+    ],
 ) -> FHIRProvider:
     """Create a provider with a provider-level dependency."""
     provider = FHIRProvider(dependencies=[Depends(validate_token)])
@@ -55,7 +55,7 @@ def provider_with_dependency(
 def provider_with_interaction_dependency(
     patient_create_func: Callable[
         [InteractionContext, Patient], Union[Coroutine[None, None, str], str]
-    ]
+    ],
 ) -> FHIRProvider:
     """Create a provider with an interaction-level dependency."""
     provider = FHIRProvider()

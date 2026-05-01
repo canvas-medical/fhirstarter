@@ -27,7 +27,7 @@ def check_fhir_sequence() -> None:
 
 
 class PractitionerCustom(Practitioner):
-    model_config = {
+    model_config = {  # noqa: RUF012  # pydantic model_config
         "json_schema_extra": {
             "examples": [
                 {
@@ -85,7 +85,7 @@ def test_inline_search_type_by_post_schemas(schema: Mapping[str, Any]) -> None:
         for path_name, path in schema["paths"].items()
         if path_name.endswith("_search")
     )
-    for path_name, path in search_type_paths:
+    for _, path in search_type_paths:
         keys = path["post"]["requestBody"]["content"][
             "application/x-www-form-urlencoded"
         ]["schema"].keys()

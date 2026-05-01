@@ -50,10 +50,10 @@ def _parse_operation_id(operation_id: str) -> _OperationId:
 
 
 def _operations(
-    openapi_schema: MutableMapping[str, Any]
+    openapi_schema: MutableMapping[str, Any],
 ) -> Iterator[Tuple[_OperationId, Dict[str, Any]]]:
     """Yield operations in the OpenAPI schema that were created by FHIRStarter."""
-    for path_name, path in openapi_schema["paths"].items():
+    for path in openapi_schema["paths"].values():
         for operation in path.values():
             operation_id = operation.get("operationId", "")
             if operation_id.startswith("fhirstarter|"):
@@ -61,7 +61,7 @@ def _operations(
 
 
 def _search_type_operations(
-    openapi_schema: MutableMapping[str, Any]
+    openapi_schema: MutableMapping[str, Any],
 ) -> Iterator[Tuple[_OperationId, Dict[str, Any]]]:
     """Yield search-type operations in the OpenAPI schema that were created by FHIRStarter."""
     for operation_id, operation in _operations(openapi_schema):
@@ -153,7 +153,7 @@ def _add_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
     schemas = openapi_schema["components"]["schemas"]
 
     # Iterate over the operations and add resource schemas that are missing
-    for operation_id, operation in _operations(openapi_schema):
+    for operation_id, _ in _operations(openapi_schema):
         if operation_id.model_name and (
             operation_id.model_name not in schemas
             or schemas[operation_id.model_name] == {"type": "object"}
@@ -172,9 +172,7 @@ def _add_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
         schemas["OperationOutcome"] = OperationOutcome.model_json_schema()
 
     # Recreate the schema dictionary so that the schemas appear sorted
-    openapi_schema["components"]["schemas"] = {
-        schema_name: schema for schema_name, schema in sorted(schemas.items())
-    }
+    openapi_schema["components"]["schemas"] = dict(sorted(schemas.items()))
 
 
 def _get_examples(
@@ -286,14 +284,16 @@ def _adjust_operation(
     # For operations that take a request body (excluding patch), change the application/json content
     # type to application/fhir+json and add request body examples. Also, adjust schema references
     # that point to schemas that were renamed.
-    if operation_id.interaction_type != "patch":
-        if content := operation.get("requestBody", {}).get("content"):
-            if "application/json" in content:
-                content["application/fhir+json"] = content.pop("application/json")
-                content["application/fhir+json"].update(resource_examples)
-                schema = content["application/fhir+json"]
-                if schema.get("schema", {}).get("$ref", "").endswith("-Input"):
-                    schema["schema"]["$ref"] = schema["schema"]["$ref"][:-6]
+    if (
+        operation_id.interaction_type != "patch"
+        and (content := operation.get("requestBody", {}).get("content"))
+        and "application/json" in content
+    ):
+        content["application/fhir+json"] = content.pop("application/json")
+        content["application/fhir+json"].update(resource_examples)
+        schema = content["application/fhir+json"]
+        if schema.get("schema", {}).get("$ref", "").endswith("-Input"):
+            schema["schema"]["$ref"] = schema["schema"]["$ref"][:-6]
 
     # For each possible response (i.e. status code), remove the default FastAPI response schema
     responses = operation["responses"]
@@ -343,6 +343,6 @@ def _adjust_operation(
 
         # Add specialized OperationOutcome responses if available for the status code
         if operation_outcome_example := examples["OperationOutcome"].get(status_code):
-            response["content"]["application/fhir+json"][
-                "example"
-            ] = operation_outcome_example
+            response["content"]["application/fhir+json"]["example"] = (
+                operation_outcome_example
+            )

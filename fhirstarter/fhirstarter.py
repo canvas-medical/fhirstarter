@@ -361,7 +361,7 @@ class FHIRStarter(FastAPI):
                 "interaction": [
                     {"code": label}
                     for label in sorted(
-                        interactions.keys(), key=lambda l: _INTERACTION_ORDER[l]
+                        interactions.keys(), key=lambda il: _INTERACTION_ORDER[il]
                     )
                 ],
             }
@@ -482,8 +482,10 @@ class FHIRStarter(FastAPI):
         try:
             response = await _HTTP_CLIENT.get(url)
             return response.json()
-        except Exception:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as exception:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            ) from exception
 
     def _add_route(self, interaction: TypeInteraction[ResourceType]) -> None:
         """
