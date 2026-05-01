@@ -10,22 +10,23 @@ The framework supports three FHIR sequences: STU3, R4B, and R5. The active seque
 
 ## Common commands
 
-Dependency and environment management uses Poetry. The repo also has a local `.venv` and an `.envrc` that activates it (direnv).
+Dependency and environment management uses [uv](https://docs.astral.sh/uv/).
 
 ```bash
-poetry install                      # install dependencies (incl. dev group)
-poetry run pytest                   # run the full test suite (current FHIR sequence)
-FHIR_SEQUENCE=STU3 poetry run pytest
-FHIR_SEQUENCE=R4B  poetry run pytest
-FHIR_SEQUENCE=R5   poetry run pytest # default
-poetry run pytest fhirstarter/tests/test_interactions.py::<test_name>  # single test
-poetry run mypy fhirstarter         # type-check
-poetry run black fhirstarter        # format
-poetry run isort fhirstarter        # import sort
-poetry run python -m fhirstarter.examples.example  # run the example server
+uv sync                             # install dependencies (incl. dev group)
+uv run pytest                       # run the full test suite (current FHIR sequence)
+FHIR_SEQUENCE=STU3 uv run pytest
+FHIR_SEQUENCE=R4B  uv run pytest
+FHIR_SEQUENCE=R5   uv run pytest    # default
+uv run pytest fhirstarter/tests/test_interactions.py::<test_name>  # single test
+uv run mypy fhirstarter             # type-check
+uv run black fhirstarter            # format
+uv run isort fhirstarter            # import sort
+uv run python -m fhirstarter.examples.example  # run the example server
+uv build                            # produce wheel + sdist
 ```
 
-CI (`.github/workflows/tests.yml`) runs `poetry run pytest` across the full matrix of Python 3.8–3.13 × {STU3, R4B, R5}. When changing behavior that could differ between sequences, run all three locally before declaring done.
+CI (`.github/workflows/tests.yml`) runs `uv run --frozen pytest` across the full matrix of Python 3.8–3.13 × {STU3, R4B, R5}. When changing behavior that could differ between sequences, run all three locally before declaring done.
 
 ## Architecture
 
