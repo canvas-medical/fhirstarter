@@ -26,7 +26,7 @@ from .utils import (
 
 @pytest.fixture(scope="module")
 def client(
-    create_test_client_func: Callable[[Tuple[str, ...]], TestClient]
+    create_test_client_func: Callable[[Tuple[str, ...]], TestClient],
 ) -> TestClient:
     """Return a module-scoped test client with all interactions enabled."""
     return create_test_client_func(
@@ -340,9 +340,9 @@ def test_search_type(
     )
 
 
-def _search_type_handler_parameter_multiple_values_async() -> (
-    Callable[..., Coroutine[None, None, Bundle]]
-):
+def _search_type_handler_parameter_multiple_values_async() -> Callable[
+    ..., Coroutine[None, None, Bundle]
+]:
     """Return an async Patient search-type handler that can test repeated query parameters."""
 
     async def patient_search_type(

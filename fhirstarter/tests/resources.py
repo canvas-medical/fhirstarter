@@ -29,4 +29,4 @@ elif FHIR_SEQUENCE == "R5":
     from fhir.resources.patient import Patient
     from fhir.resources.practitioner import Practitioner
 
-__all__ = ["Patient", "HumanName", "Appointment", "Bundle", "Practitioner"]
+__all__ = ["Appointment", "Bundle", "HumanName", "Patient", "Practitioner"]

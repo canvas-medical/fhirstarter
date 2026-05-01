@@ -5,7 +5,7 @@ from typing import Any, Callable, ClassVar, Dict, Literal, Sequence, Union
 
 import orjson
 from fastapi import Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import Response
 
 from . import status
 from .fhir_specification.utils import is_resource_type
@@ -207,7 +207,7 @@ class FormatParameters:
             if raise_exception:
                 from .exceptions import FHIRGeneralError
 
-                raise FHIRGeneralError(
+                raise FHIRGeneralError(  # noqa: B904  # caught KeyError is not a meaningful cause
                     status_code=status.HTTP_400_BAD_REQUEST,
                     severity="error",
                     code="structure",
@@ -235,7 +235,7 @@ def format_response(
     resource: Union[Resource, None],
     response: Union[Response, None] = None,
     status_code: Union[int, None] = None,
-    format_parameters: FormatParameters = FormatParameters(),
+    format_parameters: FormatParameters = FormatParameters(),  # noqa: B008  # immutable sentinel
 ) -> Union[Resource, Response]:
     """
     Return a response with the proper formatting applied.
@@ -251,9 +251,9 @@ def format_response(
     5. Minified XML
     """
     if not resource:
-        assert (
-            response is not None
-        ), "Response object must be provided for a null resource"
+        assert response is not None, (
+            "Response object must be provided for a null resource"
+        )
         response.headers["Content-Type"] = format_parameters.format
         return resource
 
@@ -272,9 +272,9 @@ def format_response(
                     media_type=format_parameters.format,
                 )
             else:
-                assert (
-                    response is not None
-                ), "Response object or status code must be provided for non-pretty JSON responses"
+                assert response is not None, (
+                    "Response object or status code must be provided for non-pretty JSON responses"
+                )
 
                 return Response(
                     content=orjson.dumps(resource.model_dump()),
@@ -571,7 +571,7 @@ def _internal_server_error(_: TypeInteraction[ResourceType]) -> _Responses:
     return {
         status.HTTP_500_INTERNAL_SERVER_ERROR: {
             "model": OperationOutcome,
-            "description": f"The server has encountered a situation it does not know how to "
+            "description": "The server has encountered a situation it does not know how to "
             "handle.",
         }
     }

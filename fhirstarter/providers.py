@@ -204,19 +204,19 @@ def _check_resource_type_module(resource_type: Type[Resource]) -> None:
     for base in bases:
         if base.__module__.startswith("fhir.resources"):
             module = base.__module__
-    assert (
-        module
-    ), f"Unable to determine FHIR sequence of resource {resource_type.get_resource_type()}"
+    assert module, (
+        f"Unable to determine FHIR sequence of resource {resource_type.get_resource_type()}"
+    )
 
     if FHIR_SEQUENCE == "STU3":
-        assert module.startswith(
-            "fhir.resources.STU3"
-        ), "Only resource types from fhir.resources.STU3 can be used with FHIR sequence STU3"
+        assert module.startswith("fhir.resources.STU3"), (
+            "Only resource types from fhir.resources.STU3 can be used with FHIR sequence STU3"
+        )
     elif FHIR_SEQUENCE == "R4B":
-        assert module.startswith(
-            "fhir.resources.R4B"
-        ), "Only resource types from fhir.resources.R4B can be used with FHIR sequence R4B"
+        assert module.startswith("fhir.resources.R4B"), (
+            "Only resource types from fhir.resources.R4B can be used with FHIR sequence R4B"
+        )
     elif FHIR_SEQUENCE == "R5":
-        assert not module.startswith(
-            ("fhir.resources.STU3", "fhir.resources.R4B")
-        ), f"Resource types from {module} cannot be used with FHIR sequence R5"
+        assert not module.startswith(("fhir.resources.STU3", "fhir.resources.R4B")), (
+            f"Resource types from {module} cannot be used with FHIR sequence R5"
+        )

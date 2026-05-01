@@ -136,7 +136,7 @@ from .utils import generate_fhir_resource_id, make_request
             (
                 "search unrecognized resource type",
                 "GET",
-                f"/FakeResource",
+                "/FakeResource",
                 ParsedRequest(),
             ),
             (
@@ -170,7 +170,7 @@ from .utils import generate_fhir_resource_id, make_request
             (
                 "operation-type GET",
                 "GET",
-                f"/Patient/$export",
+                "/Patient/$export",
                 ParsedRequest(  # type: ignore[call-arg]
                     request_type="operation",
                     resource_type="Patient",
@@ -181,7 +181,7 @@ from .utils import generate_fhir_resource_id, make_request
             (
                 "operation-type POST",
                 "POST",
-                f"/Patient/$export",
+                "/Patient/$export",
                 ParsedRequest(  # type: ignore[call-arg]
                     request_type="operation",
                     resource_type="Patient",
@@ -192,7 +192,7 @@ from .utils import generate_fhir_resource_id, make_request
             (
                 "operation-system GET",
                 "GET",
-                f"/$export",
+                "/$export",
                 ParsedRequest(  # type: ignore[call-arg]
                     request_type="operation",
                     resource_type=None,
@@ -203,7 +203,7 @@ from .utils import generate_fhir_resource_id, make_request
             (
                 "operation-system POST",
                 "POST",
-                f"/$export",
+                "/$export",
                 ParsedRequest(  # type: ignore[call-arg]
                     request_type="operation",
                     resource_type=None,

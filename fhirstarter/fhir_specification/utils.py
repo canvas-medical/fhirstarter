@@ -37,7 +37,7 @@ elif FHIR_SEQUENCE == "R5":
     FHIR_VERSION = fhir.resources.__fhir_version__
     FHIR_DIR = Path(sequences.R5.__file__).parent
 else:
-    raise AssertionError(f"Specified FHIR sequence must be one of: STU3, R4B, R5")
+    raise AssertionError("Specified FHIR sequence must be one of: STU3, R4B, R5")
 
 
 def is_resource_type(resource_type: str) -> bool:

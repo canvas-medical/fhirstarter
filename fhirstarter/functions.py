@@ -56,7 +56,7 @@ ID_PP = Path(
     alias="id",
     min_length=1,
     max_length=64,
-    regex="^[A-Za-z0-9\-.]+$",
+    regex=r"^[A-Za-z0-9\-.]+$",
     description=Resource.model_fields["id"].title,
 )
 FORMAT_QP = Query(None, alias="_format", description=_FORMAT_PARAMETER_DESCRIPTION)
@@ -227,7 +227,9 @@ def make_patch_function(
         ) -> Union[ResourceType, Response]:
             """Function for patch interaction."""
             handler = cast(PatchInteractionHandler[ResourceType], interaction.handler)
-            result = await handler(InteractionContext(request, response), id_, json_patch)  # type: ignore[call-arg,misc]
+            result = await handler(
+                InteractionContext(request, response), id_, json_patch
+            )  # type: ignore[call-arg,misc]
             _, result_resource = _result_to_id_resource_tuple(result)
 
             response.headers["Location"] = f"/{resource_type_str}/{id_}"
@@ -508,9 +510,9 @@ def _make_search_parameter(
 
     Set the defaults to Form for POST endpoints, and Query for non-POST endpoints.
     """
-    assert _is_valid_parameter_name(
-        name
-    ), f"{name} is not a valid search parameter name"
+    assert _is_valid_parameter_name(name), (
+        f"{name} is not a valid search parameter name"
+    )
 
     if post:
         # At the time of writing, there is a bug in FastAPI causing Forms parameters to ignore the
@@ -588,6 +590,6 @@ def _set_search_type_function_signature(
     )
 
     sig = sig.replace(parameters=sorted_search_parameters)
-    setattr(search_type_function, "__signature__", sig)
+    search_type_function.__signature__ = sig
 
     return search_type_function

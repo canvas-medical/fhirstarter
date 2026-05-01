@@ -109,7 +109,7 @@ def main() -> None:
             compression=zipfile.ZIP_DEFLATED,
             compresslevel=9,
         ) as file_:
-            for resource_type in examples.keys():
+            for resource_type in examples:
                 file_.writestr(
                     f"{resource_type.lower()}.json",
                     json.dumps(

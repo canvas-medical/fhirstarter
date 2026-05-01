@@ -5,7 +5,7 @@ The exception classes defined here provide a method which will return an Operati
 """
 
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import ClassVar, Dict, Union
 
 from fastapi import Request, status
 from fastapi.exceptions import HTTPException
@@ -43,7 +43,7 @@ class FHIRHTTPException(FHIRException):
     response.
     """
 
-    _STATUS_CODE_MAPPINGS = {
+    _STATUS_CODE_MAPPINGS: ClassVar[Dict[int, str]] = {
         401: "unknown",
         403: "forbidden",
         405: "not-supported",
@@ -54,7 +54,7 @@ class FHIRHTTPException(FHIRException):
         415: "not-supported",
     }
 
-    def __init__(self, details_text: Union[str, None] = None):
+    def __init__(self, details_text: Union[str, None] = None) -> None:
         super().__init__(self._status_code(), details_text)
 
     def operation_outcome(self) -> OperationOutcome:

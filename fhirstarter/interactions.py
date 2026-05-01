@@ -77,7 +77,7 @@ class TypeInteraction(Generic[ResourceType]):
         resource_type: Type[ResourceType],
         handler: InteractionHandler[ResourceType],
         route_options: Mapping[str, Any],
-    ):
+    ) -> None:
         self.resource_type = resource_type
         self.handler = handler
         self.route_options = route_options

@@ -4,7 +4,7 @@ from typing import Any, Dict, Iterable, List, Literal, MutableSequence, Optional
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from pydantic_core import InitErrorDetails
 
-_PATH_PATTERN = re.compile("^\/(?:[^/]+\/)*[^/]+$")
+_PATH_PATTERN = re.compile(r"^\/(?:[^/]+\/)*[^/]+$")
 
 
 class JSONPatchOperation(BaseModel):
@@ -26,7 +26,10 @@ class JSONPatchOperation(BaseModel):
                     "path": "/text",
                     "value": {
                         "status": "empty",
-                        "div": '<div xmlns="http://www.w3.org/1999/xhtml">No human-readable text provided in this case</div>',
+                        "div": (
+                            '<div xmlns="http://www.w3.org/1999/xhtml">'
+                            "No human-readable text provided in this case</div>"
+                        ),
                     },
                 }
             ]
@@ -38,7 +41,7 @@ class JSONPatchOperation(BaseModel):
     def validate_json_pointers(cls, json_pointer: str) -> str:
         """Ensure that the from and path fields contain valid JSON Pointers."""
         if not re.fullmatch(_PATH_PATTERN, json_pointer):
-            raise ValueError(f"invalid JSON Pointer")
+            raise ValueError("invalid JSON Pointer")
         return json_pointer
 
     @model_validator(mode="after")

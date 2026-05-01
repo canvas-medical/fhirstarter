@@ -185,7 +185,7 @@ def test_set_capability_statement_modifier(client_create_and_read: TestClient) -
 
 
 def _fhir_sequence_adjust(
-    capability_statement: MutableMapping[str, Any]
+    capability_statement: MutableMapping[str, Any],
 ) -> MutableMapping[str, Any]:
     """
     Adjust a capability statement for the purposes of comparison.
