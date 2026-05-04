@@ -127,7 +127,11 @@ def test_validation_error(
     if isinstance(request_body, Mapping):
         request_body = orjson.dumps(request_body).decode()
 
-    create_response = client.post("/Patient", content=request_body)
+    create_response = client.post(
+        "/Patient",
+        content=request_body,
+        headers={"Content-Type": "application/fhir+json"},
+    )
 
     assert_expected_response(
         create_response,
