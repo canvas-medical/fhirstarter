@@ -29,7 +29,7 @@ uv run python -m fhirstarter.examples.example  # run the example server
 uv build                            # produce wheel + sdist
 ```
 
-CI (`.github/workflows/tests.yml`) runs `uv run --frozen pytest` across the full matrix of Python 3.8–3.13 × {STU3, R4B, R5}. A separate workflow (`.github/workflows/lint.yml`) runs `prek run --all-files` on every PR. When changing behavior that could differ between sequences, run all three locally before declaring done.
+CI (`.github/workflows/tests.yml`) runs `uv run --frozen pytest` across the full matrix of Python 3.10–3.14 × {STU3, R4B, R5}. A separate workflow (`.github/workflows/lint.yml`) runs `prek run --all-files` on every PR. When changing behavior that could differ between sequences, run all three locally before declaring done.
 
 `ty` is in beta and produces false positives on the framework's dynamic patterns (FHIR Resource construction via `**{...}` kwarg expansion, dynamic type hints derived from `interaction.resource_type`, the decorator/wrapper pattern in `functions.py`). Several rules are silenced via `[[tool.ty.overrides]]` in `pyproject.toml` for the affected files; new files get full ty enforcement. Promote rules back to default as ty matures.
 

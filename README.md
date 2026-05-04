@@ -13,8 +13,8 @@
   <a href="https://pypi.org/project/fhirstarter/">
     <img src="https://img.shields.io/pypi/l/fhirstarter">
   </a>
-  <a href="https://github.com/psf/black">
-    <img src="https://img.shields.io/badge/code%20style-black-000000">
+  <a href="https://github.com/astral-sh/ruff">
+    <img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" alt="Ruff">
   </a>
 </p>
 
