@@ -3,7 +3,7 @@
 from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Dict, Tuple, Union, cast
+from typing import cast
 
 import jsonpatch
 
@@ -18,7 +18,7 @@ from .resources import HumanName, Patient
 from .utils import generate_fhir_resource_id
 
 # In-memory "database" used to simulate persistence of created FHIR resources
-DATABASE: Dict[str, Patient] = {}
+DATABASE: dict[str, Patient] = {}
 
 _VALID_TOKEN = "valid"
 _INVALID_TOKEN = "invalid"
@@ -110,10 +110,10 @@ def patient_create(_: InteractionContext, resource: Patient) -> str:
 
 async def patient_search_type_async(
     context: InteractionContext,
-    family: Union[str, None],
-    general_practitioner: Union[str, None],
-    nickname: Union[str, None],
-    _last_updated: Union[str, None],
+    family: str | None,
+    general_practitioner: str | None,
+    nickname: str | None,
+    _last_updated: str | None,
 ) -> Bundle:
     """Patient search-type FHIR interaction."""
     return patient_search_type(
@@ -123,10 +123,10 @@ async def patient_search_type_async(
 
 def patient_search_type(
     _: InteractionContext,
-    family: Union[str, None],
-    general_practitioner: Union[str, None],
-    nickname: Union[str, None],
-    _last_updated: Union[str, None],
+    family: str | None,
+    general_practitioner: str | None,
+    nickname: str | None,
+    _last_updated: str | None,
 ) -> Bundle:
     """Patient search-type FHIR interaction."""
     patients = []
@@ -179,7 +179,7 @@ include-in-capability-statement = true
     return TestClient(app_)
 
 
-def create_test_client_async(interactions: Tuple[str, ...]) -> TestClient:
+def create_test_client_async(interactions: tuple[str, ...]) -> TestClient:
     """Given a list of interactions, create an app with async handlers and return a test client."""
     provider = FHIRProvider()
 
@@ -200,7 +200,7 @@ def create_test_client_async(interactions: Tuple[str, ...]) -> TestClient:
     return app(provider)
 
 
-def create_test_client(interactions: Tuple[str, ...]) -> TestClient:
+def create_test_client(interactions: tuple[str, ...]) -> TestClient:
     """Given a list of interactions, create an app and return a test client."""
     provider = FHIRProvider()
 

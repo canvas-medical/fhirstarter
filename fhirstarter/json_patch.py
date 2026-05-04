@@ -1,5 +1,6 @@
 import re
-from typing import Any, Dict, Iterable, List, Literal, MutableSequence, Optional
+from collections.abc import Iterable, MutableSequence
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 from pydantic_core import InitErrorDetails
@@ -15,7 +16,7 @@ class JSONPatchOperation(BaseModel):
     op: Literal["add", "remove", "replace", "move", "copy", "test"]
     from_: str = Field(default=None, alias="from")
     path: str
-    value: Optional[Any]
+    value: Any | None
 
     model_config = {
         "extra": "forbid",
@@ -50,7 +51,7 @@ class JSONPatchOperation(BaseModel):
         Ensure that this operation has the correct fields based on the operation type (e.g. add,
         replace, etc.)
         """
-        errors: List[InitErrorDetails] = []
+        errors: list[InitErrorDetails] = []
 
         self._check_optional_field(
             field="from",
@@ -92,10 +93,10 @@ class JSONPatchOperation(BaseModel):
             errors.append(InitErrorDetails(type="missing", loc=(field,), input=value))
 
 
-JSONPatch = List[JSONPatchOperation]
+JSONPatch = list[JSONPatchOperation]
 
 
-def convert_json_patch(json_patch: JSONPatch) -> List[Dict[str, Any]]:
+def convert_json_patch(json_patch: JSONPatch) -> list[dict[str, Any]]:
     """
     Convert the JSON Patch object to a list of dicts.
 

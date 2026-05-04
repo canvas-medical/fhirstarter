@@ -1,17 +1,13 @@
 """Classes and types for handling and representing FHIR Interactions."""
 
 from abc import abstractmethod
+from collections.abc import Callable, Coroutine, Mapping
 from dataclasses import dataclass
 from typing import (
     Any,
-    Callable,
-    Coroutine,
     Generic,
     Literal,
-    Mapping,
-    Type,
     TypeVar,
-    Union,
 )
 
 from fastapi import Request, Response
@@ -29,36 +25,34 @@ class InteractionContext:
 
 
 ReadInteractionHandler = Callable[
-    [InteractionContext, str], Union[Coroutine[None, None, ResourceType], ResourceType]
+    [InteractionContext, str], Coroutine[None, None, ResourceType] | ResourceType
 ]
 UpdateInteractionHandler = Callable[
     [InteractionContext, str, ResourceType],
-    Union[Coroutine[None, None, Union[str, ResourceType]], str, ResourceType],
+    Coroutine[None, None, str | ResourceType] | str | ResourceType,
 ]
 PatchInteractionHandler = Callable[
     [InteractionContext, str, JSONPatch],
-    Union[Coroutine[None, None, Union[str, ResourceType]], str, ResourceType],
+    Coroutine[None, None, str | ResourceType] | str | ResourceType,
 ]
 DeleteInteractionHandler = Callable[
     [InteractionContext, str],
-    Union[Coroutine[None, None, None], None],
+    Coroutine[None, None, None] | None,
 ]
 CreateInteractionHandler = Callable[
     [InteractionContext, ResourceType],
-    Union[Coroutine[None, None, Union[str, ResourceType]], str, ResourceType],
+    Coroutine[None, None, str | ResourceType] | str | ResourceType,
 ]
-SearchTypeInteractionHandler = Callable[
-    ..., Union[Coroutine[None, None, Bundle], Bundle]
-]
+SearchTypeInteractionHandler = Callable[..., Coroutine[None, None, Bundle] | Bundle]
 
-InteractionHandler = Union[
-    ReadInteractionHandler[ResourceType],
-    PatchInteractionHandler[ResourceType],
-    DeleteInteractionHandler,
-    UpdateInteractionHandler[ResourceType],
-    CreateInteractionHandler[ResourceType],
-    SearchTypeInteractionHandler,
-]
+InteractionHandler = (
+    ReadInteractionHandler[ResourceType]
+    | PatchInteractionHandler[ResourceType]
+    | DeleteInteractionHandler
+    | UpdateInteractionHandler[ResourceType]
+    | CreateInteractionHandler[ResourceType]
+    | SearchTypeInteractionHandler
+)
 
 
 class TypeInteraction(Generic[ResourceType]):
@@ -74,7 +68,7 @@ class TypeInteraction(Generic[ResourceType]):
 
     def __init__(
         self,
-        resource_type: Type[ResourceType],
+        resource_type: type[ResourceType],
         handler: InteractionHandler[ResourceType],
         route_options: Mapping[str, Any],
     ) -> None:

@@ -3,7 +3,6 @@
 import os
 import zipfile
 from copy import deepcopy
-from typing import Dict, Set
 
 import orjson
 
@@ -12,8 +11,9 @@ try:
 except ImportError:
     from functools import lru_cache as cache
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Mapping, Union, cast
+from typing import Any, cast
 
 import fhir.resources
 
@@ -46,7 +46,7 @@ def is_resource_type(resource_type: str) -> bool:
 
 
 @cache
-def _load_resources_list() -> Set[str]:
+def _load_resources_list() -> set[str]:
     """Load the list of resources from the JSON file."""
     with open(FHIR_DIR / "resource_types.json") as file_:
         return orjson.loads(file_.read())
@@ -55,13 +55,13 @@ def _load_resources_list() -> Set[str]:
 @cache
 def load_examples(
     resource_type: str,
-) -> Dict[str, Dict[str, Union[str, Dict[str, Any]]]]:
+) -> dict[str, dict[str, str | dict[str, Any]]]:
     """Return the examples for a specific resource type."""
     with zipfile.ZipFile(FHIR_DIR / "examples.zip") as file_:
         return orjson.loads(file_.read(f"{resource_type.lower()}.json"))
 
 
-def create_bundle_example(resource_example: Mapping[str, Any]) -> Dict[str, Any]:
+def create_bundle_example(resource_example: Mapping[str, Any]) -> dict[str, Any]:
     """
     Create a bundle example for a specific resource type.
 
@@ -70,7 +70,7 @@ def create_bundle_example(resource_example: Mapping[str, Any]) -> Dict[str, Any]
     resource_type = resource_example["resourceType"]
     bundle_examples = load_examples("Bundle")
     bundle_example = deepcopy(
-        cast(Dict[str, Any], next(iter(bundle_examples.values()))["value"])
+        cast(dict[str, Any], next(iter(bundle_examples.values()))["value"])
     )
 
     bundle_example["link"][0] = {
@@ -95,7 +95,7 @@ def create_bundle_example(resource_example: Mapping[str, Any]) -> Dict[str, Any]
 
 def make_operation_outcome_example(
     severity: str, code: str, details_text: str
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Make an OperationOutcome example given a severity, code, and details text."""
     return {
         "resourceType": "OperationOutcome",
@@ -110,13 +110,13 @@ def make_operation_outcome_example(
     }
 
 
-def load_search_parameters() -> Dict[str, Any]:
+def load_search_parameters() -> dict[str, Any]:
     """Load the search parameters file."""
     with zipfile.ZipFile(FHIR_DIR / "search-parameters.zip") as file_:
         return orjson.loads(file_.read("search-parameters.json"))
 
 
-def load_extra_search_parameters() -> Dict[str, Dict[str, Union[str, bool]]]:
+def load_extra_search_parameters() -> dict[str, dict[str, str | bool]]:
     """Load the extra search parameters file."""
     with open(FHIR_DIR / "extra-search-parameters.json") as file_:
         return orjson.loads(file_.read())

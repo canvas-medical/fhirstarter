@@ -1,6 +1,6 @@
 """FHIRStarter test fixtures"""
 
-from typing import Callable, Tuple
+from collections.abc import Callable
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -22,7 +22,7 @@ def create_test_client_func(request: FixtureRequest) -> bool:
 @pytest.fixture
 def client(
     request: FixtureRequest,
-    create_test_client_func: Callable[[Tuple[str, ...]], TestClient],
+    create_test_client_func: Callable[[tuple[str, ...]], TestClient],
 ) -> TestClient:
     """Return a test client with specified interactions enabled."""
     return create_test_client_func(request.param)
@@ -30,7 +30,7 @@ def client(
 
 @pytest.fixture
 def client_all(
-    create_test_client_func: Callable[[Tuple[str, ...]], TestClient],
+    create_test_client_func: Callable[[tuple[str, ...]], TestClient],
 ) -> TestClient:
     """Return a test client with all interactions enabled."""
     return create_test_client_func(
@@ -40,7 +40,7 @@ def client_all(
 
 @pytest.fixture
 def client_create_and_read(
-    create_test_client_func: Callable[[Tuple[str, ...]], TestClient],
+    create_test_client_func: Callable[[tuple[str, ...]], TestClient],
 ) -> TestClient:
     """Return a test client with the create and read interactions enabled."""
     return create_test_client_func(("read", "create"))

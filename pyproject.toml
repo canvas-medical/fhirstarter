@@ -1,9 +1,9 @@
 [project]
 name = "fhirstarter"
-version = "3.0.0"
+version = "4.0.0"
 description = "An ASGI FHIR API framework built on top of FastAPI and FHIR Resources"
 readme = "README.md"
-requires-python = ">=3.8,<3.14"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
 license-files = ["LICENSE.md"]
 authors = [{ name = "Christopher Sande", email = "christopher.sande@canvasmedical.com" }]
@@ -19,8 +19,6 @@ classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -78,7 +76,7 @@ module-root = ""
 
 [tool.ruff]
 line-length = 88
-target-version = "py38"
+target-version = "py310"
 extend-exclude = ["fhirstarter/fhir_specification/sequences"]
 
 [tool.ruff.lint]
@@ -120,7 +118,7 @@ max-line-length = 100
 [tool.ruff.format]
 
 [tool.ty.environment]
-python-version = "3.8"
+python-version = "3.10"
 
 [tool.ty.src]
 include = ["fhirstarter"]

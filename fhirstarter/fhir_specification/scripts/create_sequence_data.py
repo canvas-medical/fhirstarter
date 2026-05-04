@@ -6,7 +6,7 @@ import sys
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict, Literal, Union
+from typing import Any, Literal
 from uuid import uuid4
 
 import requests
@@ -120,7 +120,7 @@ def main() -> None:
     print("\nDone")
 
 
-def get_examples(sequence: str, resource_type: str) -> Dict[str, Any]:
+def get_examples(sequence: str, resource_type: str) -> dict[str, Any]:
     if sequence == "R5" and resource_type == "AdverseEvent":
         return {
             "example": {
@@ -156,7 +156,7 @@ def get_examples(sequence: str, resource_type: str) -> Dict[str, Any]:
     return examples
 
 
-def _get_structuredefinition_examples(sequence: str) -> Dict[str, Any]:
+def _get_structuredefinition_examples(sequence: str) -> dict[str, Any]:
     resource_type = "StructureDefinition"
 
     # Download the examples page for the resource type
@@ -218,11 +218,11 @@ def _get_structuredefinition_examples(sequence: str) -> Dict[str, Any]:
 def _get_examples(
     sequence: str,
     resource_type: str,
-    examples_table: Union[Tag, None],
+    examples_table: Tag | None,
     description_prefix: str = "",
     id_method: Literal["standard", "random", "description"] = "standard",
-) -> Dict[str, Any]:
-    examples: Dict[str, Any] = {}
+) -> dict[str, Any]:
+    examples: dict[str, Any] = {}
 
     if not examples_table:
         return examples
