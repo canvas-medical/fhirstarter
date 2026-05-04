@@ -10,6 +10,7 @@
   <a href="https://pypi.org/project/fhirstarter/">
     <img src="https://img.shields.io/pypi/pyversions/fhirstarter">
   </a>
+  <img src="https://img.shields.io/badge/FHIR-STU3%20%7C%20R4B%20%7C%20R5-c41e3a" alt="FHIR STU3 | R4B | R5">
   <a href="https://pypi.org/project/fhirstarter/">
     <img src="https://img.shields.io/pypi/l/fhirstarter">
   </a>
