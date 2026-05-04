@@ -15,7 +15,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.13"
+          python-version: "3.14"
           enable-cache: true
       - name: Sync dev dependencies
         run: uv sync --frozen
