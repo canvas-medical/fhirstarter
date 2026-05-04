@@ -1,19 +1,11 @@
 """OpenAPI schema modifications"""
 
 from collections import defaultdict
+from collections.abc import Iterator, Mapping, MutableMapping
 from dataclasses import dataclass
 from importlib import import_module
 from typing import (
     Any,
-    DefaultDict,
-    Dict,
-    Iterator,
-    List,
-    Mapping,
-    MutableMapping,
-    Set,
-    Tuple,
-    Union,
     cast,
 )
 
@@ -33,13 +25,13 @@ __all__ = ["adjust_schema"]
 class _OperationId:
     interaction_type: str
     method: str
-    module_name: Union[str, None]
-    model_name: Union[str, None]
+    module_name: str | None
+    model_name: str | None
 
 
 def _parse_operation_id(operation_id: str) -> _OperationId:
     """Return a parsed operation ID."""
-    tokens: List[str] = operation_id.split("|")
+    tokens: list[str] = operation_id.split("|")
 
     interaction_type = tokens[2]
     method = tokens[3]
@@ -51,7 +43,7 @@ def _parse_operation_id(operation_id: str) -> _OperationId:
 
 def _operations(
     openapi_schema: MutableMapping[str, Any],
-) -> Iterator[Tuple[_OperationId, Dict[str, Any]]]:
+) -> Iterator[tuple[_OperationId, dict[str, Any]]]:
     """Yield operations in the OpenAPI schema that were created by FHIRStarter."""
     for path in openapi_schema["paths"].values():
         for operation in path.values():
@@ -62,7 +54,7 @@ def _operations(
 
 def _search_type_operations(
     openapi_schema: MutableMapping[str, Any],
-) -> Iterator[Tuple[_OperationId, Dict[str, Any]]]:
+) -> Iterator[tuple[_OperationId, dict[str, Any]]]:
     """Yield search-type operations in the OpenAPI schema that were created by FHIRStarter."""
     for operation_id, operation in _operations(openapi_schema):
         if operation_id.interaction_type == "search-type":
@@ -71,7 +63,7 @@ def _search_type_operations(
 
 def adjust_schema(
     openapi_schema: MutableMapping[str, Any], include_external_examples: bool
-) -> Set[str]:
+) -> set[str]:
     """
     Adjust the OpenAPI schema to make it more FHIR-friendly. Return a set containing all the URLs
     for external documentation examples.
@@ -178,13 +170,13 @@ def _add_schemas(openapi_schema: MutableMapping[str, Any]) -> None:
 def _get_examples(
     openapi_schema: MutableMapping[str, Any],
     include_external_examples: bool,
-) -> Tuple[Dict[str, Dict[str, Any]], Set[str]]:
+) -> tuple[dict[str, dict[str, Any]], set[str]]:
     """
     Gather examples for all scenarios: request and response bodies for interactions;
     resource-specific Bundle examples for search interactions; and OperationOutcome examples for
     errors.
     """
-    examples: DefaultDict[str, Any] = defaultdict(dict)
+    examples: defaultdict[str, Any] = defaultdict(dict)
     external_example_urls = set()
 
     # Get all resource examples from the models and the FHIR specification
@@ -266,7 +258,7 @@ def _get_examples(
 def _adjust_operation(
     operation_id: _OperationId,
     operation: MutableMapping[str, Any],
-    examples: Mapping[str, Dict[str, Any]],
+    examples: Mapping[str, dict[str, Any]],
 ) -> None:
     """
     Make adjustments to an operation in the OpenAPI schema.
@@ -297,7 +289,7 @@ def _adjust_operation(
 
     # For each possible response (i.e. status code), remove the default FastAPI response schema
     responses = operation["responses"]
-    status_codes: Tuple[str, ...] = tuple(responses.keys())
+    status_codes: tuple[str, ...] = tuple(responses.keys())
     for status_code in status_codes:
         if (
             status_code != str(status.HTTP_204_NO_CONTENT)

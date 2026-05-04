@@ -1,7 +1,8 @@
 """Miscellaneous utility functions."""
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Any, Callable, ClassVar, Dict, Literal, Sequence, Union
+from typing import Any, ClassVar, Literal
 
 import orjson
 from fastapi import Request
@@ -15,16 +16,16 @@ from .resources import Bundle, OperationOutcome, Resource
 
 @dataclass
 class ParsedRequest:
-    request_type: Union[Literal["interaction", "operation"], None] = None
-    resource_type: Union[str, None] = None
-    resource_id: Union[str, None] = None
-    interaction_type: Union[
+    request_type: Literal["interaction", "operation"] | None = None
+    resource_type: str | None = None
+    resource_id: str | None = None
+    interaction_type: (
         Literal[
             "read", "update", "patch", "delete", "create", "search-type", "capabilities"
-        ],
-        None,
-    ] = None
-    operation_name: Union[str, None] = None
+        ]
+        | None
+    ) = None
+    operation_name: str | None = None
 
 
 def parse_fhir_request(request: Request) -> ParsedRequest:
@@ -92,7 +93,7 @@ def _parse_fhir_interaction_request(
     # and the URL format
     resource_type = None
     resource_id = None
-    interaction_type: Union[str, None]
+    interaction_type: str | None
 
     path_parts_count = len(split_path)
 
@@ -222,7 +223,7 @@ class FormatParameters:
         )
 
     @classmethod
-    def format_from_accept_header(cls, request: Request) -> Union[str, None]:
+    def format_from_accept_header(cls, request: Request) -> str | None:
         if request.method == "POST":
             for content_type in request.headers.getlist("Accept"):
                 if content_type_normalized := cls._CONTENT_TYPES.get(content_type):
@@ -232,11 +233,11 @@ class FormatParameters:
 
 
 def format_response(
-    resource: Union[Resource, None],
-    response: Union[Response, None] = None,
-    status_code: Union[int, None] = None,
+    resource: Resource | None,
+    response: Response | None = None,
+    status_code: int | None = None,
     format_parameters: FormatParameters = FormatParameters(),  # noqa: B008  # immutable sentinel
-) -> Union[Resource, Response]:
+) -> Resource | Response:
     """
     Return a response with the proper formatting applied.
 
@@ -288,7 +289,7 @@ def format_response(
         )
 
 
-def read_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
+def read_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
     """Provide arguments for creation of a FHIR read API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -315,13 +316,13 @@ def read_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any
     }
 
 
-def update_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
+def update_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
     """Provide arguments for creation of a FHIR update API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
     return {
         "path": f"/{resource_type_str}/{{id}}",
-        "response_model": Union[interaction.resource_type, None],
+        "response_model": interaction.resource_type | None,
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{resource_type_str}"],
         "summary": f"{resource_type_str} {interaction.label()}",
@@ -344,13 +345,13 @@ def update_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, A
     }
 
 
-def patch_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
+def patch_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
     """Provide arguments for creation of a FHIR patch API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
     return {
         "path": f"/{resource_type_str}/{{id}}",
-        "response_model": Union[interaction.resource_type, None],
+        "response_model": interaction.resource_type | None,
         "status_code": status.HTTP_200_OK,
         "tags": [f"Type:{resource_type_str}"],
         "summary": f"{resource_type_str} {interaction.label()}",
@@ -374,7 +375,7 @@ def patch_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, An
     }
 
 
-def delete_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
+def delete_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
     """Provide arguments for creation of a FHIR delete API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -400,13 +401,13 @@ def delete_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, A
     }
 
 
-def create_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, Any]:
+def create_route_args(interaction: TypeInteraction[ResourceType]) -> dict[str, Any]:
     """Provide arguments for creation of a FHIR create API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
     return {
         "path": f"/{resource_type_str}",
-        "response_model": Union[interaction.resource_type, None],
+        "response_model": interaction.resource_type | None,
         "status_code": status.HTTP_201_CREATED,
         "tags": [f"Type:{resource_type_str}"],
         "summary": f"{resource_type_str} {interaction.label()}",
@@ -430,7 +431,7 @@ def create_route_args(interaction: TypeInteraction[ResourceType]) -> Dict[str, A
 
 def search_type_route_args(
     interaction: TypeInteraction[ResourceType], post: bool
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Provide arguments for creation of a FHIR search-type API route."""
     resource_type_str = interaction.resource_type.get_resource_type()
 
@@ -458,7 +459,7 @@ def search_type_route_args(
     }
 
 
-_Responses = Dict[int, Dict[str, Any]]
+_Responses = dict[int, dict[str, Any]]
 
 
 def _responses(

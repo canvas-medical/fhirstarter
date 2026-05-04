@@ -1,6 +1,6 @@
 """Test FHIRStarter dependency injection"""
 
-from typing import Callable, Coroutine, Union
+from collections.abc import Callable, Coroutine
 
 import pytest
 from _pytest.fixtures import FixtureRequest
@@ -33,7 +33,7 @@ def validate_token(
 )
 def patient_create_func(
     request: FixtureRequest,
-) -> Callable[[InteractionContext, Patient], Union[Coroutine[None, None, str], str]]:
+) -> Callable[[InteractionContext, Patient], Coroutine[None, None, str] | str]:
     """Parametrized fixture to ensure that tests are tested in both async and nonasync modes."""
     return request.param
 
@@ -41,7 +41,7 @@ def patient_create_func(
 @pytest.fixture
 def provider_with_dependency(
     patient_create_func: Callable[
-        [InteractionContext, Patient], Union[Coroutine[None, None, str], str]
+        [InteractionContext, Patient], Coroutine[None, None, str] | str
     ],
 ) -> FHIRProvider:
     """Create a provider with a provider-level dependency."""
@@ -54,7 +54,7 @@ def provider_with_dependency(
 @pytest.fixture
 def provider_with_interaction_dependency(
     patient_create_func: Callable[
-        [InteractionContext, Patient], Union[Coroutine[None, None, str], str]
+        [InteractionContext, Patient], Coroutine[None, None, str] | str
     ],
 ) -> FHIRProvider:
     """Create a provider with an interaction-level dependency."""

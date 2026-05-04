@@ -10,19 +10,11 @@ except ImportError:
 
 import datetime
 from collections import defaultdict
+from collections.abc import Callable, Collection, Coroutine, MutableMapping
 from io import IOBase
 from os import PathLike
 from typing import (
     Any,
-    Callable,
-    Collection,
-    Coroutine,
-    DefaultDict,
-    Dict,
-    List,
-    MutableMapping,
-    Set,
-    Union,
     cast,
 )
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -107,7 +99,7 @@ class FHIRStarter(FastAPI):
     def __init__(
         self,
         *,
-        config_file: Union[str, PathLike, IOBase, None] = None,
+        config_file: str | PathLike | IOBase | None = None,
         title: str = "FHIRStarter",
         **kwargs: Any,
     ) -> None:
@@ -133,7 +125,7 @@ class FHIRStarter(FastAPI):
             config = {}
             self._search_parameters = SearchParameters()
 
-        self._capabilities: DefaultDict[str, Dict[str, TypeInteraction]] = defaultdict(
+        self._capabilities: defaultdict[str, dict[str, TypeInteraction]] = defaultdict(
             dict
         )
         self._created = (
@@ -162,7 +154,7 @@ class FHIRStarter(FastAPI):
         )
 
         # Add the external example proxy route
-        self._allowed_external_example_urls: Set[str] = set()
+        self._allowed_external_example_urls: set[str] = set()
         if self._external_examples_enabled and not (
             "openapi_url" in kwargs and kwargs["openapi_url"] is None
         ):
@@ -384,7 +376,7 @@ class FHIRStarter(FastAPI):
                 resource["searchParam"] = sorted(
                     supported_search_parameters_,
                     key=lambda p: parameter_sort_key(
-                        cast(Dict[str, str], p)["name"], search_parameter_metadata
+                        cast(dict[str, str], p)["name"], search_parameter_metadata
                     ),
                 )
             resources.append(resource)
@@ -413,7 +405,7 @@ class FHIRStarter(FastAPI):
             )
         )
 
-    def openapi(self) -> Dict[str, Any]:
+    def openapi(self) -> dict[str, Any]:
         """Adjust the OpenAPI schema to make it more FHIR-friendly."""
         if self.openapi_schema:
             return self.openapi_schema
@@ -435,7 +427,7 @@ class FHIRStarter(FastAPI):
             response: Response,
             format_: str = FORMAT_QP,
             pretty_: str = PRETTY_QP,
-        ) -> Union[CapabilityStatement, Response]:
+        ) -> CapabilityStatement | Response:
             return format_response(
                 resource=self.capability_statement(request, response),
                 response=response,
@@ -462,7 +454,7 @@ class FHIRStarter(FastAPI):
     def _add_external_example_proxy_route(self) -> None:
         """Add the /_example route to proxy external documentation examples."""
 
-        async def example(value: str) -> Dict[str, Any]:
+        async def example(value: str) -> dict[str, Any]:
             return await self._example(value, self._allowed_external_example_urls)
 
         self.get(
@@ -474,7 +466,7 @@ class FHIRStarter(FastAPI):
         lambda app: app._external_examples_cache,
         key=lambda app, url, allowed_urls: url,
     )
-    async def _example(self, url: str, allowed_urls: Collection[str]) -> Dict[str, Any]:
+    async def _example(self, url: str, allowed_urls: Collection[str]) -> dict[str, Any]:
         """Fetch the external documentation example if the provided URL is in the allow list."""
         if urlparse(url).scheme != "https" or url not in allowed_urls:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -619,7 +611,7 @@ async def _merge_parameter_strings(request: Request) -> bytes:
     If there is a header that specifies the requested format, then ignore the _format parameter(s)
     in the parameter strings.
     """
-    merged: DefaultDict[bytes, List[bytes]] = defaultdict(list)
+    merged: defaultdict[bytes, list[bytes]] = defaultdict(list)
 
     format_ = FormatParameters.format_from_accept_header(request)
     if format_:

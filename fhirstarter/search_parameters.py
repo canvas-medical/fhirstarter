@@ -13,7 +13,8 @@ try:
 except ImportError:
     from functools import lru_cache as cache
 
-from typing import Any, Callable, Dict, Mapping, Tuple, Union
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from fastapi import Request, Response
 
@@ -27,13 +28,12 @@ from .interactions import InteractionContext
 class SearchParameters:
     def __init__(
         self,
-        custom_search_parameters: Union[
-            Mapping[str, Mapping[str, Mapping[str, str]]], None
-        ] = None,
+        custom_search_parameters: Mapping[str, Mapping[str, Mapping[str, str]]]
+        | None = None,
     ) -> None:
         self._custom_search_parameters = custom_search_parameters or {}
 
-    def get_metadata(self, resource_type: str) -> Dict[str, Dict[str, str]]:
+    def get_metadata(self, resource_type: str) -> dict[str, dict[str, str]]:
         """
         Return search parameter metadata for the given resource type.
 
@@ -69,15 +69,14 @@ def var_name_to_qp_name(name: str) -> str:
     # The _format and _pretty parameters are handled differently because they apply to more than
     # just search-type interactions
     if name in {"format_", "pretty_"}:
-        return f"_{name[:-1]}"
+        return f"_{name.removesuffix('_')}"
 
     # Convert variables like "_last_updated" to "_lastUpdated"
     if name.startswith("_"):
         return f"_{re.sub('_[a-z]', lambda m: m.group(0)[1:].upper(), name[1:])}"
 
     # Reserved names will have underscores after them
-    if name.endswith("_"):
-        name = name[:-1]
+    name = name.removesuffix("_")
 
     # Finally, replace underscores with dashes
     return name.replace("_", "-")
@@ -91,7 +90,7 @@ class SupportedSearchParameter:
 
 def supported_search_parameters(
     search_function: Callable[..., Any],
-) -> Tuple[SupportedSearchParameter, ...]:
+) -> tuple[SupportedSearchParameter, ...]:
     """
     Given a callable, return a list of the parameter names in the function (excluding variadic
     keyword and variadic positional arguments).
@@ -113,9 +112,9 @@ def supported_search_parameters(
 
 def parameter_sort_key(
     name: str,
-    search_parameter_metadata: Dict[str, Dict[str, str]],
-    parameter_annotation: Union[type, None] = None,
-) -> Tuple[bool, bool, bool, bool, bool, str]:
+    search_parameter_metadata: dict[str, dict[str, str]],
+    parameter_annotation: type | None = None,
+) -> tuple[bool, bool, bool, bool, bool, str]:
     """
     Return a sort key for a parameter.
 
@@ -146,7 +145,7 @@ def parameter_sort_key(
 
 
 @cache
-def _load_search_parameters_file() -> Dict[str, Dict[str, Dict[str, Union[str, bool]]]]:
+def _load_search_parameters_file() -> dict[str, dict[str, dict[str, str | bool]]]:
     """
     Load the search parameters JSON file.
 
@@ -183,8 +182,7 @@ def _transform_description(description: str, resource_type: str) -> str:
         for description_for_resource_type in description.split("\n"):
             if description_for_resource_type.startswith(f"* [{resource_type}]"):
                 _, description = description_for_resource_type.split(": ", maxsplit=1)
-                if description.endswith("\r"):
-                    return description[:-1]
+                return description.removesuffix("\r")
         else:
             raise AssertionError("Resource type must exist in the description")
 

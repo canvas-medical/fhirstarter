@@ -6,8 +6,9 @@ actions.
 
 import contextlib
 import json
+from collections.abc import MutableMapping
 from pathlib import Path
-from typing import Any, Dict, List, MutableMapping, Union
+from typing import Any
 from uuid import uuid4
 
 import jsonpatch
@@ -40,7 +41,7 @@ app = FHIRStarter(
 )
 
 # Create a "database"
-DATABASE: Dict[str, Dict[str, str]] = {"Patient": {}, "Practitioner": {}}
+DATABASE: dict[str, dict[str, str]] = {"Patient": {}, "Practitioner": {}}
 
 # Create a provider
 provider = FHIRProvider()
@@ -143,11 +144,11 @@ async def patient_create(context: InteractionContext, resource: Patient) -> str:
 @provider.search_type(Patient)
 async def patient_search_type(
     context: InteractionContext,
-    birthdate: Union[List[str], None],
-    general_practitioner: Union[str, None],
-    family: Union[str, None],
-    nickname: Union[str, None],
-    _last_updated: Union[str, None],
+    birthdate: list[str] | None,
+    general_practitioner: str | None,
+    family: str | None,
+    nickname: str | None,
+    _last_updated: str | None,
 ) -> Bundle:
     # Filter the patients based on the search criteria
     patients = []
