@@ -14,7 +14,7 @@ class JSONPatchOperation(BaseModel):
     """
 
     op: Literal["add", "remove", "replace", "move", "copy", "test"]
-    from_: str = Field(default=None, alias="from")
+    from_: str | None = Field(default=None, alias="from")
     path: str
     value: Any | None
 
