@@ -12,7 +12,7 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
         fhir-sequence: [STU3, R4B, R5]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
     - name: Install uv
       uses: astral-sh/setup-uv@v4
       with:
@@ -29,7 +29,7 @@ jobs:
         python-version: ["3.14"]
         fhir-sequence: [R5]
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
     - name: Install uv
       uses: astral-sh/setup-uv@v4
       with:
