@@ -1,6 +1,6 @@
 [project]
 name = "fhirstarter"
-version = "4.1.0"
+version = "4.1.1"
 description = "An ASGI FHIR API framework built on top of FastAPI and FHIR Resources"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
