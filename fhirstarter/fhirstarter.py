@@ -194,7 +194,7 @@ class FHIRStarter(FastAPI):
         for interaction in sorted(
             sorted(
                 provider_interactions,
-                key=lambda i: cast(str, i.resource_type.get_resource_type()),
+                key=lambda i: i.resource_type.get_resource_type(),
             ),
             key=lambda i: _INTERACTION_ORDER[i.label()],
         ):
@@ -376,7 +376,7 @@ class FHIRStarter(FastAPI):
                 resource["searchParam"] = sorted(
                     supported_search_parameters_,
                     key=lambda p: parameter_sort_key(
-                        cast(dict[str, str], p)["name"], search_parameter_metadata
+                        p["name"], search_parameter_metadata
                     ),
                 )
             resources.append(resource)

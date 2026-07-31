@@ -54,7 +54,8 @@ def make_request(
     parsed_path = urlparse(path)
 
     path = parsed_path.path
-    query_string = parsed_path.query
+    # The ASGI spec requires a bytestring here; Starlette decodes it directly.
+    query_string = parsed_path.query.encode()
 
     return Request(
         scope={

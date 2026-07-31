@@ -1,6 +1,6 @@
 [project]
 name = "fhirstarter"
-version = "4.1.0"
+version = "4.1.1"
 description = "An ASGI FHIR API framework built on top of FastAPI and FHIR Resources"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -41,7 +41,7 @@ dependencies = [
     "fhir.resources[xml]>=8.0.0,<9.0.0",
     "httpx>=0.24.1,<0.29.0",
     "orjson>=3.10.3,<4",
-    "python-multipart>=0.0.6,<0.0.28",
+    "python-multipart>=0.0.31,<0.0.32",
     "tomli>=2.0.1,<3.0.0 ; python_version < '3.11'",
     "tzdata>=2026.2,<2026.3; platform_system == 'Windows'",
 ]
@@ -59,9 +59,9 @@ dev = [
     "pytest>=7.4,<10.0",
     "requests>=2.31.0,<3",
     "ruff>=0.15.12,<0.16",
-    "setuptools>=75.3.2,<83",
+    "setuptools>=83,<84",
     "ty>=0.0.1a16",
-    "types-cachetools>=5.5.0.20240820,<6",
+    "types-cachetools>=7.0.0.20260713,<8",
     "types-requests>=2.31.0.2,<3",
     "uvicorn[standard]>=0.23.2,<0.47.0 ; platform_system != 'Windows'",
     "uvicorn>=0.23.2,<0.47.0 ; platform_system == 'Windows'",
@@ -71,6 +71,9 @@ dev = [
 [build-system]
 requires = ["uv_build>=0.5.0,<0.12"]
 build-backend = "uv_build"
+
+[tool.uv]
+exclude-newer = false
 
 [tool.uv.build-backend]
 module-root = ""
