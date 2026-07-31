@@ -61,7 +61,7 @@ dev = [
     "ruff>=0.15.12,<0.16",
     "setuptools>=75.3.2,<83",
     "ty>=0.0.1a16",
-    "types-cachetools>=5.5.0.20240820,<6",
+    "types-cachetools>=7.0.0.20260713,<8",
     "types-requests>=2.31.0.2,<3",
     "uvicorn[standard]>=0.23.2,<0.47.0 ; platform_system != 'Windows'",
     "uvicorn>=0.23.2,<0.47.0 ; platform_system == 'Windows'",
