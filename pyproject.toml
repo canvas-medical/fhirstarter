@@ -72,6 +72,16 @@ dev = [
 requires = ["uv_build>=0.5.0,<0.12"]
 build-backend = "uv_build"
 
+[tool.uv]
+# Opt this repository out of any `exclude-newer` freshness filter. A relative
+# cutoff configured outside the repository (e.g. a developer's global
+# ~/.config/uv/uv.toml) is baked into uv.lock as `exclude-newer-span`, so it
+# silently re-resolves and downgrades dependencies on a bare `uv run` while
+# Renovate and CI, which see no such cutoff, lock the newest releases.
+# Declaring the setting here keeps resolution identical for developers, CI,
+# and Renovate.
+exclude-newer = false
+
 [tool.uv.build-backend]
 module-root = ""
 
