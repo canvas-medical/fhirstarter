@@ -232,6 +232,42 @@ class FormatParameters:
         return None
 
 
+def _is_empty(value: Any) -> bool:
+    """Return whether a value is an empty container that must be omitted from FHIR JSON.
+
+    Only genuinely-empty dicts and lists qualify. Falsy scalars (0, False, "") are valid
+    FHIR values (e.g. Bundle.total == 0) and must be preserved, so a bare falsiness check
+    would be wrong here.
+    """
+    return isinstance(value, (dict, list)) and not value
+
+
+def prune_empty_elements(value: Any) -> Any:
+    """Recursively drop empty objects and arrays from a model_dump() structure.
+
+    FHIR JSON prohibits empty arrays and objects: a repeating element with no entries
+    must be omitted rather than serialized as []. Pydantic v2's model_dump (unlike v1's
+    dict()) preserves these empty containers, so prune them before serialization.
+
+    Pruning is bottom-up so that a container which becomes empty only after its children
+    are pruned is itself removed (e.g. name=[{"given": []}] collapses until the whole
+    `name` key disappears).
+    """
+    if isinstance(value, dict):
+        return {
+            key: cleaned
+            for key, sub in value.items()
+            if not _is_empty(cleaned := prune_empty_elements(sub))
+        }
+    if isinstance(value, list):
+        return [
+            cleaned
+            for item in value
+            if not _is_empty(cleaned := prune_empty_elements(item))
+        ]
+    return value
+
+
 def format_response(
     resource: Resource | None,
     response: Response | None = None,
@@ -259,16 +295,20 @@ def format_response(
         return resource
 
     if format_parameters.format == "application/fhir+json":
+        # Prune empty containers left in by Pydantic v2's model_dump so the JSON body
+        # conforms to FHIR. The XML path below does not have this problem.
+        data = prune_empty_elements(resource.model_dump())
+
         if format_parameters.pretty:
             return Response(
-                content=orjson.dumps(resource.model_dump(), option=orjson.OPT_INDENT_2),
+                content=orjson.dumps(data, option=orjson.OPT_INDENT_2),
                 status_code=status_code or status.HTTP_200_OK,
                 media_type=format_parameters.format,
             )
         else:
             if status_code:
                 return Response(
-                    content=orjson.dumps(resource.model_dump()),
+                    content=orjson.dumps(data),
                     status_code=status_code,
                     media_type=format_parameters.format,
                 )
@@ -278,7 +318,7 @@ def format_response(
                 )
 
                 return Response(
-                    content=orjson.dumps(resource.model_dump()),
+                    content=orjson.dumps(data),
                     media_type=format_parameters.format,
                 )
     else:
