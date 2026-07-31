@@ -72,6 +72,9 @@ dev = [
 requires = ["uv_build>=0.5.0,<0.12"]
 build-backend = "uv_build"
 
+[tool.uv]
+exclude-newer = false
+
 [tool.uv.build-backend]
 module-root = ""
 
