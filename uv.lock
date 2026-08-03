@@ -259,7 +259,7 @@ xml = [
 
 [[package]]
 name = "fhirstarter"
-version = "4.1.1"
+version = "4.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "asyncache" },
