@@ -548,12 +548,19 @@ async def _transform_search_type_post_request(
         and request.headers.get("Content-Type") == "application/x-www-form-urlencoded"
     ):
         scope = request.scope
+
+        # Merge the parameter strings before rewriting the method, because the Accept header is
+        # only honored for POST requests, and the merge needs to see the original method in order
+        # to give the header precedence over the _format parameters.
+        query_string = await _merge_parameter_strings(request)
+
         scope["method"] = "GET"
         if scope["path"].endswith("/_search"):
             scope["path"] = scope["path"][:-8]
-        if scope["raw_path"][-8:] == "/_search":
+        # raw_path is bytes, unlike path
+        if scope["raw_path"].endswith(b"/_search"):
             scope["raw_path"] = scope["raw_path"][:-8]
-        scope["query_string"] = await _merge_parameter_strings(request)
+        scope["query_string"] = query_string
         scope["headers"] = [
             (name, value)
             for name, value in scope["headers"]
@@ -619,7 +626,7 @@ async def _merge_parameter_strings(request: Request) -> bytes:
 
     for query_string in (await request.body(), request.scope["query_string"]):
         for name, values in parse_qs(query_string).items():
-            if format_ and name == "_format":
+            if format_ and name == b"_format":
                 continue
             merged[name].extend(values)
 
