@@ -3,7 +3,7 @@
 from collections.abc import Callable, Coroutine
 from functools import partial
 from inspect import iscoroutinefunction
-from typing import cast
+from typing import Any, cast
 
 import pytest
 from requests.models import Response
@@ -307,37 +307,100 @@ def test_no_body(
 
 
 @pytest.mark.parametrize(
-    argnames="search_type_func,search_type_func_kwargs",
+    argnames="search_type_func,search_type_func_kwargs,content_type",
     argvalues=[
         (
             lambda client: partial(client.get, "/Patient"),
             {"params": {"family": "Baggins"}},
+            "application/fhir+json",
+        ),
+        (
+            lambda client: partial(client.get, "/Patient"),
+            {
+                "params": {"family": "Baggins"},
+                "headers": {"Accept": "application/fhir+xml"},
+            },
+            # The Accept header is only honored for search interactions by POST
+            "application/fhir+json",
+        ),
+        (
+            lambda client: partial(client.get, "/Patient"),
+            {"params": {"family": "Baggins", "_format": "xml"}},
+            "application/fhir+xml",
+        ),
+        (
+            lambda client: partial(client.get, "/Patient"),
+            {
+                "params": {"family": "Baggins", "_format": "xml"},
+                "headers": {"Accept": "application/fhir+json"},
+            },
+            "application/fhir+xml",
         ),
         (
             lambda client: partial(client.post, "/Patient/_search"),
             {"data": {"family": "Baggins"}},
+            "application/fhir+json",
+        ),
+        (
+            lambda client: partial(client.post, "/Patient/_search"),
+            {
+                "data": {"family": "Baggins"},
+                "headers": {"Accept": "application/fhir+xml"},
+            },
+            "application/fhir+xml",
+        ),
+        (
+            lambda client: partial(client.post, "/Patient/_search"),
+            {"data": {"family": "Baggins", "_format": "xml"}},
+            "application/fhir+xml",
+        ),
+        (
+            lambda client: partial(client.post, "/Patient/_search"),
+            {
+                "data": {"family": "Baggins", "_format": "xml"},
+                "headers": {"Accept": "application/fhir+json"},
+            },
+            # For search interactions by POST, the Accept header supersedes _format
+            "application/fhir+json",
         ),
     ],
-    ids=["get", "post"],
+    ids=[
+        "get",
+        "get accept header",
+        "get format parameter",
+        "get accept header and format parameter",
+        "post",
+        "post accept header",
+        "post format parameter",
+        "post accept header and format parameter",
+    ],
 )
 def test_search_type(
     client: TestClient,
     patient_id: str,
     search_type_func: Callable[[TestClient], Callable[..., Response]],
-    search_type_func_kwargs: dict[str, str],
+    search_type_func_kwargs: dict[str, Any],
+    content_type: str,
 ) -> None:
-    """Test the FHIR search interaction."""
+    """Test the FHIR search interaction, including negotiation of the response format."""
     search_type_response = search_type_func(client)(**search_type_func_kwargs)
+
+    bundle = {
+        "resourceType": "Bundle",
+        "type": "searchset",
+        "total": 1,
+        "entry": [{"resource": resource(patient_id)}],
+    }
 
     assert_expected_response(
         search_type_response,
         status.HTTP_200_OK,
-        content={
-            "resourceType": "Bundle",
-            "type": "searchset",
-            "total": 1,
-            "entry": [{"resource": resource(patient_id)}],
-        },
+        content_type=content_type,
+        content=(
+            bundle
+            if content_type == "application/fhir+json"
+            else Bundle(**bundle).model_dump_xml()
+        ),
     )
 
 
@@ -462,5 +525,65 @@ def test_search_type_parameter_multiple_values(
             "resourceType": "Bundle",
             "type": "searchset",
             "total": 0,
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="search_type_func,search_type_func_kwargs",
+    argvalues=[
+        (
+            lambda client: partial(client.get, "/Patient"),
+            {"params": {"family": "Baggins", "_format": "bogus"}},
+        ),
+        (
+            lambda client: partial(client.post, "/Patient/_search"),
+            {"data": {"family": "Baggins", "_format": "bogus"}},
+        ),
+    ],
+    ids=["get", "post"],
+)
+def test_search_type_invalid_format(
+    client: TestClient,
+    search_type_func: Callable[[TestClient], Callable[..., Response]],
+    search_type_func_kwargs: dict[str, Any],
+) -> None:
+    """Test the FHIR search interaction with an unrecognized _format parameter value."""
+    search_type_response = search_type_func(client)(**search_type_func_kwargs)
+
+    assert_expected_response(
+        search_type_response,
+        status.HTTP_400_BAD_REQUEST,
+        content=make_operation_outcome(
+            severity="error",
+            code="structure",
+            details_text="Invalid response format specified for '_format' parameter",
+        ).model_dump(),
+    )
+
+
+def test_search_type_post_accept_header_supersedes_invalid_format(
+    client: TestClient, patient_id: str
+) -> None:
+    """
+    Test the FHIR search interaction by POST with an Accept header and an invalid _format value.
+
+    The Accept header takes precedence, so the unrecognized _format value is discarded rather than
+    rejected.
+    """
+    search_type_response = client.post(
+        "/Patient/_search",
+        data={"family": "Baggins", "_format": "bogus"},
+        headers={"Accept": "application/fhir+json"},
+    )
+
+    assert_expected_response(
+        search_type_response,
+        status.HTTP_200_OK,
+        content={
+            "resourceType": "Bundle",
+            "type": "searchset",
+            "total": 1,
+            "entry": [{"resource": resource(patient_id)}],
         },
     )
